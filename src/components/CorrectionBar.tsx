@@ -15,7 +15,7 @@ export function CorrectionBar({ disabled, loading, onSubmit }: CorrectionBarProp
 
   return (
     <form
-      className="flex gap-2"
+      className="flex flex-col gap-2 sm:flex-row"
       onSubmit={(e) => {
         e.preventDefault();
         const correction = text.trim();
@@ -30,12 +30,12 @@ export function CorrectionBar({ disabled, loading, onSubmit }: CorrectionBarProp
         disabled={disabled}
         onChange={(e) => setText(e.target.value)}
         placeholder={'Correct it — e.g. "that’s rye bread, and you missed the butter"'}
-        className="min-w-0 flex-1 rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm focus:border-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-900"
+        className="min-w-0 flex-1 rounded-panel border border-line bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none"
       />
       <button
         type="submit"
         disabled={disabled || !text.trim()}
-        className="flex shrink-0 items-center gap-2 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white transition disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900"
+        className="flex shrink-0 items-center justify-center gap-2 rounded-panel bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition hover:bg-accent disabled:opacity-40"
       >
         {loading && <Spinner />}
         Re-analyze

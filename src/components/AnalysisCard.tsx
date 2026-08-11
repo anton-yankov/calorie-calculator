@@ -4,9 +4,9 @@ import { useState } from "react";
 import type { Confidence, FoodItem, MealAnalysis } from "@/lib/schema";
 
 const confidenceStyles: Record<Confidence, string> = {
-  high: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  medium: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  low: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+  high: "border-success/50 bg-success-soft text-success",
+  medium: "border-accent/50 bg-accent-soft text-accent",
+  low: "border-danger/50 bg-danger-soft text-danger",
 };
 
 const fmt = (n: number) => (Number.isInteger(n) ? n.toString() : n.toFixed(1));
@@ -20,7 +20,7 @@ function Delta({ now, before }: { now: number; before: number | null }) {
   const up = diff > 0;
   return (
     <span
-      className={`font-mono text-xs tabular-nums ${up ? "text-amber-500 dark:text-amber-400" : "text-sky-600 dark:text-sky-400"}`}
+      className={`font-mono text-xs tabular-nums ${up ? "text-accent" : "text-success"}`}
       aria-label={`${up ? "up" : "down"} ${Math.abs(diff)} calories from previous estimate`}
     >
       {up ? "▲" : "▼"}
@@ -47,15 +47,15 @@ function FoodRow({
   const [draft, setDraft] = useState<string | null>(null);
 
   return (
-    <li className="px-3 py-2.5">
+    <li className="px-4 py-3">
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1 truncate font-medium">{food.name}</span>
         {isNew && (
-          <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+          <span className="shrink-0 rounded-full border border-success/50 bg-success-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-success">
             new
           </span>
         )}
-        <label className="flex shrink-0 items-center gap-1 text-xs text-neutral-500">
+        <label className="flex shrink-0 items-center gap-1 text-xs text-muted">
           <input
             type="number"
             inputMode="numeric"
@@ -71,7 +71,7 @@ function FoodRow({
               }
             }}
             onBlur={() => setDraft(null)}
-            className="w-14 rounded-md border border-neutral-300 bg-transparent px-1 py-1 text-right font-mono text-sm tabular-nums text-neutral-900 focus:border-neutral-500 focus:outline-none dark:border-neutral-700 dark:text-neutral-100"
+            className="w-14 rounded-md border border-line bg-background px-1 py-1 text-right font-mono text-sm tabular-nums text-foreground focus:border-accent focus:outline-none"
           />
           g
         </label>
@@ -83,11 +83,11 @@ function FoodRow({
         className="mt-1 flex w-full items-center gap-1.5 text-left"
       >
         <span
-          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase ${confidenceStyles[food.confidence]}`}
+          className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${confidenceStyles[food.confidence]}`}
         >
           {food.confidence}
         </span>
-        <span className={`text-xs text-neutral-500 ${expanded ? "" : "truncate"}`}>
+        <span className={`text-xs text-muted ${expanded ? "" : "truncate"}`}>
           {food.assumptions}
         </span>
       </button>
@@ -95,10 +95,10 @@ function FoodRow({
       <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <span className="flex items-baseline gap-1.5 font-mono text-sm tabular-nums">
           <span className="font-semibold">{Math.round(food.calories)}</span>
-          <span className="text-xs text-neutral-500">kcal</span>
+          <span className="text-xs text-muted">kcal</span>
           <Delta now={food.calories} before={prevKcal} />
         </span>
-        <span className="font-mono text-xs tabular-nums text-neutral-500">
+        <span className="font-mono text-xs tabular-nums text-muted">
           P {fmt(food.protein_g)} · C {fmt(food.carbs_g)} · F {fmt(food.fat_g)}
         </span>
       </div>
@@ -127,17 +127,15 @@ export function AnalysisCard({
   const removed = previous?.foods.filter((f) => !currentNames.has(norm(f.name))) ?? [];
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-      <header className="flex items-baseline justify-between border-b border-neutral-200 px-3 py-2 dark:border-neutral-800">
-        <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+    <section className="overflow-hidden rounded-panel border border-line bg-surface">
+      <header className="flex items-baseline justify-between border-b border-line bg-surface-raised px-4 py-2.5">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
           {label}
         </span>
-        {previous && (
-          <span className="text-[11px] text-neutral-400">▲▼ show change vs previous</span>
-        )}
+        {previous && <span className="text-[11px] text-muted">▲▼ show change vs previous</span>}
       </header>
 
-      <ul className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+      <ul className="divide-y divide-line">
         {analysis.foods.map((food, i) => (
           <FoodRow
             key={`${food.name}-${i}`}
@@ -151,27 +149,25 @@ export function AnalysisCard({
       </ul>
 
       {removed.length > 0 && (
-        <p className="border-t border-neutral-100 px-3 py-2 text-xs text-neutral-500 line-through dark:border-neutral-800/60">
+        <p className="border-t border-line px-4 py-2 text-xs text-muted line-through">
           Removed: {removed.map((f) => f.name).join(", ")}
         </p>
       )}
 
-      <footer className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-t-2 border-neutral-300 px-3 py-2.5 dark:border-neutral-700">
+      <footer className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-t-2 border-foreground px-4 py-3">
         <span className="flex items-baseline gap-1.5 font-mono tabular-nums">
           <span className="text-lg font-bold">{Math.round(analysis.totals.calories)}</span>
-          <span className="text-xs text-neutral-500">kcal total</span>
+          <span className="text-xs text-muted">kcal total</span>
           <Delta now={analysis.totals.calories} before={previous?.totals.calories ?? null} />
         </span>
-        <span className="font-mono text-xs tabular-nums text-neutral-500">
+        <span className="font-mono text-xs tabular-nums text-muted">
           P {fmt(analysis.totals.protein_g)} · C {fmt(analysis.totals.carbs_g)} · F{" "}
           {fmt(analysis.totals.fat_g)}
         </span>
       </footer>
 
       {analysis.notes && (
-        <p className="border-t border-neutral-100 px-3 py-2 text-xs text-neutral-500 dark:border-neutral-800/60">
-          {analysis.notes}
-        </p>
+        <p className="border-t border-line px-4 py-2.5 text-xs text-muted">{analysis.notes}</p>
       )}
     </section>
   );
@@ -180,19 +176,21 @@ export function AnalysisCard({
 /** Collapsed view of a superseded estimate — summary line, expandable to a read-only list. */
 export function CompactAnalysis({ analysis, label }: { analysis: MealAnalysis; label: string }) {
   return (
-    <details className="rounded-2xl border border-neutral-200 bg-white/60 dark:border-neutral-800 dark:bg-neutral-900/60">
-      <summary className="cursor-pointer select-none px-3 py-2 text-sm text-neutral-500">
-        <span className="font-semibold uppercase tracking-wide text-xs">{label}</span>
+    <details className="rounded-panel border border-line bg-surface/60 transition-colors open:bg-surface">
+      <summary className="cursor-pointer select-none px-4 py-2.5 text-sm text-muted">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+          {label}
+        </span>
         <span className="ml-2 font-mono tabular-nums">
           {Math.round(analysis.totals.calories)} kcal
         </span>
         <span className="ml-2 text-xs">{analysis.foods.length} items</span>
       </summary>
-      <ul className="border-t border-neutral-100 px-3 py-1.5 dark:border-neutral-800/60">
+      <ul className="border-t border-line px-4 py-1.5">
         {analysis.foods.map((food, i) => (
           <li
             key={`${food.name}-${i}`}
-            className="flex items-baseline justify-between gap-2 py-1 text-sm text-neutral-500"
+            className="flex items-baseline justify-between gap-2 py-1 text-sm text-muted"
           >
             <span className="min-w-0 truncate">{food.name}</span>
             <span className="shrink-0 font-mono text-xs tabular-nums">

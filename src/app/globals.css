@@ -1,28 +1,79 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #1b1a16;
+  --foreground: #edeae0;
+  --surface: #24221c;
+  --surface-raised: #2a281f;
+  --muted: #a5a195;
+  --accent: #e08a5c;
+  --accent-soft: #3a2a20;
+  --green: #7fbf92;
+  --green-soft: #22312a;
+  --line: #38352c;
+  --danger: #e58b82;
+  --danger-soft: #3b2421;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--green);
+  --color-success-soft: var(--green-soft);
+  --color-line: var(--line);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-fraunces);
+  --font-mono: var(--font-jetbrains-mono);
+  --radius-panel: 10px;
 }
 
 html,
 body {
   /* A tool page should never pan sideways on a phone */
   overflow-x: clip;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--background);
+}
+
+body {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(224, 138, 92, 0.08), transparent 34rem),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button,
+a,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--background);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 /* Skeleton shimmer: a directional highlight sweeping across ghost bars.
@@ -46,13 +97,7 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
-}
-
-@media (prefers-color-scheme: dark) {
-  .ghost-shimmer::after {
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09), transparent);
-  }
+  background: linear-gradient(90deg, transparent, rgba(237, 234, 224, 0.09), transparent);
 }
 
 /* Motion only for users who haven't opted out — otherwise bars stay static */
@@ -60,10 +105,33 @@ body {
   .ghost-shimmer::after {
     animation: shimmer 1.6s ease-in-out infinite;
   }
+
+  .page-enter {
+    animation: page-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .page-enter > * {
+    animation: content-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .page-enter > :nth-child(2) {
+    animation-delay: 60ms;
+  }
+
+  .page-enter > :nth-child(3) {
+    animation-delay: 100ms;
+  }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+@keyframes page-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }

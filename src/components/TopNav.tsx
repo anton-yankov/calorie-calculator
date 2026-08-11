@@ -12,9 +12,13 @@ export function TopNav() {
   const pathname = usePathname();
 
   return (
-    <nav>
-      <div className="mx-auto w-full max-w-lg px-4 pt-4">
-        <div className="flex rounded-full border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900">
+    <nav className="sticky top-0 z-30 border-b border-line/80 bg-background/90 backdrop-blur-xl">
+      <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-5 px-5 py-3 sm:px-6">
+        <Link href="/" className="font-serif text-lg font-semibold tracking-tight text-foreground">
+          <span className="sm:hidden">Calories</span>
+          <span className="hidden sm:inline">Calorie Calculator</span>
+        </Link>
+        <div className="flex rounded-full border border-line bg-surface p-1">
           {tabs.map((tab) => {
             const active = pathname === tab.href;
             return (
@@ -22,10 +26,8 @@ export function TopNav() {
                 key={tab.href}
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex-1 rounded-full px-4 py-1.5 text-center text-sm font-semibold transition ${
-                  active
-                    ? "bg-emerald-600 text-white"
-                    : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                className={`rounded-full px-4 py-1.5 text-center text-xs font-semibold transition-colors ${
+                  active ? "bg-accent text-background" : "text-muted hover:text-foreground"
                 }`}
               >
                 {tab.label}
