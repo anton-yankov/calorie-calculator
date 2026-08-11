@@ -25,6 +25,43 @@ body {
   overflow-x: clip;
 }
 
+/* Skeleton shimmer: a directional highlight sweeping across ghost bars.
+   The card frame stays completely still — only the bars carry motion. */
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.ghost-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.ghost-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  .ghost-shimmer::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09), transparent);
+  }
+}
+
+/* Motion only for users who haven't opted out — otherwise bars stay static */
+@media (prefers-reduced-motion: no-preference) {
+  .ghost-shimmer::after {
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

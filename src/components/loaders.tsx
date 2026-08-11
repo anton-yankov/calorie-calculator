@@ -21,7 +21,9 @@ export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
 }
 
 function GhostBar({ className }: { className: string }) {
-  return <div className={`rounded bg-neutral-200 dark:bg-neutral-800 ${className}`} />;
+  return (
+    <div className={`ghost-shimmer rounded bg-neutral-200 dark:bg-neutral-800 ${className}`} />
+  );
 }
 
 /**
@@ -34,7 +36,7 @@ export function SkeletonEstimate({ label }: { label: string }) {
     <section
       role="status"
       aria-label={`${label} loading`}
-      className="overflow-hidden rounded-2xl border border-neutral-200 bg-white motion-safe:animate-pulse dark:border-neutral-800 dark:bg-neutral-900"
+      className="overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
     >
       <header className="flex items-center gap-2 border-b border-neutral-200 px-3 py-2 dark:border-neutral-800">
         <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">

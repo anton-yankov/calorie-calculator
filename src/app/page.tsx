@@ -89,7 +89,13 @@ export default function Home() {
     if (!sourceBlob) return;
     setLoading(true);
     setError(null);
-    if (correction) setPendingCorrection(correction);
+    if (correction) {
+      setPendingCorrection(correction);
+    } else {
+      // First analysis or "Start over": the result replaces the whole thread,
+      // so clear it now — the skeleton takes its place, not a stale thread
+      setHistory([]);
+    }
     try {
       if (!resizedRef.current) {
         resizedRef.current = await resizeToJpeg(sourceBlob);
@@ -217,9 +223,7 @@ export default function Home() {
         );
       })}
 
-      {loading && !pendingCorrection && (
-        <SkeletonEstimate label={latest ? "New estimate" : "Estimate"} />
-      )}
+      {loading && !pendingCorrection && <SkeletonEstimate label="Estimate" />}
 
       {pendingCorrection && (
         <>

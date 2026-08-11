@@ -24,6 +24,7 @@ export function PhotoInput({
   onClear,
 }: PhotoInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   return (
     <div className="relative">
@@ -40,17 +41,19 @@ export function PhotoInput({
           e.target.value = ""; // allow re-selecting the same file
         }}
       />
+      {/* With a photo: tap = full-screen preview. Without: tap = pick a photo. */}
       <button
         type="button"
-        disabled={disabled}
-        onClick={() => inputRef.current?.click()}
+        disabled={preparing || (!previewUrl && disabled)}
+        title={previewUrl ? "View photo" : undefined}
+        onClick={() => (previewUrl ? dialogRef.current?.showModal() : inputRef.current?.click())}
         className="w-full overflow-hidden rounded-2xl border-2 border-dashed border-neutral-300 bg-white transition hover:border-neutral-400 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-500"
       >
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- local object URL, next/image not applicable
           <img
             src={previewUrl}
-            alt="Selected meal"
+            alt="Selected meal — tap to view full size"
             className={`w-full object-cover transition-all ${compact ? "max-h-28" : "max-h-80"}`}
           />
         ) : (
@@ -63,18 +66,30 @@ export function PhotoInput({
           </div>
         )}
       </button>
+
       {previewUrl && !preparing && (
-        <button
-          type="button"
-          disabled={disabled}
-          aria-label="Remove photo"
-          title="Remove photo"
-          onClick={onClear}
-          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-sm font-semibold text-white backdrop-blur transition hover:bg-black/80 disabled:opacity-40"
-        >
-          ✕
-        </button>
+        <div className="absolute right-2 top-2 flex items-center gap-1.5">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => inputRef.current?.click()}
+            className="flex h-8 items-center rounded-full bg-black/60 px-3 text-xs font-semibold text-white backdrop-blur transition hover:bg-black/80 disabled:opacity-40"
+          >
+            Change
+          </button>
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label="Remove photo"
+            title="Remove photo"
+            onClick={onClear}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-sm font-semibold text-white backdrop-blur transition hover:bg-black/80 disabled:opacity-40"
+          >
+            ✕
+          </button>
+        </div>
       )}
+
       {preparing && (
         <div
           role="status"
@@ -87,6 +102,33 @@ export function PhotoInput({
           </span>
         </div>
       )}
+
+      {/* Full-screen preview — native <dialog>: Esc, focus trap, and backdrop for free.
+          Tap anywhere (or ✕) to close. */}
+      <dialog
+        ref={dialogRef}
+        aria-label="Photo preview"
+        onClick={(e) => e.currentTarget.close()}
+        className="m-auto h-dvh w-screen max-h-none max-w-none bg-transparent p-0 backdrop:bg-black/90"
+      >
+        {previewUrl && (
+          <div className="flex h-full w-full items-center justify-center p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
+            <img
+              src={previewUrl}
+              alt="Selected meal, full size"
+              className="max-h-full max-w-full rounded-lg object-contain"
+            />
+            <button
+              type="button"
+              aria-label="Close preview"
+              className="fixed right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-lg font-semibold text-white backdrop-blur transition hover:bg-white/25"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </dialog>
     </div>
   );
 }
