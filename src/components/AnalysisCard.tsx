@@ -5,7 +5,7 @@ import type { Confidence, FoodItem, MealAnalysis } from "@/lib/schema";
 
 const confidenceStyles: Record<Confidence, string> = {
   high: "border-success/50 bg-success-soft text-success",
-  medium: "border-accent/50 bg-accent-soft text-accent",
+  medium: "border-focus/50 bg-accent-soft text-label",
   low: "border-danger/50 bg-danger-soft text-danger",
 };
 
@@ -20,7 +20,7 @@ function Delta({ now, before }: { now: number; before: number | null }) {
   const up = diff > 0;
   return (
     <span
-      className={`font-mono text-xs tabular-nums ${up ? "text-accent" : "text-success"}`}
+      className={`font-mono text-xs tabular-nums ${up ? "text-label" : "text-success"}`}
       aria-label={`${up ? "up" : "down"} ${Math.abs(diff)} calories from previous estimate`}
     >
       {up ? "▲" : "▼"}
@@ -71,7 +71,7 @@ function FoodRow({
               }
             }}
             onBlur={() => setDraft(null)}
-            className="w-14 rounded-md border border-line bg-background px-1 py-1 text-right font-mono text-sm tabular-nums text-foreground focus:border-accent focus:outline-none"
+            className="w-14 rounded-md border border-line bg-background px-1 py-1 text-right font-mono text-sm tabular-nums text-foreground focus:border-focus focus:outline-none"
           />
           g
         </label>
@@ -129,7 +129,7 @@ export function AnalysisCard({
   return (
     <section className="overflow-hidden rounded-panel border border-line bg-surface">
       <header className="flex items-baseline justify-between border-b border-line bg-surface-raised px-4 py-2.5">
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-label">
           {label}
         </span>
         {previous && <span className="text-[11px] text-muted">▲▼ show change vs previous</span>}
@@ -154,7 +154,7 @@ export function AnalysisCard({
         </p>
       )}
 
-      <footer className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-t-2 border-foreground px-4 py-3">
+      <footer className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-t border-line bg-surface-raised px-4 py-3">
         <span className="flex items-baseline gap-1.5 font-mono tabular-nums">
           <span className="text-lg font-bold">{Math.round(analysis.totals.calories)}</span>
           <span className="text-xs text-muted">kcal total</span>
@@ -178,7 +178,7 @@ export function CompactAnalysis({ analysis, label }: { analysis: MealAnalysis; l
   return (
     <details className="rounded-panel border border-line bg-surface/60 transition-colors open:bg-surface">
       <summary className="cursor-pointer select-none px-4 py-2.5 text-sm text-muted">
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-label">
           {label}
         </span>
         <span className="ml-2 font-mono tabular-nums">

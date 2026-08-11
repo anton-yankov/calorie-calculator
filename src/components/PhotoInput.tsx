@@ -47,7 +47,7 @@ export function PhotoInput({
         disabled={preparing || (!previewUrl && disabled)}
         title={previewUrl ? "View photo" : undefined}
         onClick={() => (previewUrl ? dialogRef.current?.showModal() : inputRef.current?.click())}
-        className="group w-full overflow-hidden rounded-panel border-2 border-dashed border-line bg-surface transition duration-200 hover:border-accent hover:bg-surface-raised disabled:opacity-50"
+        className="group w-full overflow-hidden rounded-panel border border-dashed border-line bg-surface transition duration-200 hover:border-focus hover:bg-surface-raised disabled:opacity-50"
       >
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- local object URL, next/image not applicable
@@ -59,7 +59,7 @@ export function PhotoInput({
         ) : (
           <div className="flex flex-col items-center gap-2 px-5 py-14 text-muted">
             <span
-              className="mb-1 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-background font-mono text-xl text-accent transition-transform group-hover:-translate-y-0.5"
+              className="mb-1 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-background font-mono text-xl text-label transition-transform group-hover:-translate-y-0.5"
               aria-hidden
             >
               +

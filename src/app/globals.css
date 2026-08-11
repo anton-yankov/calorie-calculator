@@ -1,18 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #1b1a16;
-  --foreground: #edeae0;
-  --surface: #24221c;
-  --surface-raised: #2a281f;
-  --muted: #a5a195;
-  --accent: #e08a5c;
-  --accent-soft: #3a2a20;
-  --green: #7fbf92;
-  --green-soft: #22312a;
-  --line: #38352c;
-  --danger: #e58b82;
-  --danger-soft: #3b2421;
+  /* T3 Chat theme tokens */
+  --background: #1f1a24;
+  --foreground: #f9f8fb;
+  --surface: #2b2431;
+  --surface-raised: #2e2833;
+  --control: #372c3d;
+  --muted: #cdccd0;
+  --label: #b9a8b3;
+  --placeholder: #978e9f;
+  --accent: #501f38;
+  --accent-hover: #622544;
+  --accent-foreground: #fbd0e8;
+  --accent-soft: #37152b;
+  --focus: #8f3b68;
+  --green: #78b892;
+  --green-soft: #21352b;
+  --line: #27242d;
+  --danger: #d985a6;
+  --danger-soft: #331a2b;
 }
 
 @theme inline {
@@ -20,18 +27,24 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
+  --color-control: var(--control);
   --color-muted: var(--muted);
+  --color-label: var(--label);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
+  --color-focus: var(--focus);
+  --color-placeholder: var(--placeholder);
   --color-success: var(--green);
   --color-success-soft: var(--green-soft);
   --color-line: var(--line);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --font-sans: var(--font-inter);
-  --font-serif: var(--font-fraunces);
+  --font-serif: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
-  --radius-panel: 10px;
+  --radius-panel: 12px;
 }
 
 html,
@@ -46,9 +59,7 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(circle at 50% -10%, rgba(224, 138, 92, 0.08), transparent 34rem),
-    var(--background);
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 16px;
@@ -67,13 +78,17 @@ summary {
 }
 
 ::selection {
-  background: var(--accent);
-  color: var(--background);
+  background: var(--focus);
+  color: var(--foreground);
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
+}
+
+input::placeholder {
+  color: var(--placeholder);
 }
 
 /* Skeleton shimmer: a directional highlight sweeping across ghost bars.
@@ -97,7 +112,7 @@ summary {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(237, 234, 224, 0.09), transparent);
+  background: linear-gradient(90deg, transparent, rgba(251, 208, 232, 0.1), transparent);
 }
 
 /* Motion only for users who haven't opted out — otherwise bars stay static */

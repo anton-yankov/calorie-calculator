@@ -133,11 +133,11 @@ export default function LogPage() {
 
   return (
     <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-5 py-8 sm:px-6 sm:py-11">
-      <header className="border-b-2 border-foreground pb-6">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
+      <header className="border-b border-line pb-6">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-label">
           Daily record
         </p>
-        <h1 className="font-serif text-[clamp(2rem,8vw,2.9rem)] font-semibold leading-[1.08] tracking-tight">
+        <h1 className="font-serif text-[clamp(2rem,8vw,2.45rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
           Meal log
         </h1>
         <p className="mt-2 text-[15px] text-muted">Your saved meals, grouped by day.</p>

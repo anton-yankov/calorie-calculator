@@ -66,7 +66,7 @@ export function SkeletonEstimate({ label }: { label: string }) {
       className="overflow-hidden rounded-panel border border-line bg-surface"
     >
       <header className="flex items-center gap-2 border-b border-line bg-surface-raised px-4 py-2.5">
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-label">
           {label}
         </span>
       </header>
@@ -86,7 +86,7 @@ export function SkeletonEstimate({ label }: { label: string }) {
         ))}
       </ul>
       <footer
-        className="flex items-center justify-between gap-2 border-t-2 border-foreground px-4 py-3"
+        className="flex items-center justify-between gap-2 border-t border-line bg-surface-raised px-4 py-3"
         aria-hidden
       >
         <GhostBar className="h-5 w-24" />

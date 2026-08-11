@@ -24,7 +24,7 @@ interface HistoryEntry {
 
 function CorrectionBubble({ text }: { text: string }) {
   return (
-    <div className="self-end max-w-[85%] rounded-panel rounded-br-sm border border-success/40 bg-success-soft px-4 py-2.5 text-sm text-foreground">
+    <div className="self-end max-w-[85%] rounded-panel rounded-br-sm bg-surface px-4 py-2.5 text-sm text-foreground">
       {text}
     </div>
   );
@@ -183,11 +183,11 @@ export default function Home() {
 
   return (
     <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 px-5 py-8 sm:px-6 sm:py-11">
-      <header className="mb-2 border-b-2 border-foreground pb-6">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
+      <header className="mb-2 border-b border-line pb-6">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-label">
           Meal analysis
         </p>
-        <h1 className="font-serif text-[clamp(2rem,8vw,2.9rem)] font-semibold leading-[1.08] tracking-tight">
+        <h1 className="font-serif text-[clamp(2rem,8vw,2.45rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
           What’s on your plate?
         </h1>
         <p className="mt-2 max-w-xl text-[15px] text-muted sm:text-base">
@@ -209,14 +209,14 @@ export default function Home() {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Optional details — e.g. rye bread, whole milk, olive oil"
-        className="rounded-panel border border-line bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none"
+        className="rounded-panel border border-line bg-surface px-4 py-3 text-sm text-foreground placeholder:text-placeholder transition-colors hover:border-muted/30 focus:border-focus focus:outline-none"
       />
 
       <button
         type="button"
         disabled={!sourceBlob || loading || preparing}
         onClick={() => analyze()}
-        className="flex items-center justify-center gap-2 rounded-panel bg-accent px-4 py-3 font-semibold text-background transition duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex items-center justify-center gap-2 rounded-panel bg-accent px-4 py-3 font-semibold text-accent-foreground transition duration-200 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
       >
         {/* During photo prep the frame overlay is the loader — the button stays plain */}
         {loading && <Spinner />}
@@ -274,7 +274,7 @@ export default function Home() {
             {loggedAtLength === history.length && (
               <Link
                 href="/log"
-                className="shrink-0 rounded-panel bg-success px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
+                className="shrink-0 rounded-panel bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-accent-hover"
               >
                 View log
               </Link>
