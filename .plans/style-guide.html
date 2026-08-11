@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Document Style Guide — Calorie Calculator</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill {
+    font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+
+  pre[class*="language-"] {
+    border-radius: var(--radius); font-size: 13.5px; line-height: 1.55;
+    margin: 16px 0; padding: 18px 20px;
+  }
+  code { font-family: 'JetBrains Mono', monospace; }
+  :not(pre) > code {
+    background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px;
+  }
+  pre code { font-family: 'JetBrains Mono', monospace !important; }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 0 0 18px 52px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+
+  /* Guide-only helpers: color swatches */
+  .swatch { display: inline-block; width: 20px; height: 20px; border-radius: 6px;
+    border: 1px solid var(--line); vertical-align: -5px; margin-right: 8px; }
+
+  @media print {
+    body { background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    pre[class*="language-"] { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Style guide · self-demonstrating</div>
+  <h1>The Plan Document Style</h1>
+  <p class="subtitle">The exact design system used by every document in <code>.plans/</code>. This page is written in the system it describes — every rule below is also visible in use, on this page.</p>
+  <div class="meta">
+    <span><strong>Palette:</strong> warm dark, 6 colors</span>
+    <span><strong>Type:</strong> Fraunces · Inter · JetBrains Mono</span>
+    <span><strong>Column:</strong> 880px</span>
+    <span><strong>Dependencies:</strong> Google Fonts + Prism (CDN)</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>The palette</h2>
+<p class="lede">Six colors, all warm. The rule that makes it cohesive: <strong>no pure grays, no pure white, no pure black</strong> — every neutral leans brown, so the page feels like paper in lamplight rather than a terminal.</p>
+
+<table>
+  <tr><th>Variable</th><th>Value</th><th>Role</th></tr>
+  <tr><td><span class="swatch" style="background:#1B1A16"></span><code>--bg</code></td><td><code>#1B1A16</code></td><td>Page background. Near-black with a warm brown cast.</td></tr>
+  <tr><td><span class="swatch" style="background:#24221C"></span><code>--surface</code></td><td><code>#24221C</code></td><td>Cards, tables, anything that sits "on" the page. Exactly one step lighter than the background, same hue.</td></tr>
+  <tr><td><span class="swatch" style="background:#EDEAE0"></span><code>--ink</code></td><td><code>#EDEAE0</code></td><td>Primary text. Warm off-white — never <code>#fff</code>, which would glare against the warm background.</td></tr>
+  <tr><td><span class="swatch" style="background:#A5A195"></span><code>--ink-soft</code></td><td><code>#A5A195</code></td><td>Secondary text: ledes, captions, table headers, metadata.</td></tr>
+  <tr><td><span class="swatch" style="background:#E08A5C"></span><code>--accent</code></td><td><code>#E08A5C</code></td><td>Terracotta. Kickers, section numbers, links, emphasis. The identity color.</td></tr>
+  <tr><td><span class="swatch" style="background:#3A2A20"></span><code>--accent-soft</code></td><td><code>#3A2A20</code></td><td>Terracotta at background strength, for callout fills.</td></tr>
+  <tr><td><span class="swatch" style="background:#7FBF92"></span><code>--green</code></td><td><code>#7FBF92</code></td><td>Success, confirmation, "good" callouts.</td></tr>
+  <tr><td><span class="swatch" style="background:#22312A"></span><code>--green-soft</code></td><td><code>#22312A</code></td><td>Green at background strength.</td></tr>
+  <tr><td><span class="swatch" style="background:#38352C"></span><code>--line</code></td><td><code>#38352C</code></td><td>Every border and divider. One border color for the whole document.</td></tr>
+</table>
+
+<div class="callout"><strong>The two-strength rule:</strong> each accent hue exists as a bright version (text, borders) and a "soft" dark version (fills). A callout is the bright hue as a 4px left border on the soft hue as background — same color, two strengths, which is why nothing ever clashes.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Typography</h2>
+<p class="lede">Three faces, three jobs, no exceptions.</p>
+
+<table>
+  <tr><th>Face</th><th>Job</th><th>Rules</th></tr>
+  <tr><td>Fraunces</td><td>Display: <code>h1</code>, <code>h2</code> only</td><td>Serif with personality, weight 650. Title sized <code>clamp(32px, 5vw, 46px)</code>, sections 27px. Never used for body text — scarcity is what keeps it special.</td></tr>
+  <tr><td>Inter</td><td>Everything readable</td><td>16px body on <code>line-height: 1.65</code>; 17px ledes; 14.5px table text; weights 400–700.</td></tr>
+  <tr><td>JetBrains Mono</td><td>Everything data-like</td><td>Code, numbers, section numerals, step counters, anything a monospace grid helps. 13.5px in blocks.</td></tr>
+</table>
+
+<p>Loaded with one Google Fonts request:</p>
+<pre><code class="language-text">https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap</code></pre>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Structural components</h2>
+<p class="lede">Each device encodes something — none are decoration.</p>
+
+<h3>Kicker (eyebrow)</h3>
+<p>The tiny uppercase label above the title, telling you what kind of document you're in. <code>12px · letter-spacing 0.14em · uppercase · var(--accent) · weight 700</code>. You saw one at the top of this page.</p>
+
+<h3>Numbered section headings</h3>
+<p>An <code>h2</code> is a flex row: a small mono accent number (<code>01</code>) sharing a baseline with the big serif title. The numbers say "this document has a reading order." This is the style's most recognizable move.</p>
+
+<h3>Header &amp; footer rules</h3>
+<p>The document header closes with a <strong>heavy</strong> rule (<code>2px solid var(--ink)</code> — full contrast); the footer opens with a <strong>light</strong> one (<code>1px var(--line)</code>). Heavy at the top, light at the bottom: the page announces itself loudly and exits quietly.</p>
+
+<h3>Cards and callouts</h3>
+<div class="card" style="margin-bottom:8px">
+  <p style="margin:0"><strong>Card:</strong> <code>var(--surface)</code> + 1px <code>var(--line)</code> border + 10px radius + <code>20px 24px</code> padding. For grouped prose and specs.</p>
+</div>
+<div class="callout" style="margin-top:8px"><strong>Callout:</strong> 4px accent left border on <code>--accent-soft</code>, radius only on the right corners. For warnings and key decisions.</div>
+<div class="callout good"><strong>Good callout:</strong> same shape in green, for reassurances and verified facts.</div>
+
+<h3>Tables</h3>
+<p>Same shell as cards (<code>overflow: hidden</code> makes the radius clip the rows). Header row: slightly different background (<code>#2A281F</code>), 12.5px uppercase letterspaced <code>--ink-soft</code>. First column bolded and <code>white-space: nowrap</code> — it acts as the row's label.</p>
+
+<h3>Step lists</h3>
+<ol class="steps">
+  <li>
+    <strong>Built with CSS counters</strong>
+    <span class="step-note">No hand-numbering: <code>counter-increment</code> fills a 32px circle (<code>--ink</code> background, <code>--bg</code> mono digits) via <code>::before</code>.</span>
+  </li>
+  <li>
+    <strong>Connected by a thread</strong>
+    <span class="step-note">A 2px <code>--line</code> vertical connector drawn with <code>::after</code> links each circle to the next — sequence made visible.</span>
+  </li>
+</ol>
+
+<h3>Pills</h3>
+<div class="pill-row">
+  <span class="pill in">✓ in scope</span>
+  <span class="pill">neutral tag</span>
+  <span class="pill out">✗ out of scope</span>
+</div>
+<p><code>border-radius: 999px</code> chips; the in/out variants encode scope decisions (green + check, struck-through + muted).</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>Code &amp; data</h2>
+<p class="lede">Code blocks are Prism with the <code>tomorrow</code> theme — its <code>#2d2d2d</code> background reads as another warm surface. Inline code gets its own chip.</p>
+
+<pre><code class="language-typescript">// Block code: prism-tomorrow via cdnjs, 10px radius, 13.5px JetBrains Mono
+const example = "self-demonstrating";</code></pre>
+
+<p>Inline code like <code>--accent</code> uses <code>background: #2E2C24; padding: 2px 6px; border-radius: 5px</code>. Numbers in prose that carry data weight are set in mono.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>Diagrams</h2>
+<p class="lede">Hand-written inline SVG, no libraries — and the same palette hexes as the CSS, which is what makes diagrams feel native to the page instead of pasted in.</p>
+
+<figure>
+<svg viewBox="0 0 860 120" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="40" y="30" width="200" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="140" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">Box: surface fill</text>
+  <text x="140" y="74" text-anchor="middle" font-size="11.5" fill="#A5A195">ink stroke, 10px radius</text>
+  <line x1="240" y1="60" x2="380" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="310" y="50" text-anchor="middle" font-size="11" fill="#A5A195">arrow: ink-soft</text>
+  <rect x="380" y="30" width="200" height="60" rx="10" fill="#3A2A20"/>
+  <text x="480" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">Accent note box</text>
+  <text x="480" y="74" text-anchor="middle" font-size="11.5" fill="#E08A5C">soft fill, bright text</text>
+  <line x1="580" y1="60" x2="640" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="640" y="30" width="180" height="60" rx="10" fill="#EDEAE0"/>
+  <text x="730" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#1B1A16">Inverted box</text>
+  <text x="730" y="74" text-anchor="middle" font-size="11.5" fill="#55524A">for the one focal node</text>
+</svg>
+<figcaption>The three box types: surface (default), accent-soft (semantic note), inverted ink (the focal point — use once per diagram).</figcaption>
+</figure>
+
+<div class="card">
+  <p style="margin:0"><strong>Diagram rules:</strong> boxes are <code>--surface</code> fill with <code>--ink</code> stroke at 1.5px; arrows are <code>--ink-soft</code> with one shared <code>&lt;marker&gt;</code> arrowhead; semantic color (accent/green) marks meaning, not decoration; at most one inverted (light-filled) box per diagram as the focal point; labels are Inter, wire-format text is JetBrains Mono; every <code>figure</code> gets a <code>figcaption</code>.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>Layout, spacing &amp; boilerplate</h2>
+<p class="lede">One centered column and a handful of constants.</p>
+
+<table>
+  <tr><th>Constant</th><th>Value</th><th>Note</th></tr>
+  <tr><td>Column</td><td><code>max-width: 880px</code></td><td>Centered, <code>padding: 48px 24px 96px</code> — the deep bottom padding stops the doc ending abruptly</td></tr>
+  <tr><td>Radius</td><td><code>10px</code> everywhere</td><td>One radius for cards, tables, code, diagram boxes (pills use 999px)</td></tr>
+  <tr><td>Section rhythm</td><td><code>h2 { margin: 56px 0 8px }</code></td><td>Big air above sections, tight below — the heading hugs its content</td></tr>
+  <tr><td>Borders</td><td>1px <code>var(--line)</code></td><td>Except the two statement rules (header 2px ink, table footer 2px)</td></tr>
+  <tr><td>Favicon</td><td><code>icon.svg</code> beside the doc</td><td><code>&lt;link rel="icon" type="image/svg+xml" href="icon.svg"&gt;</code></td></tr>
+</table>
+
+<h3>Starting boilerplate</h3>
+<p>A new document needs the two CDN links and the CSS from any existing plan doc — the fastest start is copying <code>password-gate.html</code> and replacing the content. The head, exactly:</p>
+
+<pre><code class="language-markup">&lt;link rel="icon" type="image/svg+xml" href="icon.svg"&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet"&gt;
+&lt;link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"&gt;
+&lt;!-- before &lt;/body&gt;: prism.min.js + one prism-&lt;language&gt;.min.js per language used --&gt;</code></pre>
+
+<div class="callout good"><strong>The whole identity in one sentence:</strong> warm browns instead of grays, a serif that only appears in headings, mono wherever there's data, one border color, one radius, and every accent color in exactly two strengths.</div>
+
+<footer class="doc">
+  Calorie Calculator · plan-document style guide · the reference for all .plans/ documents
+</footer>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+</body>
+</html>
