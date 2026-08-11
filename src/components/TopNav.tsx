@@ -12,8 +12,8 @@ export function TopNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-20 border-b border-neutral-200/60 bg-white/80 backdrop-blur dark:border-neutral-800/60 dark:bg-neutral-950/80">
-      <div className="mx-auto w-full max-w-lg px-4 py-2">
+    <nav>
+      <div className="mx-auto w-full max-w-lg px-4 pt-4">
         <div className="flex rounded-full border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900">
           {tabs.map((tab) => {
             const active = pathname === tab.href;
