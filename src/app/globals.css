@@ -19,8 +19,14 @@
   }
 }
 
+html,
+body {
+  /* A tool page should never pan sideways on a phone */
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }

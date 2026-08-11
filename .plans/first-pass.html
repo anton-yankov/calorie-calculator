@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calorie Calculator — First Pass Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill {
+    font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+
+  pre[class*="language-"] {
+    border-radius: var(--radius); font-size: 13.5px; line-height: 1.55;
+    margin: 16px 0; padding: 18px 20px;
+  }
+  code { font-family: 'JetBrains Mono', monospace; }
+  :not(pre) > code {
+    background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px;
+  }
+  pre code { font-family: 'JetBrains Mono', monospace !important; }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 0 0 18px 52px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+  @media print {
+    body { background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    pre[class*="language-"] { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">First-pass plan · v1</div>
+  <h1>Calorie Calculator<br>Photo → Nutrition Breakdown</h1>
+  <p class="subtitle">Snap or upload a photo of a meal, optionally add a short note ("rye bread, whole milk"), and get back the foods on the plate with estimated grams, calories, protein, carbs, and fat — editable and correctable.</p>
+  <div class="meta">
+    <span><strong>Owner:</strong> Anton</span>
+    <span><strong>Date:</strong> Aug 11, 2026</span>
+    <span><strong>Stack:</strong> Next.js + TypeScript</span>
+    <span><strong>Model:</strong> GPT‑5.6 Luna (OpenAI)</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>Decisions at a glance</h2>
+<p class="lede">Agreed during scoping — the rest of this document builds on these.</p>
+
+<table>
+  <tr><th>Question</th><th>Decision</th><th>Why</th></tr>
+  <tr><td>Form factor</td><td>Mobile-friendly web app (Next.js 15, App Router, TypeScript, <code>src/</code> layout)</td><td>One codebase for UI + API, opens on any phone, fastest to iterate</td></tr>
+  <tr><td>Scope</td><td>Analyzer only — no accounts, no meal history, no database</td><td>Smallest thing that proves the idea</td></tr>
+  <tr><td>Nutrition source</td><td>Vision model estimates everything (foods, grams, macros)</td><td>Simplest architecture; numbers are estimates, which is fine for a first pass</td></tr>
+  <tr><td>Model</td><td><code>gpt-5.6-luna</code>, kept in an env var so it's swappable</td><td>Vision + structured JSON output at $0.20/$1.20 per 1M tokens ≈ <strong>$0.002–0.003 per analysis</strong></td></tr>
+  <tr><td>Photos</td><td>Single photo per analysis + optional text description</td><td>Covers the typical plate-of-food case</td></tr>
+  <tr><td>Corrections</td><td>Full edit + re-ask: adjust grams locally <em>and</em> send text corrections back to the model</td><td>Photo-based estimates will be wrong sometimes; cheap model makes re-asking nearly free</td></tr>
+  <tr><td>Deployment</td><td>Local only (<code>npm run dev</code>), API key in <code>.env.local</code></td><td>Personal use; no auth or hosting needed yet</td></tr>
+</table>
+
+<div class="pill-row">
+  <span class="pill in">✓ Photo upload &amp; camera capture</span>
+  <span class="pill in">✓ Optional description</span>
+  <span class="pill in">✓ Per-food macro table + totals</span>
+  <span class="pill in">✓ Editable grams</span>
+  <span class="pill in">✓ Text corrections → re-analysis</span>
+  <span class="pill out">✗ Accounts / login</span>
+  <span class="pill out">✗ Meal history &amp; daily totals</span>
+  <span class="pill out">✗ Multiple photos</span>
+  <span class="pill out">✗ Nutrition database lookups</span>
+  <span class="pill out">✗ Hosting / deployment</span>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Architecture</h2>
+<p class="lede">Three moving parts. The API key never leaves the server — the browser only ever talks to our own API route.</p>
+
+<figure>
+<svg viewBox="0 0 860 300" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+
+  <!-- Browser box -->
+  <rect x="20" y="60" width="230" height="180" rx="12" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="135" y="90" text-anchor="middle" font-size="15" font-weight="700" fill="#EDEAE0">Browser (phone)</text>
+  <text x="135" y="112" text-anchor="middle" font-size="12" fill="#A5A195">Next.js client page</text>
+  <rect x="40" y="128" width="190" height="28" rx="6" fill="#3A2A20"/>
+  <text x="135" y="147" text-anchor="middle" font-size="12" fill="#E08A5C" font-weight="600">Photo picker / camera</text>
+  <rect x="40" y="164" width="190" height="28" rx="6" fill="#3A2A20"/>
+  <text x="135" y="183" text-anchor="middle" font-size="12" fill="#E08A5C" font-weight="600">Results table + editing</text>
+  <rect x="40" y="200" width="190" height="28" rx="6" fill="#3A2A20"/>
+  <text x="135" y="219" text-anchor="middle" font-size="12" fill="#E08A5C" font-weight="600">Client-side image resize</text>
+
+  <!-- Server box -->
+  <rect x="330" y="60" width="230" height="180" rx="12" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="445" y="90" text-anchor="middle" font-size="15" font-weight="700" fill="#EDEAE0">Next.js server</text>
+  <text x="445" y="112" text-anchor="middle" font-size="12" fill="#A5A195">API route (route handler)</text>
+  <rect x="350" y="128" width="190" height="28" rx="6" fill="#22312A"/>
+  <text x="445" y="147" text-anchor="middle" font-size="12" fill="#7FBF92" font-weight="600">POST /api/analyze</text>
+  <rect x="350" y="164" width="190" height="28" rx="6" fill="#22312A"/>
+  <text x="445" y="183" text-anchor="middle" font-size="12" fill="#7FBF92" font-weight="600">Prompt + JSON schema</text>
+  <rect x="350" y="200" width="190" height="28" rx="6" fill="#22312A"/>
+  <text x="445" y="219" text-anchor="middle" font-size="12" fill="#7FBF92" font-weight="600">OPENAI_API_KEY (.env)</text>
+
+  <!-- OpenAI box -->
+  <rect x="640" y="90" width="200" height="120" rx="12" fill="#EDEAE0"/>
+  <text x="740" y="130" text-anchor="middle" font-size="15" font-weight="700" fill="#1B1A16">OpenAI API</text>
+  <text x="740" y="155" text-anchor="middle" font-size="13" fill="#C05B2E" font-family="'JetBrains Mono', monospace">gpt-5.6-luna</text>
+  <text x="740" y="178" text-anchor="middle" font-size="11.5" fill="#55524A">vision + structured output</text>
+
+  <!-- Arrows -->
+  <line x1="250" y1="125" x2="330" y2="125" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="290" y="115" text-anchor="middle" font-size="11" fill="#A5A195">image + note</text>
+  <line x1="330" y1="185" x2="250" y2="185" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="290" y="205" text-anchor="middle" font-size="11" fill="#A5A195">JSON result</text>
+
+  <line x1="560" y1="125" x2="640" y2="125" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="600" y="115" text-anchor="middle" font-size="11" fill="#A5A195">request</text>
+  <line x1="640" y1="185" x2="560" y2="185" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="600" y="205" text-anchor="middle" font-size="11" fill="#A5A195">schema-valid JSON</text>
+</svg>
+<figcaption>The browser resizes the photo (≈1024&nbsp;px long edge) before upload to keep requests fast and token costs low.</figcaption>
+</figure>
+
+<div class="callout good"><strong>No database, no storage.</strong> Photos are processed in memory and never written to disk. Everything the user sees lives in client state for the current page session.</div>
+
+<h3>Phone photos: resizing &amp; quality</h3>
+<div class="card">
+  <p><strong>The problem:</strong> a phone photo is 12–48&nbsp;MP (4000×3000+, 2–8&nbsp;MB as HEIC/JPEG). The model doesn't need anywhere near that — vision models downscale big images internally anyway — so sending the original wastes upload time on mobile data without improving the analysis.</p>
+  <p><strong>The approach:</strong> resize in the browser before upload. <code>createImageBitmap(file)</code> → draw onto a canvas at <strong>1024&nbsp;px on the long edge</strong> → <code>canvas.toBlob("image/jpeg", 0.85)</code>. A 5&nbsp;MB photo becomes a ~100–200&nbsp;KB upload.</p>
+  <table>
+    <tr><th>Concern</th><th>Answer</th></tr>
+    <tr><td>Does quality suffer?</td><td>Downscaling is a clean resample, not compression artifacts. Plates, portions, and food textures stay fully recognizable — which is all the analysis depends on. Accuracy is limited by portion-estimation ambiguity, not resolution.</td></tr>
+    <tr><td>What <em>does</em> degrade?</td><td>Tiny text (e.g. nutrition labels on packaging). If we later want label reading, bump the constant to 1568–2048&nbsp;px — a one-line change in <code>lib/resize.ts</code>.</td></tr>
+    <tr><td>Original photo</td><td>Never modified — we only send a downscaled copy. The on-screen preview uses the full-quality local file.</td></tr>
+    <tr><td>Sideways photos</td><td>Browsers apply EXIF orientation during decode, so the canvas copy is always upright.</td></tr>
+    <tr><td>Privacy bonus</td><td>Re-encoding strips EXIF metadata, including GPS location, before anything leaves the phone.</td></tr>
+    <tr><td>iPhone HEIC</td><td>Safari decodes HEIC natively; the canvas always exports JPEG, so the server and model only ever see JPEG.</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>User flow</h2>
+
+<figure>
+<svg viewBox="0 0 860 150" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <g>
+    <rect x="10" y="35" width="150" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+    <text x="85" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="#EDEAE0">1 · Add photo</text>
+    <text x="85" y="79" text-anchor="middle" font-size="11" fill="#A5A195">+ optional note</text>
+
+    <rect x="185" y="35" width="150" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+    <text x="260" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="#EDEAE0">2 · Analyze</text>
+    <text x="260" y="79" text-anchor="middle" font-size="11" fill="#A5A195">~3–8 s spinner</text>
+
+    <rect x="360" y="35" width="150" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+    <text x="435" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="#EDEAE0">3 · Review</text>
+    <text x="435" y="79" text-anchor="middle" font-size="11" fill="#A5A195">foods, grams, macros</text>
+
+    <rect x="535" y="10" width="150" height="50" rx="10" fill="#22312A" stroke="#7FBF92" stroke-width="1.5"/>
+    <text x="610" y="31" text-anchor="middle" font-size="12.5" font-weight="700" fill="#7FBF92">4a · Edit grams</text>
+    <text x="610" y="48" text-anchor="middle" font-size="11" fill="#7FBF92">instant, local math</text>
+
+    <rect x="535" y="80" width="150" height="50" rx="10" fill="#3A2A20" stroke="#E08A5C" stroke-width="1.5"/>
+    <text x="610" y="101" text-anchor="middle" font-size="12.5" font-weight="700" fill="#E08A5C">4b · Correct</text>
+    <text x="610" y="118" text-anchor="middle" font-size="11" fill="#E08A5C">"that's rye, not white"</text>
+
+    <rect x="710" y="35" width="140" height="60" rx="10" fill="#EDEAE0"/>
+    <text x="780" y="61" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1B1A16">5 · Totals</text>
+    <text x="780" y="80" text-anchor="middle" font-size="11" fill="#55524A">kcal · P · C · F</text>
+
+    <line x1="160" y1="65" x2="185" y2="65" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <line x1="335" y1="65" x2="360" y2="65" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <line x1="510" y1="55" x2="535" y2="40" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <line x1="510" y1="75" x2="535" y2="98" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <line x1="685" y1="35" x2="712" y2="55" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+    <!-- correction loops back to analyze -->
+    <path d="M 610 130 L 610 143 L 260 143 L 260 98" fill="none" stroke="#E08A5C" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arr2)"/>
+  </g>
+</svg>
+<figcaption>Corrections (4b) loop back through the model with the original photo, the prior answer, and the user's note.</figcaption>
+</figure>
+
+<h3>The two correction paths, precisely</h3>
+<table>
+  <tr><th>Path</th><th>What happens</th><th>Cost / latency</th></tr>
+  <tr>
+    <td>Edit grams</td>
+    <td>User changes a food's grams in the table. Macros for that row scale proportionally (<code>new = old × newGrams / oldGrams</code>), totals recompute. Pure client-side.</td>
+    <td>Free, instant</td>
+  </tr>
+  <tr>
+    <td>Correct &amp; re-ask</td>
+    <td>User types a correction ("that's rye bread", "there's also butter you missed"). We re-call the model with the same image, the previous JSON answer, and the correction. Model returns a full replacement result.</td>
+    <td>~$0.003, a few seconds</td>
+  </tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>API contract</h2>
+<p class="lede">One route handles both first analysis and corrections — a correction is just an analysis with extra context.</p>
+
+<h3>Request — <code>POST /api/analyze</code> (multipart form)</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+  <tr><td><code>image</code></td><td>File (JPEG/PNG/WebP/HEIC)</td><td>Resized client-side to ≈1024&nbsp;px long edge, re-encoded as JPEG</td></tr>
+  <tr><td><code>description</code></td><td>string, optional</td><td>User's note, e.g. "rye bread, whole milk, olive oil on the salad"</td></tr>
+  <tr><td><code>previousResult</code></td><td>JSON string, optional</td><td>The prior analysis — present only on correction calls</td></tr>
+  <tr><td><code>correction</code></td><td>string, optional</td><td>The user's correction text — present only on correction calls</td></tr>
+</table>
+
+<h3>Response — enforced by a JSON schema (structured outputs)</h3>
+<pre><code class="language-json">{
+  "foods": [
+    {
+      "name": "Rye bread",
+      "grams": 80,
+      "calories": 207,
+      "protein_g": 6.8,
+      "carbs_g": 38.6,
+      "fat_g": 2.6,
+      "confidence": "high",
+      "assumptions": "Two slices, standard density rye"
+    },
+    {
+      "name": "Butter",
+      "grams": 10,
+      "calories": 72,
+      "protein_g": 0.1,
+      "carbs_g": 0.0,
+      "fat_g": 8.1,
+      "confidence": "medium",
+      "assumptions": "Thin spread visible on both slices"
+    }
+  ],
+  "totals": { "calories": 279, "protein_g": 6.9, "carbs_g": 38.6, "fat_g": 10.7 },
+  "notes": "Portion sizes estimated from plate diameter (~26 cm assumed)."
+}</code></pre>
+
+<p>The <code>confidence</code> and <code>assumptions</code> fields exist so the UI can show <em>why</em> a number is what it is — that makes wrong guesses easy to spot and correct.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>Model call</h2>
+<p class="lede">Sketch of the server-side call. Exact SDK method names to be verified against current OpenAI docs during implementation — the shape is what matters here.</p>
+
+<pre><code class="language-typescript">// src/app/api/analyze/route.ts
+import OpenAI from "openai";
+
+const client = new OpenAI(); // reads OPENAI_API_KEY from env
+const MODEL = process.env.VISION_MODEL ?? "gpt-5.6-luna"; // swappable
+
+const SYSTEM_PROMPT = `You are a nutrition estimation assistant.
+Given one photo of food and an optional user description, identify each
+distinct food item and estimate: portion weight in grams, calories, and
+grams of protein, carbs, and fat.
+
+Rules:
+- Use visual cues (plate size, utensils, packaging) to judge portions.
+- The user's description overrides what you infer from the image
+  (e.g. if they say "whole milk", do not assume skim).
+- If a correction to a previous answer is provided, produce a fully
+  corrected new answer — apply the correction and keep everything
+  else that was right.
+- State your key assumptions per item; mark confidence low when the
+  photo is ambiguous (sauces, oils, hidden ingredients).`;
+
+export async function POST(req: Request) {
+  const form = await req.formData();
+  const image = form.get("image") as File;
+  const b64 = Buffer.from(await image.arrayBuffer()).toString("base64");
+
+  const userParts: object[] = [
+    { type: "input_image", image_url: `data:image/jpeg;base64,${b64}` },
+  ];
+  const description = form.get("description");
+  if (description) userParts.push({ type: "input_text",
+    text: `User description: ${description}` });
+
+  const previous = form.get("previousResult");
+  const correction = form.get("correction");
+  if (previous &amp;&amp; correction) {
+    userParts.push({ type: "input_text",
+      text: `Previous analysis: ${previous}\nUser correction: ${correction}` });
+  }
+
+  const response = await client.responses.create({
+    model: MODEL,
+    input: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: userParts },
+    ],
+    text: { format: { type: "json_schema", name: "meal_analysis",
+      schema: MEAL_ANALYSIS_SCHEMA, strict: true } },
+  });
+
+  return Response.json(JSON.parse(response.output_text));
+}</code></pre>
+
+<div class="callout"><strong>Why structured outputs?</strong> Luna supports schema-enforced JSON, so the response is guaranteed parseable — no regex extraction, no retry-on-bad-JSON logic in the first pass.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>Cost</h2>
+<table>
+  <tr><th>Item</th><th>Tokens (est.)</th><th>Cost</th></tr>
+  <tr><td>Resized photo (input)</td><td>~1,000–1,600</td><td rowspan="3"><strong>≈ $0.002–0.003 per analysis</strong><br><span style="color:var(--ink-soft)">at Luna's $0.20 / $1.20 per 1M tokens</span></td></tr>
+  <tr><td>Prompt + description (input)</td><td>~600</td></tr>
+  <tr><td>JSON result + reasoning (output)</td><td>~1,000–2,000</td></tr>
+</table>
+<p>Worst case with corrections: call it <strong>$0.01 per meal</strong>. At 5 meals a day that's ~$1.50/month. Cost is a non-issue at this tier; if Luna's portion estimates prove too rough, upgrading the env var to <code>gpt-5.6-terra</code> (~$0.02/analysis) is the first lever to pull.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>Project structure</h2>
+<pre><code class="language-text">calorie-calculator/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx          # single page: upload → results
+│   │   ├── layout.tsx
+│   │   └── api/
+│   │       └── analyze/
+│   │           └── route.ts  # the one API route (analysis + corrections)
+│   ├── components/
+│   │   ├── PhotoInput.tsx    # file picker + camera capture + client resize
+│   │   ├── ResultsTable.tsx  # per-food rows, editable grams, totals footer
+│   │   └── CorrectionBar.tsx # text input + "Re-analyze" button
+│   └── lib/
+│       ├── schema.ts         # MEAL_ANALYSIS_SCHEMA + TypeScript types
+│       └── resize.ts         # canvas downscale to ~1024px JPEG @ 0.85 quality
+├── .env.local                # OPENAI_API_KEY, VISION_MODEL
+└── package.json</code></pre>
+
+<!-- ============================================================ -->
+<h2><span class="num">08</span>Build order</h2>
+<ol class="steps">
+  <li>
+    <strong>Setup (~15 min)</strong>
+    <span class="step-note">Scaffold Next.js + TypeScript with the <code>src/</code> directory option (<code>create-next-app</code> asks), install the OpenAI SDK. Create an API key at <a href="https://platform.openai.com">platform.openai.com</a>, add a few dollars of credit, put the key in <code>.env.local</code>.</span>
+  </li>
+  <li>
+    <strong>API route first</strong>
+    <span class="step-note">Build <code>/api/analyze</code> and test it with <code>curl</code> and a few real food photos before touching UI. This is where all the risk lives — tune the prompt until the numbers look sane.</span>
+  </li>
+  <li>
+    <strong>Upload UI</strong>
+    <span class="step-note">Photo picker with camera capture on mobile (<code>&lt;input type="file" accept="image/*" capture="environment"&gt;</code>), client-side resize, description field, loading state.</span>
+  </li>
+  <li>
+    <strong>Results table</strong>
+    <span class="step-note">Per-food rows with kcal/protein/carbs/fat, confidence badge, assumptions on tap, totals row. Editable grams with proportional recompute.</span>
+  </li>
+  <li>
+    <strong>Correction loop</strong>
+    <span class="step-note">Correction text bar → re-call the route with <code>previousResult</code> + <code>correction</code> → replace the table. Done.</span>
+  </li>
+</ol>
+<p>Realistic total: <strong>an afternoon to a day</strong> of build time; the variable is prompt tuning in step 2.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">09</span>Known limitations &amp; open questions</h2>
+<div class="card">
+  <p><strong>Accuracy is inherently rough.</strong> Photo-based portion estimation is typically ±20–30% even for strong vision models — hidden oils, sauces, and cooking methods are invisible. The description field and correction loop are the mitigations; the <code>assumptions</code> field makes errors visible.</p>
+  <p><strong>Numbers are model estimates, not database values.</strong> If first-pass quality feels off, the v2 upgrade path is: model identifies foods + grams, macros come from USDA FoodData Central per 100&nbsp;g. Deliberately out of scope now.</p>
+  <p><strong>HEIC photos from iPhone.</strong> Client-side canvas re-encoding to JPEG should handle this in Safari; needs a quick test on a real device early in step 3.</p>
+  <p><strong>For later (explicitly deferred):</strong> meal log with daily totals, deployment for phone use anywhere, multiple photos per meal, barcode/label reading for packaged foods.</p>
+</div>
+
+<footer class="doc">
+  Calorie Calculator · first-pass plan · generated Aug 11, 2026 ·
+  model pricing sourced from OpenAI's GPT‑5.6 announcement (Jul 2026, post-price-cut rates)
+</footer>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+</body>
+</html>
