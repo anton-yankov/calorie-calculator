@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AnalysisCard, CompactAnalysis } from "@/components/AnalysisCard";
 import { CorrectionBar } from "@/components/CorrectionBar";
 import { SkeletonEstimate, Spinner } from "@/components/loaders";
 import { PhotoInput } from "@/components/PhotoInput";
-import { resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
+import { saveMeal } from "@/lib/log";
+import { makeThumbnail, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
 import type { MealAnalysis } from "@/lib/schema";
 
 interface HistoryEntry {
@@ -38,6 +40,8 @@ export default function Home() {
   const [pendingCorrection, setPendingCorrection] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // History length at the moment of logging — logging re-enables after a correction
+  const [loggedAtLength, setLoggedAtLength] = useState<number | null>(null);
   // The resized JPEG is cached so corrections re-send the same bytes
   const resizedRef = useRef<Blob | null>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
@@ -82,7 +86,25 @@ export default function Home() {
     setPreviewUrl(null); // the effect cleanup revokes the old object URL
     setHistory([]);
     setError(null);
+    setLoggedAtLength(null);
     resizedRef.current = null;
+  }
+
+  async function handleLog() {
+    if (!latest) return;
+    try {
+      const thumbnail = resizedRef.current ? await makeThumbnail(resizedRef.current) : null;
+      saveMeal({
+        id: crypto.randomUUID(),
+        loggedAt: new Date().toISOString(),
+        description: description.trim(),
+        analysis: latest.analysis,
+        thumbnail,
+      });
+      setLoggedAtLength(history.length);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't save the meal");
+    }
   }
 
   async function analyze(correction?: string) {
@@ -95,6 +117,7 @@ export default function Home() {
       // First analysis or "Start over": the result replaces the whole thread,
       // so clear it now — the skeleton takes its place, not a stale thread
       setHistory([]);
+      setLoggedAtLength(null);
     }
     try {
       if (!resizedRef.current) {
@@ -234,6 +257,24 @@ export default function Home() {
 
       {latest && !pendingCorrection && (
         <>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={loading || loggedAtLength === history.length}
+              onClick={() => void handleLog()}
+              className="flex-1 rounded-xl border-2 border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-600/10 disabled:border-neutral-300 disabled:text-neutral-400 dark:text-emerald-400 dark:disabled:border-neutral-700 dark:disabled:text-neutral-500"
+            >
+              {loggedAtLength === history.length ? "Logged ✓" : "Log meal"}
+            </button>
+            {loggedAtLength === history.length && (
+              <Link
+                href="/log"
+                className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                View log
+              </Link>
+            )}
+          </div>
           <CorrectionBar
             disabled={loading}
             loading={loading}

@@ -26,6 +26,35 @@ function GhostBar({ className }: { className: string }) {
   );
 }
 
+/** Ghost version of the meal-log list: one day header + a few entry rows. */
+export function SkeletonLog() {
+  return (
+    <div role="status" aria-label="Meal log loading" className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between px-1" aria-hidden>
+        <GhostBar className="h-3.5 w-16" />
+        <GhostBar className="h-3.5 w-36" />
+      </div>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          aria-hidden
+          className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-3 py-2.5 dark:border-neutral-800 dark:bg-neutral-900"
+        >
+          <GhostBar className="h-12 w-12 rounded-lg" />
+          <div className="min-w-0 flex-1">
+            <GhostBar className={`h-4 ${i === 1 ? "w-40" : "w-28"}`} />
+            <GhostBar className="mt-1.5 h-3 w-12" />
+          </div>
+          <div className="flex flex-col items-end">
+            <GhostBar className="h-4 w-16" />
+            <GhostBar className="mt-1.5 h-3 w-24" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Ghost version of AnalysisCard, shown wherever an estimate is about to land —
  * first analysis and correction re-analysis alike. Same footprint as the real

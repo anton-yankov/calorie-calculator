@@ -46,6 +46,24 @@ export async function toDisplayableBlob(file: File): Promise<Blob> {
   return heicTo({ blob: file, type: "image/jpeg", quality: 0.92 });
 }
 
+/** Tiny JPEG data URL (~160px long edge) for meal-log entries. */
+export async function makeThumbnail(source: Blob, longEdge = 160): Promise<string> {
+  const url = URL.createObjectURL(source);
+  try {
+    const img = await loadImage(url);
+    const scale = Math.min(1, longEdge / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas 2D context unavailable");
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.7);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /**
  * Downscale a photo to MAX_LONG_EDGE px on its long side and re-encode as JPEG.
  * Browsers apply EXIF orientation during decode, and re-encoding strips
