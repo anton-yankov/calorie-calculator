@@ -28,6 +28,7 @@ export default function Home() {
     history,
     pendingCorrection,
     loading,
+    logging,
     error,
     loggedAtLength,
     latest,
@@ -130,11 +131,12 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={loading || loggedAtLength === history.length}
+              disabled={loading || logging || loggedAtLength === history.length}
               onClick={() => void handleLog()}
-              className="flex-1 rounded-panel border border-success px-4 py-2.5 text-sm font-semibold text-success transition-colors hover:bg-success-soft disabled:border-line disabled:text-muted"
+              className="flex flex-1 items-center justify-center gap-2 rounded-panel border border-success px-4 py-2.5 text-sm font-semibold text-success transition-colors hover:bg-success-soft disabled:border-line disabled:text-muted"
             >
-              {loggedAtLength === history.length ? "Logged ✓" : "Log meal"}
+              {logging && <Spinner className="h-3.5 w-3.5" />}
+              {logging ? "Logging…" : loggedAtLength === history.length ? "Logged ✓" : "Log meal"}
             </button>
             {loggedAtLength === history.length && (
               <Link

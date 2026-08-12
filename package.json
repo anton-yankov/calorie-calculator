@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "heic-to": "^1.5.2",
     "next": "16.3.0",
     "openai": "^7.4.0",

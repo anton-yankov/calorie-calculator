@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useRef, useState } from "react";
-import { saveMeal } from "@/lib/log";
+import { logMealAction } from "@/app/actions";
 import { makeThumbnail, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
 import type { MealAnalysis } from "@/lib/schema";
 
@@ -26,6 +26,7 @@ interface AnalysisState {
   history: HistoryEntry[];
   pendingCorrection: string | null;
   loading: boolean;
+  logging: boolean;
   error: string | null;
   loggedAtLength: number | null;
   latest: HistoryEntry | undefined;
@@ -53,6 +54,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [pendingCorrection, setPendingCorrection] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [logging, setLogging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // History length at the moment of logging — logging re-enables after a correction
   const [loggedAtLength, setLoggedAtLength] = useState<number | null>(null);
@@ -101,19 +103,24 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function handleLog() {
-    if (!latest) return;
+    if (!latest || logging) return;
+    setLogging(true);
+    setError(null);
     try {
       const thumbnail = resizedRef.current ? await makeThumbnail(resizedRef.current) : null;
-      saveMeal({
+      const result = await logMealAction({
         id: crypto.randomUUID(),
         loggedAt: new Date().toISOString(),
         description: description.trim(),
         analysis: latest.analysis,
         thumbnail,
       });
+      if (result.error) throw new Error(result.error);
       setLoggedAtLength(history.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save the meal");
+    } finally {
+      setLogging(false);
     }
   }
 
@@ -202,6 +209,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         history,
         pendingCorrection,
         loading,
+        logging,
         error,
         loggedAtLength,
         latest,
