@@ -16,7 +16,7 @@ export default async function LogPage() {
   }
 
   return (
-    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-5 py-8 sm:px-6 sm:py-11">
+    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-5 py-8 sm:px-6 sm:py-11 lg:max-w-3xl">
       <header className="border-b-2 border-foreground pb-6">
         <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
           Daily record

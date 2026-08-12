@@ -53,10 +53,14 @@ export function PhotoInput({
           <img
             src={previewUrl}
             alt="Selected meal — tap to view full size"
-            className={`w-full object-cover transition-all duration-500 group-hover:scale-[1.01] ${compact ? "max-h-28" : "max-h-80"}`}
+            className={`w-full object-cover transition-all duration-500 group-hover:scale-[1.01] ${compact ? "max-h-28 lg:max-h-72" : "max-h-80"}`}
           />
         ) : (
-          <div className="flex flex-col items-center gap-2 px-5 py-14 text-muted">
+          // While preparing, the empty state keeps its size (no frame jump) but
+          // hides so its text doesn't show through the translucent overlay
+          <div
+            className={`flex flex-col items-center gap-2 px-5 py-14 text-muted ${preparing ? "invisible" : ""}`}
+          >
             <span
               className="mb-1 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-background font-mono text-xl text-accent transition-transform group-hover:-translate-y-0.5"
               aria-hidden

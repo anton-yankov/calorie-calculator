@@ -16,7 +16,7 @@ export function TopNav() {
 
   return (
     <nav className="sticky top-0 z-30 border-b border-line/80 bg-background/90 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-5 px-5 py-3 sm:px-6">
+      <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-5 px-5 py-3 sm:px-6 lg:max-w-5xl">
         <Link href="/" className="font-serif text-lg font-semibold tracking-tight text-foreground">
           <span className="sm:hidden">Calories</span>
           <span className="hidden sm:inline">Calorie Calculator</span>
