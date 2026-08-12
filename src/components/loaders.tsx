@@ -21,9 +21,7 @@ export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
 }
 
 function GhostBar({ className }: { className: string }) {
-  return (
-    <div className={`ghost-shimmer rounded bg-neutral-200 dark:bg-neutral-800 ${className}`} />
-  );
+  return <div className={`ghost-shimmer rounded bg-line ${className}`} />;
 }
 
 /** Ghost version of the meal-log list: one day header + a few entry rows. */
@@ -38,7 +36,7 @@ export function SkeletonLog() {
         <div
           key={i}
           aria-hidden
-          className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-3 py-2.5 dark:border-neutral-800 dark:bg-neutral-900"
+          className="flex items-center gap-3 rounded-panel border border-line bg-surface px-4 py-3"
         >
           <GhostBar className="h-12 w-12 rounded-lg" />
           <div className="min-w-0 flex-1">
@@ -65,16 +63,16 @@ export function SkeletonEstimate({ label }: { label: string }) {
     <section
       role="status"
       aria-label={`${label} loading`}
-      className="overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+      className="overflow-hidden rounded-panel border border-line bg-surface"
     >
-      <header className="flex items-center gap-2 border-b border-neutral-200 px-3 py-2 dark:border-neutral-800">
-        <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+      <header className="flex items-center gap-2 border-b border-line bg-surface-raised px-4 py-2.5">
+        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
           {label}
         </span>
       </header>
-      <ul className="divide-y divide-neutral-100 dark:divide-neutral-800/60" aria-hidden>
+      <ul className="divide-y divide-line" aria-hidden>
         {[0, 1, 2].map((i) => (
-          <li key={i} className="px-3 py-2.5">
+          <li key={i} className="px-4 py-3">
             <div className="flex items-center justify-between gap-2">
               <GhostBar className={`h-4 ${i === 1 ? "w-44" : "w-32"}`} />
               <GhostBar className="h-7 w-14 rounded-md" />
@@ -88,7 +86,7 @@ export function SkeletonEstimate({ label }: { label: string }) {
         ))}
       </ul>
       <footer
-        className="flex items-center justify-between gap-2 border-t-2 border-neutral-300 px-3 py-3 dark:border-neutral-700"
+        className="flex items-center justify-between gap-2 border-t-2 border-foreground px-4 py-3"
         aria-hidden
       >
         <GhostBar className="h-5 w-24" />

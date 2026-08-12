@@ -24,7 +24,7 @@ interface HistoryEntry {
 
 function CorrectionBubble({ text }: { text: string }) {
   return (
-    <div className="self-end max-w-[85%] rounded-2xl rounded-br-sm border border-emerald-600/30 bg-emerald-600/10 px-3 py-2 text-sm">
+    <div className="self-end max-w-[85%] rounded-panel rounded-br-sm border border-success/40 bg-success-soft px-4 py-2.5 text-sm text-foreground">
       {text}
     </div>
   );
@@ -182,10 +182,15 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-3 px-4 py-6">
-      <header>
-        <h1 className="text-2xl font-bold">Calorie Calculator</h1>
-        <p className="text-sm text-neutral-500">
+    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 px-5 py-8 sm:px-6 sm:py-11">
+      <header className="mb-2 border-b-2 border-foreground pb-6">
+        <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
+          Meal analysis
+        </p>
+        <h1 className="font-serif text-[clamp(2rem,8vw,2.9rem)] font-semibold leading-[1.08] tracking-tight">
+          What’s on your plate?
+        </h1>
+        <p className="mt-2 max-w-xl text-[15px] text-muted sm:text-base">
           Photo in, macros out. Estimates — correct them below.
         </p>
       </header>
@@ -204,14 +209,14 @@ export default function Home() {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Optional details — e.g. rye bread, whole milk, olive oil"
-        className="rounded-xl border border-neutral-300 bg-white px-3 py-2.5 text-sm focus:border-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-900"
+        className="rounded-panel border border-line bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none"
       />
 
       <button
         type="button"
         disabled={!sourceBlob || loading || preparing}
         onClick={() => analyze()}
-        className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-40"
+        className="flex items-center justify-center gap-2 rounded-panel bg-accent px-4 py-3 font-semibold text-background transition duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {/* During photo prep the frame overlay is the loader — the button stays plain */}
         {loading && <Spinner />}
@@ -219,7 +224,7 @@ export default function Home() {
       </button>
 
       {error && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+        <p className="rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           {error}
         </p>
       )}
@@ -262,14 +267,14 @@ export default function Home() {
               type="button"
               disabled={loading || loggedAtLength === history.length}
               onClick={() => void handleLog()}
-              className="flex-1 rounded-xl border-2 border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-600/10 disabled:border-neutral-300 disabled:text-neutral-400 dark:text-emerald-400 dark:disabled:border-neutral-700 dark:disabled:text-neutral-500"
+              className="flex-1 rounded-panel border border-success px-4 py-2.5 text-sm font-semibold text-success transition-colors hover:bg-success-soft disabled:border-line disabled:text-muted"
             >
               {loggedAtLength === history.length ? "Logged ✓" : "Log meal"}
             </button>
             {loggedAtLength === history.length && (
               <Link
                 href="/log"
-                className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                className="shrink-0 rounded-panel bg-success px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
               >
                 View log
               </Link>
@@ -280,7 +285,7 @@ export default function Home() {
             loading={loading}
             onSubmit={(correction) => analyze(correction)}
           />
-          <p className="text-center text-xs text-neutral-400">
+          <p className="text-center text-xs text-muted">
             Edit grams for instant recalculation, or describe what’s wrong to re-analyze.
           </p>
         </>

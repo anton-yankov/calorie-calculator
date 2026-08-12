@@ -47,21 +47,24 @@ export function PhotoInput({
         disabled={preparing || (!previewUrl && disabled)}
         title={previewUrl ? "View photo" : undefined}
         onClick={() => (previewUrl ? dialogRef.current?.showModal() : inputRef.current?.click())}
-        className="w-full overflow-hidden rounded-2xl border-2 border-dashed border-neutral-300 bg-white transition hover:border-neutral-400 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:border-neutral-500"
+        className="group w-full overflow-hidden rounded-panel border-2 border-dashed border-line bg-surface transition duration-200 hover:border-accent hover:bg-surface-raised disabled:opacity-50"
       >
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- local object URL, next/image not applicable
           <img
             src={previewUrl}
             alt="Selected meal — tap to view full size"
-            className={`w-full object-cover transition-all ${compact ? "max-h-28" : "max-h-80"}`}
+            className={`w-full object-cover transition-all duration-500 group-hover:scale-[1.01] ${compact ? "max-h-28" : "max-h-80"}`}
           />
         ) : (
-          <div className="flex flex-col items-center gap-2 py-14 text-neutral-500">
-            <span className="text-4xl" aria-hidden>
-              📷
+          <div className="flex flex-col items-center gap-2 px-5 py-14 text-muted">
+            <span
+              className="mb-1 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-background font-mono text-xl text-accent transition-transform group-hover:-translate-y-0.5"
+              aria-hidden
+            >
+              +
             </span>
-            <span className="font-medium">Take or choose a photo</span>
+            <span className="font-semibold text-foreground">Take or choose a photo</span>
             <span className="text-sm">One photo of the whole meal works best</span>
           </div>
         )}
@@ -73,7 +76,7 @@ export function PhotoInput({
             type="button"
             disabled={disabled}
             onClick={() => inputRef.current?.click()}
-            className="flex h-8 items-center rounded-full bg-black/60 px-3 text-xs font-semibold text-white backdrop-blur transition hover:bg-black/80 disabled:opacity-40"
+            className="flex h-8 items-center rounded-full border border-line bg-background/85 px-3 text-xs font-semibold text-foreground backdrop-blur transition hover:border-accent disabled:opacity-40"
           >
             Change
           </button>
@@ -83,7 +86,7 @@ export function PhotoInput({
             aria-label="Remove photo"
             title="Remove photo"
             onClick={onClear}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-sm font-semibold text-white backdrop-blur transition hover:bg-black/80 disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-background/85 text-sm font-semibold text-foreground backdrop-blur transition hover:border-accent disabled:opacity-40"
           >
             ✕
           </button>
@@ -94,9 +97,9 @@ export function PhotoInput({
         <div
           role="status"
           aria-label="Preparing photo"
-          className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-sm dark:bg-neutral-950/70"
+          className="absolute inset-0 flex items-center justify-center rounded-panel bg-background/75 backdrop-blur-sm"
         >
-          <span className="flex items-center gap-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">
+          <span className="flex items-center gap-2 text-sm font-medium text-foreground">
             <Spinner />
             Preparing photo…
           </span>
@@ -109,7 +112,7 @@ export function PhotoInput({
         ref={dialogRef}
         aria-label="Photo preview"
         onClick={(e) => e.currentTarget.close()}
-        className="m-auto h-dvh w-screen max-h-none max-w-none bg-transparent p-0 backdrop:bg-black/90"
+        className="m-auto h-dvh w-screen max-h-none max-w-none bg-transparent p-0 backdrop:bg-background/95"
       >
         {previewUrl && (
           <div className="flex h-full w-full items-center justify-center p-3">
@@ -117,12 +120,12 @@ export function PhotoInput({
             <img
               src={previewUrl}
               alt="Selected meal, full size"
-              className="max-h-full max-w-full rounded-lg object-contain"
+              className="max-h-full max-w-full rounded-panel object-contain"
             />
             <button
               type="button"
               aria-label="Close preview"
-              className="fixed right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-lg font-semibold text-white backdrop-blur transition hover:bg-white/25"
+              className="fixed right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface/85 text-lg font-semibold text-foreground backdrop-blur transition hover:border-accent"
             >
               ✕
             </button>
