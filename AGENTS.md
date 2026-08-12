@@ -11,3 +11,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Working agreements
 
 - When I ask for a plan or to "plan out" something, that means planning only — do NOT make any code changes yet. Deliver the plan (as a document in `.plans/` only if I explicitly ask for one there, otherwise just present it) and wait for me to ask before implementing.
+- Plan documents in `.plans/` must follow the design system in [.plans/style-guide.html](.plans/style-guide.html) (palette, typography, numbered sections, diagram rules).
