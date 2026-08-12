@@ -85,6 +85,14 @@ label[for] {
   outline-offset: 3px;
 }
 
+/* Text fields signal focus with their accent border (focus:border-accent) —
+   this unlayered outline would otherwise beat their focus:outline-none
+   utility and draw a second ring around them */
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
 /* Skeleton shimmer: a directional highlight sweeping across ghost bars.
    The card frame stays completely still — only the bars carry motion. */
 @keyframes shimmer {

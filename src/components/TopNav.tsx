@@ -10,6 +10,9 @@ const tabs = [
 
 export function TopNav() {
   const pathname = usePathname();
+  // The locked screen keeps the wordmark but drops the tabs — every
+  // destination would just bounce back to /login anyway
+  const locked = pathname === "/login";
 
   return (
     <nav className="sticky top-0 z-30 border-b border-line/80 bg-background/90 backdrop-blur-xl">
@@ -18,7 +21,7 @@ export function TopNav() {
           <span className="sm:hidden">Calories</span>
           <span className="hidden sm:inline">Calorie Calculator</span>
         </Link>
-        <div className="flex rounded-full border border-line bg-surface p-1">
+        <div className={`flex rounded-full border border-line bg-surface p-1 ${locked ? "invisible" : ""}`}>
           {tabs.map((tab) => {
             const active = pathname === tab.href;
             return (
