@@ -27,6 +27,9 @@ export default function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except Next's static assets and the icon
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg).*)"],
+  // Everything except Next's static assets and the icons/manifest — phones
+  // fetch those without credentials when adding to the home screen
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|apple-icon.png|icon-192.png|icon-512.png|icon-maskable-512.png).*)",
+  ],
 };
