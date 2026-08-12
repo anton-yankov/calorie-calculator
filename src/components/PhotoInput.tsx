@@ -112,7 +112,7 @@ export function PhotoInput({
         ref={dialogRef}
         aria-label="Photo preview"
         onClick={(e) => e.currentTarget.close()}
-        className="m-auto h-dvh w-screen max-h-none max-w-none bg-transparent p-0 backdrop:bg-background/95"
+        className="m-auto h-dvh w-screen max-h-none max-w-none cursor-pointer bg-transparent p-0 backdrop:bg-background/95"
       >
         {previewUrl && (
           <div className="flex h-full w-full items-center justify-center p-3">

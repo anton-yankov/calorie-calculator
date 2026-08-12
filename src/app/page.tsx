@@ -1,26 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AnalysisCard, CompactAnalysis } from "@/components/AnalysisCard";
+import { useAnalysis } from "@/components/AnalysisProvider";
 import { CorrectionBar } from "@/components/CorrectionBar";
 import { SkeletonEstimate, Spinner } from "@/components/loaders";
 import { PhotoInput } from "@/components/PhotoInput";
-import { saveMeal } from "@/lib/log";
-import { makeThumbnail, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
-import type { MealAnalysis } from "@/lib/schema";
-
-interface HistoryEntry {
-  /** The correction that produced this estimate; null for the first estimate of a photo */
-  correction: string | null;
-  analysis: MealAnalysis;
-  /**
-   * The model's estimate as returned, before any gram edits. Gram edits recompute
-   * macros from this baseline so setting grams to 0 doesn't destroy the per-gram
-   * ratios (0 × anything stays 0 when scaling the current values).
-   */
-  baseline: MealAnalysis;
-}
 
 function CorrectionBubble({ text }: { text: string }) {
   return (
@@ -31,155 +17,34 @@ function CorrectionBubble({ text }: { text: string }) {
 }
 
 export default function Home() {
-  // The selected photo, converted to a browser-displayable format if needed (HEIC → JPEG)
-  const [sourceBlob, setSourceBlob] = useState<Blob | null>(null);
-  const [preparing, setPreparing] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [description, setDescription] = useState("");
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [pendingCorrection, setPendingCorrection] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // History length at the moment of logging — logging re-enables after a correction
-  const [loggedAtLength, setLoggedAtLength] = useState<number | null>(null);
-  // The resized JPEG is cached so corrections re-send the same bytes
-  const resizedRef = useRef<Blob | null>(null);
+  // All analysis state lives in AnalysisProvider (mounted in the layout) so it
+  // survives navigating away from this page mid-analysis
+  const {
+    sourceBlob,
+    preparing,
+    previewUrl,
+    description,
+    setDescription,
+    history,
+    pendingCorrection,
+    loading,
+    error,
+    loggedAtLength,
+    latest,
+    handleSelect,
+    handleClear,
+    handleLog,
+    analyze,
+    handleGramsChange,
+  } = useAnalysis();
+
   const threadEndRef = useRef<HTMLDivElement>(null);
-
-  const latest = history.length > 0 ? history[history.length - 1] : undefined;
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
 
   useEffect(() => {
     if (history.length > 1 || pendingCorrection) {
       threadEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [history.length, pendingCorrection]);
-
-  async function handleSelect(selected: File) {
-    setHistory([]);
-    setError(null);
-    resizedRef.current = null;
-    setPreparing(true);
-    try {
-      const displayable = await toDisplayableBlob(selected);
-      setSourceBlob(displayable);
-      setPreviewUrl(URL.createObjectURL(displayable));
-    } catch (err) {
-      console.error("photo preparation failed:", err);
-      const detail =
-        err instanceof Error ? err.message : typeof err === "string" ? err : JSON.stringify(err);
-      setSourceBlob(null);
-      setPreviewUrl(null);
-      setError(`Couldn't read that image (${detail}). Try a JPEG/PNG, or take the photo directly.`);
-    } finally {
-      setPreparing(false);
-    }
-  }
-
-  function handleClear() {
-    setSourceBlob(null);
-    setPreviewUrl(null); // the effect cleanup revokes the old object URL
-    setHistory([]);
-    setError(null);
-    setLoggedAtLength(null);
-    resizedRef.current = null;
-  }
-
-  async function handleLog() {
-    if (!latest) return;
-    try {
-      const thumbnail = resizedRef.current ? await makeThumbnail(resizedRef.current) : null;
-      saveMeal({
-        id: crypto.randomUUID(),
-        loggedAt: new Date().toISOString(),
-        description: description.trim(),
-        analysis: latest.analysis,
-        thumbnail,
-      });
-      setLoggedAtLength(history.length);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't save the meal");
-    }
-  }
-
-  async function analyze(correction?: string) {
-    if (!sourceBlob) return;
-    setLoading(true);
-    setError(null);
-    if (correction) {
-      setPendingCorrection(correction);
-    } else {
-      // First analysis or "Start over": the result replaces the whole thread,
-      // so clear it now — the skeleton takes its place, not a stale thread
-      setHistory([]);
-      setLoggedAtLength(null);
-    }
-    try {
-      if (!resizedRef.current) {
-        resizedRef.current = await resizeToJpeg(sourceBlob);
-      }
-      const form = new FormData();
-      form.append("image", resizedRef.current, "meal.jpg");
-      if (description.trim()) form.append("description", description.trim());
-      if (correction && latest) {
-        form.append("previousResult", JSON.stringify(latest.analysis));
-        form.append("correction", correction);
-      }
-
-      const res = await fetch("/api/analyze", { method: "POST", body: form });
-      const body = (await res.json()) as MealAnalysis | { error: string };
-      if (!res.ok || "error" in body) {
-        throw new Error("error" in body ? body.error : `Request failed (${res.status})`);
-      }
-      setHistory((prev) =>
-        correction
-          ? [...prev, { correction, analysis: body, baseline: body }]
-          : [{ correction: null, analysis: body, baseline: body }],
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
-      setPendingCorrection(null);
-    }
-  }
-
-  function handleGramsChange(foodIndex: number, grams: number) {
-    setHistory((prev) => {
-      const last = prev[prev.length - 1];
-      if (!last) return prev;
-      const foods = last.analysis.foods.map((food, i) => {
-        if (i !== foodIndex) return food;
-        // Recompute from the untouched baseline, not the current (possibly zeroed) values
-        const base = last.baseline.foods[i];
-        if (!base || base.grams <= 0) return { ...food, grams };
-        const ratio = grams / base.grams;
-        return {
-          ...food,
-          grams,
-          calories: base.calories * ratio,
-          protein_g: base.protein_g * ratio,
-          carbs_g: base.carbs_g * ratio,
-          fat_g: base.fat_g * ratio,
-        };
-      });
-      const totals = foods.reduce(
-        (acc, f) => ({
-          calories: acc.calories + f.calories,
-          protein_g: acc.protein_g + f.protein_g,
-          carbs_g: acc.carbs_g + f.carbs_g,
-          fat_g: acc.fat_g + f.fat_g,
-        }),
-        { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
-      );
-      return [...prev.slice(0, -1), { ...last, analysis: { ...last.analysis, foods, totals } }];
-    });
-  }
 
   return (
     <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 px-5 py-8 sm:px-6 sm:py-11">

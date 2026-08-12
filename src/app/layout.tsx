@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { AnalysisProvider } from "@/components/AnalysisProvider";
 import { TopNav } from "@/components/TopNav";
 import "./globals.css";
 
@@ -31,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <TopNav />
-        {children}
+        <AnalysisProvider>{children}</AnalysisProvider>
       </body>
     </html>
   );

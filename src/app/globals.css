@@ -66,6 +66,15 @@ summary {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Tailwind v4 preflight leaves buttons on cursor: default — restore the
+   pointer for everything clickable (disabled buttons keep the default) */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+summary,
+label[for] {
+  cursor: pointer;
+}
+
 ::selection {
   background: var(--accent);
   color: var(--background);

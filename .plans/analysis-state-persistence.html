@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analysis State Persistence — Calorie Calculator</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill {
+    font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+
+  pre[class*="language-"] {
+    border-radius: var(--radius); font-size: 13.5px; line-height: 1.55;
+    margin: 16px 0; padding: 18px 20px;
+  }
+  code { font-family: 'JetBrains Mono', monospace; }
+  :not(pre) > code {
+    background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px;
+  }
+  pre code { font-family: 'JetBrains Mono', monospace !important; }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 0 0 18px 52px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+
+  @media print {
+    body { background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    pre[class*="language-"] { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Bug fix plan</div>
+  <h1>The Vanishing Analysis</h1>
+  <p class="subtitle">Switch to the Log tab while a photo is being analyzed — or after it finishes — and everything is gone when you come back. Why the page forgets, and how to give the analysis a memory that outlives navigation.</p>
+  <div class="meta">
+    <span><strong>Symptom:</strong> analysis lost on tab switch</span>
+    <span><strong>Root cause:</strong> state lives in an unmounting page</span>
+    <span><strong>Fix:</strong> context provider in the layout</span>
+    <span><strong>Files touched:</strong> 3</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>The symptom</h2>
+<p class="lede">Two flavors of the same loss, both reproducible in seconds.</p>
+
+<ol class="steps">
+  <li>
+    <strong>Pick a photo and hit Analyze</strong>
+    <span class="step-note">The skeleton estimate appears; the request to <code>/api/analyze</code> is in flight.</span>
+  </li>
+  <li>
+    <strong>Switch to the Log tab, then back to Analyze</strong>
+    <span class="step-note">The page is blank: no photo, no skeleton, no result. The analysis you paid a model call for never shows up.</span>
+  </li>
+  <li>
+    <strong>Same story after the analysis completes</strong>
+    <span class="step-note">A finished estimate — corrections thread, gram edits and all — also vanishes if you glance at the log before hitting <em>Log meal</em>.</span>
+  </li>
+</ol>
+
+<div class="callout"><strong>It's not just annoying — it costs money.</strong> An in-flight analysis that gets discarded is a completed Claude API call whose answer nobody ever sees.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Why it happens</h2>
+<p class="lede">Every piece of analysis state lives inside the one component that navigation destroys.</p>
+
+<p>The Home page (<code>src/app/page.tsx</code>) holds everything in local <code>useState</code>: the photo blob, the preview URL, the description, the whole estimate/correction <code>history</code>, the <code>loading</code> flag, plus the resized-JPEG cache in a ref. In the App Router, the root layout survives navigation — the docs are explicit: <em>“On navigation, layouts preserve state, remain interactive, and do not rerender.”</em> Pages get no such promise. The moment you tap <strong>Log</strong>, the Home page component unmounts and React throws all of that state away.</p>
+
+<p>The in-flight case is subtler. Client-side navigation does <strong>not</strong> cancel the <code>fetch</code> — the request completes, the response arrives, and <code>setHistory</code> fires… against a component that no longer exists. React silently discards the update. The result was there; there was just nobody home to receive it.</p>
+
+<figure>
+<svg viewBox="0 0 860 300" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+
+  <!-- Before column -->
+  <text x="215" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#A5A195">TODAY — state in the page</text>
+  <rect x="40" y="40" width="350" height="230" rx="10" fill="none" stroke="#38352C" stroke-width="1.5"/>
+  <text x="56" y="64" font-size="11.5" fill="#A5A195" font-family="'JetBrains Mono', monospace">layout.tsx · persists</text>
+  <rect x="70" y="80" width="290" height="80" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="215" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">page.tsx (Home)</text>
+  <text x="215" y="126" text-anchor="middle" font-size="11.5" fill="#A5A195">useState: photo, history, loading…</text>
+  <text x="215" y="144" text-anchor="middle" font-size="11.5" fill="#A5A195">unmounts on navigation</text>
+  <rect x="70" y="190" width="290" height="60" rx="10" fill="#3A2A20"/>
+  <text x="215" y="215" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">state destroyed on tab switch</text>
+  <text x="215" y="233" text-anchor="middle" font-size="11.5" fill="#E08A5C">fetch result arrives → discarded</text>
+  <line x1="215" y1="160" x2="215" y2="188" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Divider arrow -->
+  <line x1="405" y1="155" x2="450" y2="155" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- After column -->
+  <text x="655" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#A5A195">PLAN — state in the layout</text>
+  <rect x="470" y="40" width="350" height="230" rx="10" fill="none" stroke="#38352C" stroke-width="1.5"/>
+  <text x="486" y="64" font-size="11.5" fill="#A5A195" font-family="'JetBrains Mono', monospace">layout.tsx · persists</text>
+  <rect x="500" y="80" width="290" height="80" rx="10" fill="#EDEAE0"/>
+  <text x="645" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#1B1A16">AnalysisProvider</text>
+  <text x="645" y="126" text-anchor="middle" font-size="11.5" fill="#55524A">owns photo, history, loading, analyze()</text>
+  <text x="645" y="144" text-anchor="middle" font-size="11.5" fill="#55524A">never unmounts — outlives every page</text>
+  <rect x="500" y="190" width="135" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="567" y="215" text-anchor="middle" font-size="12.5" font-weight="700" fill="#EDEAE0">page.tsx</text>
+  <text x="567" y="233" text-anchor="middle" font-size="11" fill="#A5A195">reads context</text>
+  <rect x="655" y="190" width="135" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="722" y="215" text-anchor="middle" font-size="12.5" font-weight="700" fill="#EDEAE0">log/page.tsx</text>
+  <text x="722" y="233" text-anchor="middle" font-size="11" fill="#A5A195">unaffected</text>
+  <line x1="567" y1="188" x2="609" y2="162" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+</svg>
+<figcaption>Today the page owns the state and takes it to the grave. The plan moves ownership into a provider mounted by the layout, which navigation never unmounts.</figcaption>
+</figure>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Options considered</h2>
+<p class="lede">Three ways to make state outlive the page — one clear winner at this app's size.</p>
+
+<table>
+  <tr><th>Option</th><th>How it works</th><th>Verdict</th></tr>
+  <tr><td>Context in layout</td><td>A client <code>AnalysisProvider</code> owns the state and the <code>analyze()</code> call; the layout mounts it once, pages consume it.</td><td>✓ Chosen. Fixes both the lost-thread and the lost-in-flight-result cases, no new dependency, blobs stay in memory untouched.</td></tr>
+  <tr><td>sessionStorage</td><td>Serialize state on change, rehydrate on mount.</td><td>✗ Blobs and object URLs don't serialize cleanly, and the in-flight response would still land on an unmounted component. Solves the wrong half.</td></tr>
+  <tr><td>State library</td><td>zustand / jotai module-level store.</td><td>✗ Works, but adds a dependency to do exactly what one context provider does here.</td></tr>
+</table>
+
+<div class="pill-row">
+  <span class="pill in">✓ survive tab switches</span>
+  <span class="pill in">✓ in-flight result kept</span>
+  <span class="pill in">✓ no new dependencies</span>
+  <span class="pill out">✗ survive full page reload</span>
+  <span class="pill out">✗ multi-tab sync</span>
+</div>
+
+<p>Surviving a hard reload is explicitly out of scope: it requires serializing the photo, and the meal log already covers "I want to keep this" via <em>Log meal</em>.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>The fix, step by step</h2>
+<p class="lede">Three files. The page's JSX barely changes — only where its data comes from.</p>
+
+<ol class="steps">
+  <li>
+    <strong>Create <code>src/components/AnalysisProvider.tsx</code></strong>
+    <span class="step-note">A <code>"use client"</code> context provider that absorbs all of Home's state: <code>sourceBlob</code>, <code>previewUrl</code>, <code>description</code>, <code>history</code>, <code>pendingCorrection</code>, <code>loading</code>, <code>error</code>, <code>loggedAtLength</code>, the <code>resizedRef</code> cache — and the functions <code>handleSelect</code>, <code>handleClear</code>, <code>handleLog</code>, <code>analyze</code>, <code>handleGramsChange</code>.</span>
+  </li>
+  <li>
+    <strong>Mount it in <code>src/app/layout.tsx</code></strong>
+    <span class="step-note">Wrap <code>{children}</code> with <code>&lt;AnalysisProvider&gt;</code>. The layout is a server component and stays one — passing children through a client provider is the standard composition.</span>
+  </li>
+  <li>
+    <strong>Slim down <code>src/app/page.tsx</code></strong>
+    <span class="step-note">Replace the <code>useState</code>/<code>useRef</code> block with <code>useAnalysis()</code>. JSX, handlers' call sites, and the thread-scroll effect stay as they are.</span>
+  </li>
+  <li>
+    <strong>Move the object-URL cleanup out of unmount</strong>
+    <span class="step-note">Today an effect revokes <code>previewUrl</code> on unmount — correct when the page owned it, wrong once the URL must outlive the page. Revoke only on photo replacement and on <code>handleClear</code>.</span>
+  </li>
+  <li>
+    <strong>Verify both repro paths</strong>
+    <span class="step-note">Switch tabs mid-analysis → result is waiting on return. Switch tabs after a correction thread → thread intact, gram edits preserved.</span>
+  </li>
+</ol>
+
+<h3>The provider's shape</h3>
+<pre><code class="language-tsx">// src/components/AnalysisProvider.tsx
+"use client";
+
+const AnalysisContext = createContext&lt;AnalysisState | null&gt;(null);
+
+export function AnalysisProvider({ children }: { children: React.ReactNode }) {
+  // …all state + analyze/handleSelect/handleLog/handleGramsChange
+  // moved verbatim from page.tsx…
+  return &lt;AnalysisContext.Provider value={state}&gt;{children}&lt;/AnalysisContext.Provider&gt;;
+}
+
+export function useAnalysis() {
+  const ctx = useContext(AnalysisContext);
+  if (!ctx) throw new Error("useAnalysis must be used within AnalysisProvider");
+  return ctx;
+}</code></pre>
+
+<h3>The layout change</h3>
+<pre><code class="language-tsx">// src/app/layout.tsx
+&lt;body className="min-h-full flex flex-col"&gt;
+  &lt;TopNav /&gt;
+  &lt;AnalysisProvider&gt;{children}&lt;/AnalysisProvider&gt;
+&lt;/body&gt;</code></pre>
+
+<div class="callout"><strong>Why the in-flight case fixes itself:</strong> <code>analyze()</code> now closes over state owned by the provider. Navigation unmounts the page but not the provider, so when the fetch resolves, <code>setHistory</code> updates a live component. Return to the Analyze tab and the page re-reads the context — result present, skeleton logic already handles the still-loading case.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>What changes where</h2>
+<p class="lede">Small blast radius; the log page is untouched.</p>
+
+<table>
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>AnalysisProvider.tsx</code></td><td><strong>New.</strong> Context + provider + <code>useAnalysis()</code> hook; receives all state and handlers from the page, plus the relocated object-URL cleanup.</td></tr>
+  <tr><td><code>layout.tsx</code></td><td>One import, one wrapper element around <code>{children}</code>.</td></tr>
+  <tr><td><code>page.tsx</code></td><td>Deletes its state block; reads everything from <code>useAnalysis()</code>. Keeps the scroll-to-thread-end effect and all JSX.</td></tr>
+  <tr><td><code>log/page.tsx</code></td><td>No changes.</td></tr>
+</table>
+
+<div class="callout good"><strong>After the fix:</strong> the Analyze tab behaves like a tab in the real sense — flip away, flip back, and everything is exactly where you left it, including a result that finished while you weren't looking.</div>
+
+<footer class="doc">
+  Calorie Calculator · analysis state persistence plan · August 2026
+</footer>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-jsx.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-tsx.min.js"></script>
+</body>
+</html>
