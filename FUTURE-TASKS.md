@@ -1,48 +1,46 @@
 # Future tasks
 
 Things deliberately deferred — pick one up by asking Claude for it by name.
+The first two are manual dashboard/SQL steps only you can run.
 
-## Switch Supabase access to the secret key
+## Create the settings table (required for daily goals)
 
-The app currently talks to the database with the **publishable** key, which maps
-to the `anon` Postgres role. The RLS policies in `supabase/schema.sql` therefore
-allow `anon` full access to `public.meals`. The key never ships to the browser
-(all access is server-side, behind the site password gate), but anyone who
-obtained the publishable key could read/write the log directly.
+The goals feature reads/writes a single-row `public.settings` table. Run the
+`create table public.settings ...` block at the bottom of
+`supabase/schema.sql` in the Supabase SQL Editor. Until then the app treats
+goals as "not set" and everything else keeps working.
 
-To tighten this up:
+## Finish the secret-key switch: drop the anon RLS policies
 
-1. In the Supabase dashboard → Project Settings → API keys, copy the **secret**
-   key (`sb_secret_...`).
-2. Add it to `.env.local` and to Vercel as `SUPABASE_SECRET_KEY` (server-only —
-   no `NEXT_PUBLIC_` prefix).
-3. Update `src/lib/supabase.ts` to use `SUPABASE_SECRET_KEY` (the secret key
-   bypasses RLS).
-4. Run in the SQL Editor:
+The code now prefers `SUPABASE_SECRET_KEY` (set in `.env.local`; add it to
+Vercel too) and falls back to the publishable key. Once a deploy with the
+secret key is live on Vercel, cut off the old path — run in the SQL Editor:
 
-   ```sql
-   drop policy "anon can read meals" on public.meals;
-   drop policy "anon can insert meals" on public.meals;
-   drop policy "anon can delete meals" on public.meals;
-   revoke select, insert, delete on public.meals from anon;
-   ```
+```sql
+drop policy "anon can read meals" on public.meals;
+drop policy "anon can insert meals" on public.meals;
+drop policy "anon can delete meals" on public.meals;
+revoke select, insert, delete on public.meals from anon;
+```
+
+Running this **before** that deploy is live would break the site's database
+access, since the fallback publishable key maps to the `anon` role.
 
 ## Add the Supabase env vars to Vercel
 
-Before the next deploy, add `NEXT_PUBLIC_SUPABASE_URL` and
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (values from `.env.local`) to the Vercel
-project's environment variables — the deployed site has no `.env.local`.
-
-## Remove the localStorage import banner
-
-`src/app/log/ImportLocalMeals.tsx` and the helpers in `src/lib/log.ts` exist
-only to migrate meals logged before the database switch. Once the log has been
-imported on every device that had one (phone + laptop), delete the component,
-strip `readLocalMeals`/`clearLocalMeals` from `src/lib/log.ts`, and remove the
-banner from `src/app/log/page.tsx`.
+Before the next deploy, make sure `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_SECRET_KEY` (values from
+`.env.local`) are in the Vercel project's environment variables — the deployed
+site has no `.env.local`.
 
 ## Paginate the meal log
 
 `listMeals()` fetches every row including thumbnails (~10 KB each). Fine for
 months of personal use, but at thousands of entries the page payload gets
 heavy — add pagination or lazy day-by-day loading when that day comes.
+
+## Add a screenshot to the README
+
+The README describes the flow; a screenshot of the Analyze page with an
+estimate would show it faster. Take one on a phone, drop it in `docs/`, and
+link it from the README intro.

@@ -14,8 +14,7 @@ export default async function proxy(request: NextRequest) {
   const password = process.env.SITE_PASSWORD;
   if (!password) return NextResponse.next();
 
-  const authed =
-    request.cookies.get(AUTH_COOKIE)?.value === (await authTokenFor(password));
+  const authed = request.cookies.get(AUTH_COOKIE)?.value === (await authTokenFor(password));
   const { pathname } = request.nextUrl;
 
   if (pathname === "/login") {

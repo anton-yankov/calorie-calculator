@@ -1,6 +1,7 @@
 import type { LoggedMeal } from "@/lib/log";
 import { listMeals } from "@/lib/meals";
-import { ImportLocalMeals } from "./ImportLocalMeals";
+import { getGoals, type Goals } from "@/lib/settings";
+import { GoalsEditor } from "./GoalsEditor";
 import { LogList } from "./LogList";
 
 // Server component: the log is fetched from Supabase per request (nothing is
@@ -8,9 +9,11 @@ import { LogList } from "./LogList";
 // happens in LogList on the client, where the viewer's timezone lives.
 export default async function LogPage() {
   let meals: LoggedMeal[] = [];
+  let goals: Goals | null = null;
   let loadError: string | null = null;
   try {
-    meals = await listMeals();
+    // getGoals never throws — a missing settings table just means "no goals yet"
+    [meals, goals] = await Promise.all([listMeals(), getGoals()]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Couldn't load the meal log.";
   }
@@ -27,14 +30,14 @@ export default async function LogPage() {
         <p className="mt-2 text-[15px] text-muted">Your saved meals, grouped by day.</p>
       </header>
 
-      <ImportLocalMeals />
+      <GoalsEditor goals={goals} />
 
       {loadError ? (
         <p className="rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           {loadError} — check your connection and reload.
         </p>
       ) : (
-        <LogList meals={meals} />
+        <LogList meals={meals} goals={goals} />
       )}
     </main>
   );

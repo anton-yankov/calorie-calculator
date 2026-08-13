@@ -7,6 +7,7 @@ import { useAnalysis } from "@/components/AnalysisProvider";
 import { CorrectionBar } from "@/components/CorrectionBar";
 import { SkeletonEstimate, Spinner } from "@/components/loaders";
 import { PhotoInput } from "@/components/PhotoInput";
+import { TodayStrip } from "@/components/TodayStrip";
 
 function CorrectionBubble({ text }: { text: string }) {
   return (
@@ -57,9 +58,11 @@ export default function Home() {
           What’s on your plate?
         </h1>
         <p className="mt-2 max-w-xl text-[15px] text-muted sm:text-base">
-          Photo in, macros out. Estimates — correct them below.
+          Photo or description in, macros out. Estimates — correct them below.
         </p>
       </header>
+
+      <TodayStrip />
 
       {/* Controls column — on lg it sticks below the nav while the thread scrolls */}
       <div className="flex flex-col gap-4 lg:sticky lg:top-24">
@@ -72,23 +75,29 @@ export default function Home() {
           onClear={handleClear}
         />
 
-          <input
+        <input
           type="text"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Optional details — e.g. rye bread, whole milk, olive oil"
+          placeholder="Details, or a full meal to analyze without a photo — e.g. 2 eggs, rye toast"
           className="rounded-panel border border-line bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none"
         />
 
         <button
           type="button"
-          disabled={!sourceBlob || loading || preparing}
+          disabled={(!sourceBlob && !description.trim()) || loading || preparing}
           onClick={() => analyze()}
           className="flex items-center justify-center gap-2 rounded-panel bg-accent px-4 py-3 font-semibold text-background transition duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {/* During photo prep the frame overlay is the loader — the button stays plain */}
           {loading && <Spinner />}
-          {loading ? "Analyzing…" : latest ? "Start over with this photo" : "Analyze"}
+          {loading
+            ? "Analyzing…"
+            : latest
+              ? sourceBlob
+                ? "Start over with this photo"
+                : "Analyze again"
+              : "Analyze"}
         </button>
 
         {error && (
@@ -102,7 +111,7 @@ export default function Home() {
       <section className="flex min-w-0 flex-col gap-4">
         {history.length === 0 && !loading && (
           <div className="hidden min-h-56 items-center justify-center rounded-panel border-2 border-dashed border-line px-6 text-sm text-muted lg:flex">
-            Estimates appear here once you analyze a photo.
+            Estimates appear here once you analyze a photo or description.
           </div>
         )}
 

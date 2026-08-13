@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finalization Plan — Calorie Calculator</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill {
+    font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+
+  pre[class*="language-"] {
+    border-radius: var(--radius); font-size: 13.5px; line-height: 1.55;
+    margin: 16px 0; padding: 18px 20px;
+  }
+  code { font-family: 'JetBrains Mono', monospace; }
+  :not(pre) > code {
+    background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px;
+  }
+  pre code { font-family: 'JetBrains Mono', monospace !important; }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 0 0 18px 52px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+
+  /* Mockup helpers — approximate the app's log-card UI inside a figure */
+  .mock { background: var(--bg); border: 1px dashed var(--line); border-radius: var(--radius); padding: 20px; }
+  .mock * { line-height: 1.4; }
+  .mock .entry { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); max-width: 560px; margin: 0 auto; }
+  .mock .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+  .mock .thumb { width: 46px; height: 46px; border-radius: 8px; background: #3A3628; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .mock .name { font-size: 14px; font-weight: 600; }
+  .mock .time { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft); }
+  .mock .kcal { margin-left: auto; text-align: right; flex-shrink: 0; }
+  .mock .kcal b { font-family: 'JetBrains Mono', monospace; font-size: 15px; }
+  .mock .kcal span { font-size: 11px; color: var(--ink-soft); }
+  .mock .macros { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
+  .mock .macros div { padding: 8px 6px; text-align: center; }
+  .mock .macros div + div { border-left: 1px solid var(--line); }
+  .mock .macros b { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; display: block; }
+  .mock .macros span { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }
+  .mock table.foods { margin: 0; border: none; border-radius: 0; border-top: 1px solid var(--line); background: transparent; font-size: 12.5px; }
+  .mock table.foods th { padding: 7px 10px; font-size: 10.5px; background: #211F19; }
+  .mock table.foods td { padding: 7px 10px; font-weight: 400; white-space: nowrap; }
+  .mock table.foods td:first-child { font-weight: 500; white-space: normal; }
+  .mock table.foods td:not(:first-child), .mock table.foods th:not(:first-child) { text-align: right; font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  .mock table.foods tr.total td { border-top: 1px solid var(--line); font-weight: 600; color: var(--ink); }
+  .mock .actions { display: flex; gap: 18px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+  .mock .actions .a { color: var(--accent); } .mock .actions .g { color: var(--green); } .mock .actions .d { color: #D97A6C; margin-left: auto; }
+  .mock .bar { max-width: 560px; margin: 0 auto 14px; }
+  .mock .bar .lbl { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  .mock .bar .lbl b { font-family: 'JetBrains Mono', monospace; color: var(--ink); }
+  .mock .bar .track { height: 6px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+  .mock .bar .fill { height: 100%; border-radius: 999px; background: var(--green); }
+
+  @media print {
+    body { background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    pre[class*="language-"] { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Plan · v1.0 finalization</div>
+  <h1>Finishing the Calorie Calculator</h1>
+  <p class="subtitle">The last feature round before calling this project done: goals and progress, a redesigned meal log, editing and re-logging, text-only analysis, toasts, and the security &amp; PWA housekeeping.</p>
+  <div class="meta">
+    <span><strong>Date:</strong> 2026-08-13</span>
+    <span><strong>Branch:</strong> off <code>main</code></span>
+    <span><strong>Status:</strong> awaiting sign-off — no code written yet</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>Scope at a glance</h2>
+<p class="lede">Everything below was agreed in conversation; struck-through items were explicitly deferred.</p>
+
+<div class="pill-row">
+  <span class="pill in">✓ daily calorie + protein goals</span>
+  <span class="pill in">✓ log card redesign</span>
+  <span class="pill in">✓ edit logged meals</span>
+  <span class="pill in">✓ quick re-log</span>
+  <span class="pill in">✓ text-only analysis</span>
+  <span class="pill in">✓ toasts (sonner)</span>
+  <span class="pill in">✓ Supabase secret key</span>
+  <span class="pill in">✓ remove import banner</span>
+  <span class="pill in">✓ PWA / metadata finish</span>
+  <span class="pill out">✗ weekly trends</span>
+  <span class="pill out">✗ CSV export</span>
+  <span class="pill out">✗ light mode</span>
+  <span class="pill out">✗ log pagination</span>
+</div>
+
+<p>Log pagination and the README rewrite stay in <code>FUTURE-TASKS.md</code>; the README is written as the very last step, after all of the above has landed.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Toast foundation</h2>
+<p class="lede">Built first because three later features (delete-undo, re-log, edit confirmation) sit on top of it.</p>
+
+<p>Add <a href="https://sonner.emilkowal.ski/">sonner</a> (~3&nbsp;KB, action-button support, fully styleable), mount one <code>&lt;Toaster&nbsp;/&gt;</code> in <code>src/app/layout.tsx</code>, and theme it with the app's surface/line/ink tokens so it looks native.</p>
+
+<pre><code class="language-bash">npm install sonner</code></pre>
+
+<p>First consumer: <strong>delete becomes undo-able</strong>. <code>window.confirm</code> in <code>LogList.tsx</code> goes away — deleting removes the row immediately and raises a toast with an <strong>Undo</strong> action. Undo re-inserts the very same row (the client still holds the full <code>LoggedMeal</code>, including id and thumbnail), so nothing is lost and no "are you sure?" dialog is needed.</p>
+
+<pre><code class="language-typescript">// LogList.tsx — replaces the confirm() flow
+const result = await deleteMealAction(meal.id);
+if (!result.error) {
+  toast("Meal deleted", {
+    action: { label: "Undo", onClick: () => relogExactAction(meal) }, // re-insert same row
+  });
+}</code></pre>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Meal log card redesign</h2>
+<p class="lede">The current card packs everything into one mono string (<code>P 12 · C 45 · F 8</code>) twice over — hard to scan. The redesign labels every number and aligns per-food data in real columns.</p>
+
+<figure>
+  <div class="mock">
+    <div class="bar">
+      <div class="lbl"><span>Today</span><b>1 430 / 2 200 kcal &nbsp;·&nbsp; 96 / 140 g protein</b></div>
+      <div class="track"><div class="fill" style="width:65%"></div></div>
+    </div>
+    <div class="entry">
+      <div class="row">
+        <div class="thumb">🥗</div>
+        <div>
+          <div class="name">Chicken salad, rye bread</div>
+          <div class="time">13:42</div>
+        </div>
+        <div class="kcal"><b>642</b> <span>kcal</span></div>
+      </div>
+      <div class="macros">
+        <div><b>42 g</b><span>protein</span></div>
+        <div><b>51 g</b><span>carbs</span></div>
+        <div><b>22 g</b><span>fat</span></div>
+      </div>
+      <table class="foods">
+        <tr><th>Food</th><th>Grams</th><th>kcal</th><th>P</th><th>C</th><th>F</th></tr>
+        <tr><td>Grilled chicken breast</td><td>150</td><td>248</td><td>35</td><td>0</td><td>11</td></tr>
+        <tr><td>Mixed salad, olive oil</td><td>120</td><td>144</td><td>2</td><td>6</td><td>12</td></tr>
+        <tr><td>Rye bread</td><td>90</td><td>250</td><td>5</td><td>45</td><td>2</td></tr>
+        <tr class="total"><td>Total</td><td>360</td><td>642</td><td>42</td><td>51</td><td>22</td></tr>
+      </table>
+      <div class="actions"><span class="a">Edit</span><span class="g">Log again</span><span class="d">Delete</span></div>
+    </div>
+  </div>
+  <figcaption>Proposed card, expanded state, with the day's goal-progress bar above it (§07). Collapsed state = the top row plus the labeled macro strip; the food table and actions appear on expand.</figcaption>
+</figure>
+
+<div class="card">
+  <p style="margin:0"><strong>What changes:</strong> macros get real labels in a three-column strip instead of the <code>P · C · F</code> shorthand; per-food data becomes an aligned table with a header row and a totals row, right-aligned tabular numerals; the actions (Edit / Log again / Delete) move to a consistent footer row. The collapsed row keeps only name, time, kcal, and the macro strip — one glance, four numbers, all labeled. On narrow phones the food table drops the P/C/F columns behind a horizontal scroll rather than truncating names.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>Edit logged meals</h2>
+<p class="lede">Grams and time only — if the analysis itself was wrong, re-analyzing is the honest fix.</p>
+
+<p>"Edit" in the card footer switches the food table into edit mode: each grams cell becomes a number input, and the logged time gets a <code>&lt;input type="time"&gt;</code>. Changing grams rescales that food's macros linearly — the exact logic <code>handleGramsChange</code> already implements in <code>AnalysisProvider</code>, extracted into <code>src/lib/scale.ts</code> so both pages share it. Save calls a new server action; the totals row and day totals recompute in the same roundtrip via <code>revalidatePath("/log")</code>.</p>
+
+<pre><code class="language-typescript">// src/app/actions.ts — new alongside deleteMealAction
+export async function updateMealAction(
+  id: string,
+  patch: { analysis: MealAnalysis; loggedAt: string },
+): Promise<{ error?: string }>;</code></pre>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>Quick re-log</h2>
+<p class="lede">Repeat meals without a photo, an API call, or cost.</p>
+
+<p>"Log again" copies the entry's foods, thumbnail, and description into a new row stamped with the current time, then confirms with a toast ("Logged to today — Undo"). Implemented as one server action that reads the source row server-side and inserts the copy with a fresh <code>crypto.randomUUID()</code> — no confirmation dialog, undo covers mistakes.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>Text-only analysis</h2>
+<p class="lede">No new UI — the description field simply works on its own.</p>
+
+<p>The Analyze button enables when there's a photo <em>or</em> non-empty description. <code>/api/analyze</code> makes the image field optional (rejecting only requests with neither), builds <code>userParts</code> without the image part, and the system prompt gains one line: when no photo is provided, estimate from the description alone and mark confidence accordingly. The thread, corrections, and logging all work unchanged; a text-only meal logs with the fallback 🍽 thumbnail.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>Daily goals &amp; progress</h2>
+<p class="lede">The feature that turns the calculator into a tracker: a calorie target, an optional protein target, and progress everywhere you decide what to eat.</p>
+
+<p>Goals live in a single-row Supabase table so both devices see the same target (localStorage would give each device its own):</p>
+
+<pre><code class="language-sql">create table public.settings (
+  id boolean primary key default true check (id),  -- guarantees max one row
+  calorie_goal integer not null,
+  protein_goal integer                              -- null = no protein target
+);</code></pre>
+
+<figure>
+<svg viewBox="0 0 860 150" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="20" y="45" width="200" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="120" y="71" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">"Set goals" inline on /log</text>
+  <text x="120" y="89" text-anchor="middle" font-size="11.5" fill="#A5A195">small form in the page header</text>
+  <line x1="220" y1="75" x2="330" y2="75" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="275" y="65" text-anchor="middle" font-size="11" fill="#A5A195">save</text>
+  <rect x="330" y="45" width="200" height="60" rx="10" fill="#EDEAE0"/>
+  <text x="430" y="71" text-anchor="middle" font-size="13" font-weight="700" fill="#1B1A16">settings row · Supabase</text>
+  <text x="430" y="89" text-anchor="middle" font-size="11.5" fill="#55524A">synced across devices</text>
+  <line x1="530" y1="60" x2="640" y2="35" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="530" y1="90" x2="640" y2="115" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="640" y="10" width="200" height="52" rx="10" fill="#22312A"/>
+  <text x="740" y="32" text-anchor="middle" font-size="13" font-weight="700" fill="#7FBF92">/log · per-day bar</text>
+  <text x="740" y="49" text-anchor="middle" font-size="11.5" fill="#7FBF92">kcal + protein vs goal</text>
+  <rect x="640" y="88" width="200" height="52" rx="10" fill="#22312A"/>
+  <text x="740" y="110" text-anchor="middle" font-size="13" font-weight="700" fill="#7FBF92">/ · "today so far" strip</text>
+  <text x="740" y="127" text-anchor="middle" font-size="11.5" fill="#7FBF92">see headroom before eating</text>
+</svg>
+<figcaption>One source of truth, two consumers. The Analyze-page strip fetches today's total server-side with the goal in a single query pass.</figcaption>
+</figure>
+
+<p>In the log, each day header gains the slim progress bar shown in the §03 mock (calories always; a second thinner bar for protein when a protein goal is set; past days show the bar too, as a record). Over-goal renders the fill in the accent color rather than an alarm red — this is a tracker, not a scold. On the Analyze page, a compact strip under the header shows <code>1 430 / 2 200 kcal · 96 / 140 g protein</code> for today, fetched server-side.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">08</span>Housekeeping</h2>
+<p class="lede">The security fix, the dead code, and the app-icon polish — split between us.</p>
+
+<h3>Supabase secret key + dropping anon RLS</h3>
+<ol class="steps">
+  <li>
+    <strong>You — copy the secret key</strong>
+    <span class="step-note">Supabase dashboard → Project Settings → API Keys → <code>sb_secret_...</code>.</span>
+  </li>
+  <li>
+    <strong>You — set the env var</strong>
+    <span class="step-note">Add <code>SUPABASE_SECRET_KEY</code> (no <code>NEXT_PUBLIC_</code> prefix) to <code>.env.local</code> and the Vercel project.</span>
+  </li>
+  <li>
+    <strong>Me — switch the client</strong>
+    <span class="step-note"><code>src/lib/supabase.ts</code> reads <code>SUPABASE_SECRET_KEY ?? NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> — the fallback keeps every environment working no matter which step lands first.</span>
+  </li>
+  <li>
+    <strong>You — drop the anon policies, last</strong>
+    <span class="step-note">Only after the secret-key deploy is live, run the four SQL statements already written in <code>FUTURE-TASKS.md</code> (drop the three <code>anon</code> policies, revoke the grants).</span>
+  </li>
+</ol>
+
+<div class="callout"><strong>Order matters once:</strong> the SQL in step 4 cuts off publishable-key access. Run it before step 3 is deployed and the live site loses its database until the deploy lands. Steps 1–3 are safe in any order thanks to the fallback.</div>
+
+<h3>Remove the localStorage import banner</h3>
+<p>Delete <code>src/app/log/ImportLocalMeals.tsx</code>, strip <code>readLocalMeals</code>/<code>clearLocalMeals</code> from <code>src/lib/log.ts</code>, drop the banner from the log page. <strong>Gated on your confirmation</strong> that neither phone nor laptop still shows the import banner on <code>/log</code> — if a device still shows it, it has meals not yet in the database.</p>
+
+<h3>PWA &amp; metadata finish</h3>
+<table>
+  <tr><th>Item</th><th>What &amp; why</th></tr>
+  <tr><td>Apple touch icon</td><td>iOS ignores manifest icons for home-screen installs. Add a 180×180 <code>apple-icon.png</code> in <code>src/app/</code> (Next generates the tag) — derived from the existing 512px icon.</td></tr>
+  <tr><td>Apple web-app meta</td><td><code>appleWebApp: { capable, title, statusBarStyle }</code> in layout metadata so the home-screen app opens full-screen, not as a Safari tab.</td></tr>
+  <tr><td><code>metadataBase</code></td><td>One line with the production URL; makes social-preview URLs absolute and silences the build warning.</td></tr>
+  <tr><td>Template cleanup</td><td>Delete <code>next.svg</code>, <code>vercel.svg</code>, <code>globe.svg</code>, <code>file.svg</code>, <code>window.svg</code> and the <code>favicon-options/</code> folder from <code>public/</code>.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">09</span>Implementation order</h2>
+<p class="lede">Seven small branches-worth of work, dependency-ordered; each lands independently usable.</p>
+
+<ol class="steps">
+  <li><strong>Toasts</strong><span class="step-note">sonner + delete-undo replacing <code>window.confirm</code>. Foundation for 3–4.</span></li>
+  <li><strong>Log card redesign</strong><span class="step-note">New collapsed/expanded card per the §03 mock, actions footer with placeholder Edit/Log again.</span></li>
+  <li><strong>Edit logged meals</strong><span class="step-note">Grams + time editing, shared <code>scale.ts</code>, <code>updateMealAction</code>.</span></li>
+  <li><strong>Quick re-log</strong><span class="step-note">Server action + toast with undo.</span></li>
+  <li><strong>Text-only analysis</strong><span class="step-note">Optional image in the route, button enablement, prompt line.</span></li>
+  <li><strong>Goals &amp; progress</strong><span class="step-note">Settings table (you run the <code>create table</code>), inline goal form, day bars, today strip.</span></li>
+  <li><strong>Housekeeping</strong><span class="step-note">Secret-key switch (§08 order), banner removal, PWA/metadata, then the README rewrite last.</span></li>
+</ol>
+
+<!-- ============================================================ -->
+<h2><span class="num">10</span>Open questions</h2>
+<p class="lede">Three answers needed before implementation starts; everything else is decided.</p>
+
+<table>
+  <tr><th>#</th><th>Question</th><th>Default if you just say "go"</th></tr>
+  <tr><td>Q1</td><td>Does the §03 card mock match what you had in mind? Anything to adjust — macro strip, table columns, action placement?</td><td>Build it as mocked.</td></tr>
+  <tr><td>Q2</td><td>Import banner: has the banner disappeared from <code>/log</code> on <em>both</em> phone and laptop?</td><td>Blocked — no default; a device that still shows it has unmigrated meals.</td></tr>
+  <tr><td>Q3</td><td>Initial goal values to seed the settings row with (e.g. 2 200 kcal / 140 g protein)?</td><td>Ship with the form empty; you set goals in the UI on first visit.</td></tr>
+</table>
+
+<div class="callout good"><strong>Everything else is signed off:</strong> feature set (§01), toast library, edit scope (grams + time only), re-log semantics, text-only UX, goals storage and placement, the secret-key split of work, and skipping light mode, trends, export, and pagination.</div>
+
+<footer class="doc">
+  Calorie Calculator · finalization plan · follows the .plans/ style guide
+</footer>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+</body>
+</html>

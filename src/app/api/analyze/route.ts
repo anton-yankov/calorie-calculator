@@ -7,12 +7,14 @@ export const runtime = "nodejs";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // client resizes to ~200KB; this is a hard backstop
 
 const SYSTEM_PROMPT = `You are a nutrition estimation assistant.
-Given one photo of food and an optional user description, identify each
+Given a photo of food, a text description, or both, identify each
 distinct food item and estimate: portion weight in grams, calories, and
 grams of protein, carbs, and fat.
 
 Rules:
 - Use visual cues (plate size, utensils, packaging, hands) to judge portions.
+- When no photo is provided, estimate from the description alone using
+  typical serving sizes, and mark confidence accordingly.
 - The user's description overrides what you infer from the image
   (e.g. if they say "whole milk", do not assume skim).
 - If a correction to a previous answer is provided, produce a fully
@@ -35,24 +37,30 @@ export async function POST(req: Request): Promise<Response> {
 
   const form = await req.formData();
   const image = form.get("image");
-  if (!(image instanceof File)) {
-    return Response.json({ error: "Missing 'image' file field." }, { status: 400 });
-  }
-  if (image.size > MAX_IMAGE_BYTES) {
-    return Response.json({ error: "Image too large (max 8 MB)." }, { status: 413 });
-  }
-
   const description = form.get("description");
   const previousResult = form.get("previousResult");
   const correction = form.get("correction");
 
-  const mimeType = image.type || "image/jpeg";
-  const b64 = Buffer.from(await image.arrayBuffer()).toString("base64");
+  const hasDescription = typeof description === "string" && description.trim().length > 0;
+  // Text-only analysis is allowed — but there must be something to analyze
+  if (!(image instanceof File) && !hasDescription) {
+    return Response.json({ error: "Provide a photo or a description." }, { status: 400 });
+  }
 
-  const userParts: ResponseInputContent[] = [
-    { type: "input_image", detail: "auto", image_url: `data:${mimeType};base64,${b64}` },
-  ];
-  if (typeof description === "string" && description.trim()) {
+  const userParts: ResponseInputContent[] = [];
+  if (image instanceof File) {
+    if (image.size > MAX_IMAGE_BYTES) {
+      return Response.json({ error: "Image too large (max 8 MB)." }, { status: 413 });
+    }
+    const mimeType = image.type || "image/jpeg";
+    const b64 = Buffer.from(await image.arrayBuffer()).toString("base64");
+    userParts.push({
+      type: "input_image",
+      detail: "auto",
+      image_url: `data:${mimeType};base64,${b64}`,
+    });
+  }
+  if (hasDescription) {
     userParts.push({ type: "input_text", text: `User description: ${description.trim()}` });
   }
   if (typeof previousResult === "string" && typeof correction === "string" && correction.trim()) {

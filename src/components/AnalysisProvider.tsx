@@ -3,6 +3,7 @@
 import { createContext, useContext, useRef, useState } from "react";
 import { logMealAction } from "@/app/actions";
 import { makeThumbnail, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
+import { scaleFood, sumTotals } from "@/lib/scale";
 import type { MealAnalysis } from "@/lib/schema";
 
 export interface HistoryEntry {
@@ -125,7 +126,8 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function analyze(correction?: string) {
-    if (!sourceBlob) return;
+    // A photo, a description, or both — text-only analysis is fine
+    if (!sourceBlob && !description.trim()) return;
     setLoading(true);
     setError(null);
     if (correction) {
@@ -137,11 +139,13 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       setLoggedAtLength(null);
     }
     try {
-      if (!resizedRef.current) {
-        resizedRef.current = await resizeToJpeg(sourceBlob);
-      }
       const form = new FormData();
-      form.append("image", resizedRef.current, "meal.jpg");
+      if (sourceBlob) {
+        if (!resizedRef.current) {
+          resizedRef.current = await resizeToJpeg(sourceBlob);
+        }
+        form.append("image", resizedRef.current, "meal.jpg");
+      }
       if (description.trim()) form.append("description", description.trim());
       if (correction && latest) {
         form.append("previousResult", JSON.stringify(latest.analysis));
@@ -174,26 +178,9 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         if (i !== foodIndex) return food;
         // Recompute from the untouched baseline, not the current (possibly zeroed) values
         const base = last.baseline.foods[i];
-        if (!base || base.grams <= 0) return { ...food, grams };
-        const ratio = grams / base.grams;
-        return {
-          ...food,
-          grams,
-          calories: base.calories * ratio,
-          protein_g: base.protein_g * ratio,
-          carbs_g: base.carbs_g * ratio,
-          fat_g: base.fat_g * ratio,
-        };
+        return base ? scaleFood(base, grams) : { ...food, grams };
       });
-      const totals = foods.reduce(
-        (acc, f) => ({
-          calories: acc.calories + f.calories,
-          protein_g: acc.protein_g + f.protein_g,
-          carbs_g: acc.carbs_g + f.carbs_g,
-          fat_g: acc.fat_g + f.fat_g,
-        }),
-        { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
-      );
+      const totals = sumTotals(foods);
       return [...prev.slice(0, -1), { ...last, analysis: { ...last.analysis, foods, totals } }];
     });
   }
