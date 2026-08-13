@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Desktop Layout &amp; UI Fixes — Calorie Calculator</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill {
+    font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+
+  pre[class*="language-"] {
+    border-radius: var(--radius); font-size: 13.5px; line-height: 1.55;
+    margin: 16px 0; padding: 18px 20px;
+  }
+  code { font-family: 'JetBrains Mono', monospace; }
+  :not(pre) > code {
+    background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px;
+  }
+  pre code { font-family: 'JetBrains Mono', monospace !important; }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 0 0 18px 52px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Implementation plan · minimal</div>
+  <h1>Desktop Layout &amp; UI Fixes</h1>
+  <p class="subtitle">Two small quality-of-life fixes: stop the photo picker's placeholder text from bleeding through the "Preparing photo…" overlay, and give desktop screens a real layout instead of a phone column floating in empty space.</p>
+  <div class="meta">
+    <span><strong>Branch:</strong> ui-fixes-desktop-layout</span>
+    <span><strong>Scope:</strong> 4 files, CSS/JSX only</span>
+    <span><strong>Risk:</strong> low — no state or API changes</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>Scope</h2>
+<div class="pill-row">
+  <span class="pill in">✓ hide placeholder during photo prep</span>
+  <span class="pill in">✓ two-column analyze page on lg+</span>
+  <span class="pill in">✓ nav &amp; log widths follow</span>
+  <span class="pill out">✗ new components</span>
+  <span class="pill out">✗ state/provider changes</span>
+  <span class="pill out">✗ mobile layout changes</span>
+</div>
+<p>Everything is Tailwind classes plus a couple of wrapper <code>&lt;div&gt;</code>s. The mobile experience — the app's primary use case — renders exactly as before.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Fix: placeholder shows through the prep overlay</h2>
+<p class="lede">While a HEIC photo is being decoded/resized, <code>PhotoInput</code> shows a translucent <code>bg-background/75</code> overlay with a spinner — but the "Take or choose a photo" empty-state underneath stays visible through it.</p>
+<p>The overlay is intentionally translucent (over an existing photo, "Change photo" prep should still show the old image). The problem is only the <em>empty-state text</em> competing with the spinner. So: when <code>preparing</code> is true and there is no <code>previewUrl</code>, make the placeholder content <code>invisible</code> — it keeps its layout size (no frame jump when prep finishes) but nothing renders behind the loader.</p>
+<div class="callout good"><strong>Why <code>invisible</code> and not conditional rendering:</strong> the placeholder defines the frame's height. Removing it would collapse the frame to the overlay's height, then pop when the preview arrives.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Desktop: two-column analyze page</h2>
+<p class="lede">Today every page is one <code>max-w-2xl</code> (672px) column. On a 1440px screen that's less than half the viewport doing work. The analyze page has a natural split: controls (photo, description, button) and results (the estimate thread).</p>
+
+<figure>
+<svg viewBox="0 0 860 220" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="40" y="16" width="780" height="44" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="430" y="43" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">header — spans both columns</text>
+  <rect x="40" y="76" width="300" height="120" rx="10" fill="#3A2A20"/>
+  <text x="190" y="122" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">controls · 2fr · sticky</text>
+  <text x="190" y="142" text-anchor="middle" font-size="11.5" fill="#E08A5C">photo · description · analyze</text>
+  <rect x="368" y="76" width="452" height="120" rx="10" fill="#EDEAE0"/>
+  <text x="594" y="122" text-anchor="middle" font-size="13" font-weight="700" fill="#1B1A16">estimate thread · 3fr</text>
+  <text x="594" y="142" text-anchor="middle" font-size="11.5" fill="#55524A">cards · corrections · log actions</text>
+  <line x1="340" y1="136" x2="368" y2="136" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+</svg>
+<figcaption>lg+ grid on the analyze page: <code>max-w-5xl</code>, columns <code>2fr / 3fr</code>. Below lg everything stacks in today's order.</figcaption>
+</figure>
+
+<h3>How the single-column markup becomes a grid</h3>
+<p>The page's children already group cleanly. Wrap them in two containers whose stacking order matches today's mobile order, so the grid costs nothing on small screens:</p>
+<pre><code class="language-typescript">&lt;main class="... max-w-2xl lg:max-w-5xl lg:grid lg:grid-cols-[2fr_3fr] lg:items-start lg:gap-x-10"&gt;
+  &lt;header class="lg:col-span-2"&gt;…&lt;/header&gt;
+  &lt;div class="flex flex-col gap-4 lg:sticky lg:top-24"&gt;   {/* photo, description, analyze, error */}
+  &lt;section class="flex min-w-0 flex-col gap-4"&gt;           {/* thread, skeletons, log + correction */}
+</code></pre>
+
+<table>
+  <tr><th>Change</th><th>File</th><th>Detail</th></tr>
+  <tr><td>Grid + wrappers</td><td><code>src/app/page.tsx</code></td><td><code>lg:max-w-5xl</code>, header spans both columns, controls column sticky below the nav.</td></tr>
+  <tr><td>Empty-thread hint</td><td><code>src/app/page.tsx</code></td><td>Desktop-only (<code>hidden lg:flex</code>) dashed panel — "estimates appear here" — so the right column isn't a void before the first analysis.</td></tr>
+  <tr><td>No compact shrink on lg</td><td><code>src/components/PhotoInput.tsx</code></td><td>The post-results <code>max-h-28</code> photo shrink exists so estimates own a phone screen; the photo has its own column on desktop, so lg keeps a taller preview.</td></tr>
+  <tr><td>Nav follows</td><td><code>src/components/TopNav.tsx</code></td><td>Inner container <code>lg:max-w-5xl</code> so the wordmark/tabs align with the widened page.</td></tr>
+  <tr><td>Log breathes a little</td><td><code>src/app/log/page.tsx</code></td><td><code>lg:max-w-3xl</code> — a reading list, not a dashboard; modest widening only.</td></tr>
+</table>
+
+<div class="callout"><strong>Sticky offset:</strong> the nav is <code>sticky top-0</code> at ~57px tall; the controls column uses <code>lg:top-24</code> so it clears the nav with the page's existing vertical rhythm.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>Order of work</h2>
+<ol class="steps">
+  <li>
+    <strong>PhotoInput: hide placeholder while preparing</strong>
+    <span class="step-note">One conditional class on the empty-state container.</span>
+  </li>
+  <li>
+    <strong>Analyze page grid</strong>
+    <span class="step-note">Wrap controls and thread, add lg grid classes, add the desktop empty-thread hint.</span>
+  </li>
+  <li>
+    <strong>Nav + log widths, compact photo on lg</strong>
+    <span class="step-note">Three one-line class edits.</span>
+  </li>
+  <li>
+    <strong>Verify</strong>
+    <span class="step-note">Lint + build, then check 390px and 1440px in the preview: prep overlay, empty state, thread after analysis.</span>
+  </li>
+</ol>
+
+<footer class="doc">
+  Calorie Calculator · desktop layout &amp; UI fixes · branch <code>ui-fixes-desktop-layout</code>
+</footer>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+</body>
+</html>
