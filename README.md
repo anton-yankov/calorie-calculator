@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Calorie Calculator
 
-## Getting Started
+A personal meal tracker: photo of a meal in, estimated calories and macros out.
+Point it at your plate (or just describe what you ate), correct anything the
+model got wrong, log it, and watch the day fill up against your calorie and
+protein goals.
 
-First, run the development server:
+Built as a phone-first PWA — add it to your home screen and it opens like an
+app.
+
+## How it works
+
+1. **Analyze** — snap or pick a photo on the Analyze page (HEIC is converted
+   in-browser, the image is resized client-side to ~200 KB). A vision model
+   returns each food with grams, calories, protein/carbs/fat, a confidence
+   level, and its assumptions. No photo? Type the meal into the description
+   field and analyze text-only.
+2. **Correct** — edit grams for instant recalculation (linear rescaling from
+   the model's baseline), or describe what's wrong ("that's whole milk, and
+   there's butter on the toast") to get a revised estimate in a chat-like
+   thread.
+3. **Log** — save the meal to the log with a small thumbnail. The log groups
+   meals by day in your timezone, shows labeled macro breakdowns per meal and
+   per day, and tracks progress bars against your daily goals. Entries can be
+   edited (grams and time), re-logged with one tap for repeat meals, or
+   deleted with undo.
+
+## Tech stack
+
+- [Next.js](https://nextjs.org) (App Router, Server Actions) + React + TypeScript
+- Tailwind CSS v4
+- OpenAI Responses API with strict structured outputs for the vision analysis
+- Supabase (Postgres) for the meal log and goals
+- [sonner](https://sonner.emilkowal.ski/) for toasts
+- Deployed on Vercel
+
+## Setup
 
 ```bash
+npm install
+cp .env.example .env.local   # then fill it in
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Environment variables (see `.env.example`):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable                               | Purpose                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------------ |
+| `OPENAI_API_KEY`                       | Vision analysis (required)                                                           |
+| `VISION_MODEL`                         | Model override; defaults to `gpt-5.6-luna`                                           |
+| `SITE_PASSWORD`                        | When set, the whole site sits behind this password                                   |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Supabase project URL                                                                 |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Fallback database key (`anon` role, needs the RLS policies in `supabase/schema.sql`) |
+| `SUPABASE_SECRET_KEY`                  | Preferred database key (server-only, bypasses RLS)                                   |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Database: create a Supabase project and run `supabase/schema.sql` in the SQL
+Editor. It creates `public.meals` (the log) and `public.settings` (daily
+goals).
 
-## Learn More
+## Deploying
 
-To learn more about Next.js, take a look at the following resources:
+Deploy to Vercel with the same environment variables. `SITE_PASSWORD` is worth
+setting there — the app is personal and the OpenAI key is on the other side of
+every analyze request. Remaining hardening and deferred work is tracked in
+[FUTURE-TASKS.md](FUTURE-TASKS.md).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command                       | What it does             |
+| ----------------------------- | ------------------------ |
+| `npm run dev`                 | Dev server               |
+| `npm run build` / `npm start` | Production build / serve |
+| `npm run lint`                | ESLint                   |
+| `npm run typecheck`           | `tsc --noEmit`           |
+| `npm run format`              | Prettier                 |

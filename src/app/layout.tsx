@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import { AnalysisProvider } from "@/components/AnalysisProvider";
 import { TopNav } from "@/components/TopNav";
 import "./globals.css";
@@ -20,8 +21,19 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  // Vercel provides the production URL at build time; localhost is the dev fallback
+  metadataBase: new URL(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000",
+  ),
   title: "Calorie Calculator",
   description: "Photo of a meal in, estimated calories and macros out.",
+  appleWebApp: {
+    capable: true,
+    title: "Calories",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -33,6 +45,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <TopNav />
         <AnalysisProvider>{children}</AnalysisProvider>
+        <Toaster
+          position="bottom-center"
+          toastOptions={{
+            style: {
+              background: "var(--surface-raised)",
+              border: "1px solid var(--line)",
+              color: "var(--foreground)",
+              borderRadius: "10px",
+            },
+            actionButtonStyle: {
+              background: "var(--accent)",
+              color: "var(--background)",
+            },
+          }}
+        />
       </body>
     </html>
   );

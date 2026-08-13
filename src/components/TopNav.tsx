@@ -21,7 +21,9 @@ export function TopNav() {
           <span className="sm:hidden">Calories</span>
           <span className="hidden sm:inline">Calorie Calculator</span>
         </Link>
-        <div className={`flex rounded-full border border-line bg-surface p-1 ${locked ? "invisible" : ""}`}>
+        <div
+          className={`flex rounded-full border border-line bg-surface p-1 ${locked ? "invisible" : ""}`}
+        >
           {tabs.map((tab) => {
             const active = pathname === tab.href;
             return (

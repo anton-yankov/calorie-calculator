@@ -29,3 +29,20 @@ create policy "anon can delete meals" on public.meals
 -- Required because "automatically expose new tables" is disabled for this
 -- project: privileges must be granted per table.
 grant select, insert, delete on public.meals to anon;
+
+-- The secret key maps to service_role, which needs per-table grants too
+-- (RLS doesn't apply to it, but plain table privileges still do).
+grant select, insert, update, delete on public.meals to service_role;
+
+-- Daily goals — a single row (the boolean primary key with a check constraint
+-- guarantees at most one). Accessed only with the secret key, which bypasses
+-- RLS, so no anon policies or grants are needed.
+create table public.settings (
+  id boolean primary key default true check (id),
+  calorie_goal integer not null check (calorie_goal > 0),
+  protein_goal integer check (protein_goal > 0)
+);
+
+alter table public.settings enable row level security;
+
+grant select, insert, update on public.settings to service_role;
