@@ -75,13 +75,26 @@ export default function Home() {
           onClear={handleClear}
         />
 
-        <input
-          type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Details, or a full meal to analyze without a photo — e.g. 2 eggs, rye toast"
-          className="rounded-panel border border-line bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none"
-        />
+        <div className="relative flex">
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Details, or a full meal to analyze without a photo — e.g. 2 eggs, rye toast"
+            className="min-w-0 flex-1 rounded-panel border border-line bg-surface py-3 pl-4 pr-11 text-sm text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none"
+          />
+          {description && (
+            <button
+              type="button"
+              aria-label="Clear description"
+              title="Clear description"
+              onClick={() => setDescription("")}
+              className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-sm font-semibold text-muted transition hover:bg-surface-raised hover:text-foreground"
+            >
+              ✕
+            </button>
+          )}
+        </div>
 
         <button
           type="button"

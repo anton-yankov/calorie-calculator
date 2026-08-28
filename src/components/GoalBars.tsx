@@ -16,8 +16,8 @@ function GoalCell({
   unit?: string;
 }) {
   const pct = Math.min(100, (value / target) * 100);
-  // Over-goal switches to the accent color — a signal, not a scold
-  const over = value > target;
+  // The goal is a floor: hitting it is the win state, under it is just progress
+  const met = value >= target;
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex items-baseline justify-between gap-2">
@@ -38,7 +38,7 @@ function GoalCell({
         className="h-1.5 overflow-hidden rounded-full bg-line/50"
       >
         <div
-          className={`h-full rounded-full ${over ? "bg-accent" : "bg-success"}`}
+          className={`h-full rounded-full ${met ? "bg-success" : "bg-muted/40"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
