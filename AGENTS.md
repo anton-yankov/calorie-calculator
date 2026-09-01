@@ -13,3 +13,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - When I ask for a plan or to "plan out" something, that means planning only — do NOT make any code changes yet. Deliver the plan (as a document in `.plans/` only if I explicitly ask for one there, otherwise just present it) and wait for me to ask before implementing.
 - Plan documents in `.plans/` must follow the design system in [.plans/style-guide.html](.plans/style-guide.html) (palette, typography, numbered sections, diagram rules).
 - Only commit or push when I explicitly ask for it — never as an automatic follow-up to other work.
+
+## Publishing HTML plans
+
+Publish every HTML plan, prototype, or visual write-up to postplan with `npx postplan upload ./plan.html --description "short label"` and share the printed draft URL. My key in `~/.postplan` attributes uploads automatically — never run `postplan auth` commands. Give the HTML a meaningful `<title>` (it becomes the draft's display name in my dashboard).
+
+The file must be a single, fully self-contained page. Postplan rejects `<link>` tags and external/module scripts — so when following [.plans/style-guide.html](.plans/style-guide.html), drop its Google Fonts and Prism CDN tags for the uploaded copy: keep the fallback font stacks (Georgia serif / system-ui / monospace) and style `<pre>` blocks with plain `--code-bg` instead of Prism. Inline classic `<script>` is fine; inline event handlers, JavaScript URLs, forms, iframes, and meta-refresh are also rejected. Re-uploading the same file adds a new version of the same draft.
