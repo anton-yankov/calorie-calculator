@@ -5,7 +5,7 @@ import { logMealAction } from "@/app/actions";
 import { dayBounds, dayKey } from "@/lib/day";
 import { makeThumbnail, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
 import { scaleFood, sumTotals } from "@/lib/scale";
-import type { MealAnalysis } from "@/lib/schema";
+import type { FoodItem, MealAnalysis } from "@/lib/schema";
 
 export interface HistoryEntry {
   /** The correction that produced this estimate; null for the first estimate of a photo */
@@ -38,6 +38,7 @@ interface AnalysisState {
   handleSelect: (selected: File) => Promise<void>;
   handleClear: () => void;
   handleLog: () => Promise<void>;
+  addScannedFood: (food: FoodItem) => void;
   analyze: (correction?: string) => Promise<void>;
   handleGramsChange: (foodIndex: number, grams: number) => void;
 }
@@ -144,9 +145,49 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  function addScannedFood(food: FoodItem) {
+    const note = "Packaged-product nutrition was added from a barcode.";
+    const withBarcodeNote = (notes: string) =>
+      notes.includes(note) ? notes : notes ? `${notes} ${note}` : note;
+    setHistory((prev) => {
+      const last = prev[prev.length - 1];
+      if (!last) {
+        const analysis: MealAnalysis = {
+          foods: [food],
+          totals: sumTotals([food]),
+          notes: note,
+        };
+        return [{ correction: null, analysis, baseline: analysis }];
+      }
+
+      const analysisFoods = [...last.analysis.foods, food];
+      const baselineFoods = [...last.baseline.foods, food];
+      return [
+        ...prev.slice(0, -1),
+        {
+          ...last,
+          analysis: {
+            ...last.analysis,
+            foods: analysisFoods,
+            totals: sumTotals(analysisFoods),
+            notes: withBarcodeNote(last.analysis.notes),
+          },
+          baseline: {
+            ...last.baseline,
+            foods: baselineFoods,
+            totals: sumTotals(baselineFoods),
+            notes: withBarcodeNote(last.baseline.notes),
+          },
+        },
+      ];
+    });
+    setLoggedAtLength(null);
+    setError(null);
+  }
+
   async function analyze(correction?: string) {
     // A photo, a description, or both — text-only analysis is fine
-    if (!sourceBlob && !description.trim()) return;
+    if (!sourceBlob && !description.trim() && !(correction && latest)) return;
     setLoading(true);
     setError(null);
     if (correction) {
@@ -224,6 +265,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         handleSelect,
         handleClear,
         handleLog,
+        addScannedFood,
         analyze,
         handleGramsChange,
       }}

@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1b1a16" />
+    <title>Barcode scanning on your phone — Calorie Calculator</title>
+    <style>
+      :root {
+        --bg: #1b1a16;
+        --ink: #edeae0;
+        --muted: #aaa69b;
+        --surface: #24221c;
+        --line: #3b382e;
+        --accent: #e08a5c;
+        --accent-soft: #3a2a20;
+        --green: #7fbf92;
+        --green-soft: #22312a;
+        --danger: #e58b82;
+        --max: 1120px;
+      }
+
+      * { box-sizing: border-box; }
+      html { color-scheme: dark; scroll-behavior: smooth; background: var(--bg); }
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 68% 8%, rgba(224, 138, 92, .11), transparent 30rem),
+          var(--bg);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 16px;
+        line-height: 1.55;
+      }
+      a { color: inherit; }
+      ::selection { background: var(--accent); color: var(--bg); }
+
+      .wrap { width: min(calc(100% - 40px), var(--max)); margin-inline: auto; }
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--accent);
+        font: 750 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+      }
+      h1, h2, h3, p { margin-top: 0; }
+      h1, h2 {
+        font-family: Georgia, "Times New Roman", serif;
+        font-weight: 600;
+        letter-spacing: -.035em;
+      }
+      h1 { max-width: 760px; margin-bottom: 20px; font-size: clamp(3.2rem, 9vw, 7.4rem); line-height: .9; }
+      h2 { max-width: 700px; margin-bottom: 18px; font-size: clamp(2.25rem, 5vw, 4.5rem); line-height: .98; }
+      h3 { margin-bottom: 7px; font-size: 1rem; }
+      .lede { max-width: 580px; color: var(--muted); font-size: clamp(1.05rem, 2.2vw, 1.3rem); }
+
+      .hero {
+        min-height: 100svh;
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(290px, .85fr);
+        align-items: center;
+        gap: clamp(42px, 8vw, 110px);
+        padding-block: max(44px, env(safe-area-inset-top)) max(54px, env(safe-area-inset-bottom));
+      }
+      .verdict {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 28px;
+        color: var(--green);
+        font-weight: 750;
+      }
+      .verdict::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 0 7px rgba(127, 191, 146, .1);
+      }
+
+      .phone-wrap { position: relative; display: grid; place-items: center; }
+      .phone-wrap::before {
+        content: "";
+        position: absolute;
+        width: min(78vw, 510px);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        border: 1px solid rgba(224, 138, 92, .18);
+        box-shadow: 0 0 0 48px rgba(224, 138, 92, .025), 0 0 0 96px rgba(224, 138, 92, .018);
+      }
+      .phone {
+        position: relative;
+        width: min(315px, 76vw);
+        aspect-ratio: 9 / 18.5;
+        overflow: hidden;
+        border: 8px solid #0d0d0b;
+        border-radius: 44px;
+        background: #151512;
+        box-shadow: 0 35px 80px rgba(0, 0, 0, .4);
+        transform: rotate(3deg);
+      }
+      .island { position: absolute; z-index: 3; top: 10px; left: 50%; width: 88px; height: 25px; transform: translateX(-50%); border-radius: 18px; background: #080807; }
+      .camera-view {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(rgba(20, 21, 16, .26), rgba(20, 21, 16, .38)),
+          radial-gradient(ellipse at 62% 51%, #d8be8e 0 12%, transparent 13%),
+          radial-gradient(ellipse at 47% 52%, #9d5639 0 21%, transparent 22%),
+          radial-gradient(ellipse at 50% 50%, #d4d0ba 0 34%, transparent 35%),
+          linear-gradient(135deg, #393929, #171812 60%);
+      }
+      .scanner-frame { position: absolute; inset: 29% 10% 27%; }
+      .corner { position: absolute; width: 28px; height: 28px; border-color: var(--ink); border-style: solid; }
+      .corner:nth-child(1) { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 8px 0 0; }
+      .corner:nth-child(2) { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 8px 0 0; }
+      .corner:nth-child(3) { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 8px; }
+      .corner:nth-child(4) { right: 0; bottom: 0; border-width: 0 3px 3px 0; border-radius: 0 0 8px; }
+      .scanline {
+        position: absolute;
+        top: 12%;
+        left: 4%;
+        width: 92%;
+        height: 2px;
+        background: var(--accent);
+        box-shadow: 0 0 18px 3px rgba(224, 138, 92, .6);
+        animation: scan 2.4s cubic-bezier(.45, 0, .55, 1) infinite alternate;
+      }
+      .barcode {
+        position: absolute;
+        left: 50%;
+        bottom: 30%;
+        width: 56%;
+        height: 54px;
+        transform: translateX(-50%) rotate(-4deg);
+        background: repeating-linear-gradient(90deg, #12120f 0 2px, #e6e0d3 2px 5px, #12120f 5px 7px, #e6e0d3 7px 11px);
+        opacity: .88;
+      }
+      .phone-copy { position: absolute; z-index: 2; top: 72px; width: 100%; padding: 0 24px; text-align: center; }
+      .phone-copy strong { display: block; font-size: 1.08rem; }
+      .phone-copy span { color: rgba(237, 234, 224, .75); font-size: .77rem; }
+      .phone-action { position: absolute; z-index: 2; right: 18px; bottom: 20px; left: 18px; padding: 14px; border-radius: 12px; background: rgba(27, 26, 22, .88); text-align: center; font-size: .85rem; font-weight: 700; backdrop-filter: blur(12px); }
+
+      section { padding-block: clamp(80px, 12vw, 150px); border-top: 1px solid var(--line); }
+      .section-grid { display: grid; grid-template-columns: .75fr 1.25fr; gap: clamp(40px, 9vw, 130px); align-items: start; }
+      .sticky { position: sticky; top: 40px; }
+      .steps { counter-reset: flow; }
+      .step {
+        counter-increment: flow;
+        display: grid;
+        grid-template-columns: 54px 1fr;
+        gap: 20px;
+        padding: 28px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .step:first-child { padding-top: 2px; }
+      .step::before { content: "0" counter(flow); color: var(--accent); font: 700 13px/1.6 ui-monospace, monospace; }
+      .step p { margin: 0; color: var(--muted); }
+
+      .requirements { display: grid; grid-template-columns: repeat(2, 1fr); border-block: 1px solid var(--line); }
+      .requirement { padding: clamp(28px, 5vw, 52px) 0; }
+      .requirement + .requirement { padding-left: clamp(24px, 5vw, 70px); border-left: 1px solid var(--line); }
+      .big-number { display: block; margin-bottom: 13px; color: var(--accent); font: 600 clamp(3rem, 7vw, 6rem)/.9 Georgia, serif; }
+      .requirement p { max-width: 380px; margin-bottom: 0; color: var(--muted); }
+
+      .truth { display: grid; grid-template-columns: 1.1fr .9fr; gap: clamp(35px, 8vw, 100px); align-items: end; }
+      .truth-note { padding: 25px 0 0 24px; border-top: 2px solid var(--danger); color: var(--muted); }
+      .truth-note strong { display: block; margin-bottom: 7px; color: var(--ink); }
+      .data-line { margin-top: 36px; color: var(--green); font: 650 13px/1.6 ui-monospace, monospace; }
+
+      .checklist { columns: 2; column-gap: clamp(38px, 8vw, 100px); margin: 42px 0 0; padding: 0; list-style: none; }
+      .checklist li { break-inside: avoid; position: relative; padding: 18px 0 18px 34px; border-bottom: 1px solid var(--line); }
+      .checklist li::before { content: "✓"; position: absolute; left: 0; color: var(--green); font-weight: 800; }
+
+      footer { padding: 40px 0 max(40px, env(safe-area-inset-bottom)); color: var(--muted); font-size: .82rem; }
+      footer .wrap { display: flex; justify-content: space-between; gap: 20px; }
+      footer a { text-underline-offset: 4px; }
+
+      @keyframes scan { to { transform: translateY(185px); } }
+      @media (prefers-reduced-motion: no-preference) {
+        .hero-copy > * { animation: enter .65s cubic-bezier(.22, 1, .36, 1) both; }
+        .hero-copy > :nth-child(2) { animation-delay: .08s; }
+        .hero-copy > :nth-child(3) { animation-delay: .16s; }
+        .hero-copy > :nth-child(4) { animation-delay: .24s; }
+        .phone { animation: phone-enter .85s .18s cubic-bezier(.22, 1, .36, 1) both; }
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity .65s ease, transform .65s ease; }
+        .reveal.visible { opacity: 1; transform: none; }
+      }
+      @keyframes enter { from { opacity: 0; transform: translateY(16px); } }
+      @keyframes phone-enter { from { opacity: 0; transform: rotate(8deg) translateY(30px) scale(.94); } }
+
+      @media (max-width: 760px) {
+        .wrap { width: min(calc(100% - 32px), var(--max)); }
+        .hero { grid-template-columns: 1fr; padding-top: 72px; }
+        h1 { font-size: clamp(3.4rem, 18vw, 5.2rem); }
+        .phone-wrap { margin: 20px 0 28px; }
+        .section-grid, .truth { grid-template-columns: 1fr; }
+        .sticky { position: static; }
+        .requirements { grid-template-columns: 1fr; }
+        .requirement + .requirement { padding-left: 0; border-top: 1px solid var(--line); border-left: 0; }
+        .checklist { columns: 1; }
+        footer .wrap { flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero wrap">
+        <div class="hero-copy">
+          <p class="eyebrow">Calorie Calculator · Mobile web app</p>
+          <h1>Scan it.<br />Know it.</h1>
+          <p class="lede">Barcode scanning will work from the home-screen web app on your phone—using the rear camera, without building a native iOS or Android app.</p>
+          <p class="verdict">Yes, it works as a PWA</p>
+        </div>
+        <div class="phone-wrap" aria-hidden="true">
+          <div class="phone">
+            <div class="island"></div>
+            <div class="camera-view"></div>
+            <div class="phone-copy"><strong>Scan a food barcode</strong><span>Point the rear camera at an EAN or UPC code</span></div>
+            <div class="barcode"></div>
+            <div class="scanner-frame"><i class="corner"></i><i class="corner"></i><i class="corner"></i><i class="corner"></i><i class="scanline"></i></div>
+            <div class="phone-action">Looking for barcode…</div>
+          </div>
+        </div>
+      </header>
+
+      <section>
+        <div class="wrap section-grid">
+          <div class="sticky reveal">
+            <p class="eyebrow">The experience</p>
+            <h2>Camera to calories in four steps.</h2>
+            <p class="lede">The scan happens on the phone. Nutrition lookup and normalization happen safely on the server.</p>
+          </div>
+          <div class="steps reveal">
+            <article class="step"><div><h3>Open the scanner</h3><p>Tap “Scan barcode.” The installed web app asks once for camera permission, then selects the rear-facing camera.</p></div></article>
+            <article class="step"><div><h3>Decode on-device</h3><p>ZXing reads common grocery formats—EAN-13, EAN-8, UPC-A, and UPC-E—from the live video. The camera stops as soon as a code is found.</p></div></article>
+            <article class="step"><div><h3>Find the product</h3><p>The barcode is sent to the app’s own Next.js route, which queries Open Food Facts for the name, brand, image, and nutrition per 100 g.</p></div></article>
+            <article class="step"><div><h3>Confirm quantity and log</h3><p>You enter how many grams you ate. The app calculates the exact macros, drops them into the current meal result, and keeps the existing gram editor and log flow.</p></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap reveal">
+          <p class="eyebrow">What the phone needs</p>
+          <h2>Two non-negotiables.</h2>
+          <div class="requirements">
+            <article class="requirement"><span class="big-number">01</span><h3>HTTPS</h3><p>Camera APIs require a secure origin. A normal production deployment is fine. A plain <code>http://192.168…</code> development URL opened from your phone may not be.</p></article>
+            <article class="requirement"><span class="big-number">02</span><h3>Camera permission</h3><p>iPhone or Android will show the standard permission prompt. If permission is denied, the app should offer manual barcode entry and explain how to re-enable access.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap truth reveal">
+          <div>
+            <p class="eyebrow">Where the data comes from</p>
+            <h2>The barcode is an ID—not a nutrition label.</h2>
+            <p class="lede">Scanning produces a number. Open Food Facts turns that number into a product record. Your app then calculates the eaten portion from nutrition per 100 g.</p>
+            <p class="data-line">EAN / UPC → product record → per-100-g values → your portion</p>
+          </div>
+          <aside class="truth-note"><strong>Keep a human in the loop.</strong>Open Food Facts is crowdsourced. The product may be missing or its serving size may be unreliable, so users should always confirm the name and grams before logging.</aside>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap reveal">
+          <p class="eyebrow">Recommended build</p>
+          <h2>Small surface area. Native-feeling result.</h2>
+          <ul class="checklist">
+            <li>Lazy-load <code>@zxing/browser</code> only when scanning starts</li>
+            <li>Prefer the rear camera with <code>facingMode: environment</code></li>
+            <li>Stop all camera tracks on success, close, and page exit</li>
+            <li>Prevent duplicate detections while product lookup runs</li>
+            <li>Proxy Open Food Facts through a Next.js route</li>
+            <li>Ask for grams rather than trusting serving text</li>
+            <li>Map the product directly into the existing MealAnalysis shape</li>
+            <li>Skip the OpenAI call for scanned packaged foods</li>
+            <li>Offer manual code and nutrition entry as fallbacks</li>
+            <li>Test installed and browser modes on both iPhone and Android</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap"><span>Calorie Calculator · Barcode scanning concept</span><span>References: <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia">Camera API</a> · <a href="https://github.com/zxing-js/browser">ZXing Browser</a> · <a href="https://openfoodfacts.github.io/documentation/docs/Product-Opener/v3/products/get-api-v3-product-code/">Open Food Facts</a></span></div>
+    </footer>
+    <script>
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add("visible"));
+      }, { threshold: 0.14 });
+      document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+    </script>
+  </body>
+</html>

@@ -42,8 +42,12 @@ export async function POST(req: Request): Promise<Response> {
   const correction = form.get("correction");
 
   const hasDescription = typeof description === "string" && description.trim().length > 0;
-  // Text-only analysis is allowed — but there must be something to analyze
-  if (!(image instanceof File) && !hasDescription) {
+  const hasCorrection =
+    typeof previousResult === "string" &&
+    typeof correction === "string" &&
+    correction.trim().length > 0;
+  // Text-only and correction-only analysis are allowed — but there must be something to analyze
+  if (!(image instanceof File) && !hasDescription && !hasCorrection) {
     return Response.json({ error: "Provide a photo or a description." }, { status: 400 });
   }
 
@@ -63,7 +67,7 @@ export async function POST(req: Request): Promise<Response> {
   if (hasDescription) {
     userParts.push({ type: "input_text", text: `User description: ${description.trim()}` });
   }
-  if (typeof previousResult === "string" && typeof correction === "string" && correction.trim()) {
+  if (hasCorrection) {
     userParts.push({
       type: "input_text",
       text:

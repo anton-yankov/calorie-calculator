@@ -152,3 +152,18 @@ textarea:focus-visible {
     transform: translateY(8px);
   }
 }
+
+@keyframes barcode-scan {
+  from {
+    top: 12%;
+  }
+  to {
+    top: 86%;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .barcode-scan-line {
+    animation: barcode-scan 1.8s ease-in-out infinite alternate;
+  }
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { AnalysisCard, CompactAnalysis } from "@/components/AnalysisCard";
 import { useAnalysis } from "@/components/AnalysisProvider";
+import { BarcodeInput } from "@/components/BarcodeInput";
 import { CorrectionBar } from "@/components/CorrectionBar";
 import { DatePicker } from "@/components/DatePicker";
 import { SkeletonEstimate, Spinner } from "@/components/loaders";
@@ -40,6 +41,7 @@ export default function Home() {
     handleSelect,
     handleClear,
     handleLog,
+    addScannedFood,
     analyze,
     handleGramsChange,
   } = useAnalysis();
@@ -81,6 +83,8 @@ export default function Home() {
           onClear={handleClear}
         />
 
+        <BarcodeInput disabled={loading || preparing || logging} onAdd={addScannedFood} />
+
         <div className="relative flex">
           <input
             type="text"
@@ -102,22 +106,24 @@ export default function Home() {
           )}
         </div>
 
-        <button
-          type="button"
-          disabled={(!sourceBlob && !description.trim()) || loading || preparing}
-          onClick={() => analyze()}
-          className="flex items-center justify-center gap-2 rounded-panel bg-accent px-4 py-3 font-semibold text-background transition duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {/* During photo prep the frame overlay is the loader — the button stays plain */}
-          {loading && <Spinner />}
-          {loading
-            ? "Analyzing…"
-            : latest
-              ? sourceBlob
-                ? "Start over with this photo"
-                : "Analyze again"
-              : "Analyze"}
-        </button>
+        {(!latest || sourceBlob || description.trim()) && (
+          <button
+            type="button"
+            disabled={(!sourceBlob && !description.trim()) || loading || preparing}
+            onClick={() => analyze()}
+            className="flex items-center justify-center gap-2 rounded-panel bg-accent px-4 py-3 font-semibold text-background transition duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {/* During photo prep the frame overlay is the loader — the button stays plain */}
+            {loading && <Spinner />}
+            {loading
+              ? "Analyzing…"
+              : latest
+                ? sourceBlob
+                  ? "Start over with this photo"
+                  : "Analyze again"
+                : "Analyze"}
+          </button>
+        )}
 
         {error && (
           <p className="rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
