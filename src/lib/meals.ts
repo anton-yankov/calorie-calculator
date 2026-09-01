@@ -72,6 +72,23 @@ export async function deleteMealById(id: string): Promise<void> {
   if (error) throw new Error(`Couldn't delete: ${error.message}`);
 }
 
+/** Latest logged_at in [startIso, endIso), or null if none — used to order backdated meals. */
+export async function latestLoggedAtBetween(
+  startIso: string,
+  endIso: string,
+): Promise<string | null> {
+  const { data, error } = await supabase()
+    .from("meals")
+    .select("logged_at")
+    .gte("logged_at", startIso)
+    .lt("logged_at", endIso)
+    .order("logged_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`Couldn't check the day's meals: ${error.message}`);
+  return data ? (data as { logged_at: string }).logged_at : null;
+}
+
 /** Calorie/macro sums for meals logged in [startIso, endIso) — used for "today so far". */
 export async function sumTotalsBetween(startIso: string, endIso: string): Promise<MealTotals> {
   const { data, error } = await supabase()

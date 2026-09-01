@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useRef, useState } from "react";
 import { logMealAction } from "@/app/actions";
+import { dayBounds, dayKey } from "@/lib/day";
 import { makeThumbnail, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
 import { scaleFood, sumTotals } from "@/lib/scale";
 import type { MealAnalysis } from "@/lib/schema";
@@ -30,6 +31,9 @@ interface AnalysisState {
   logging: boolean;
   error: string | null;
   loggedAtLength: number | null;
+  /** YYYY-MM-DD day the next log lands on; null means today */
+  logDate: string | null;
+  setLogDate: (key: string | null) => void;
   latest: HistoryEntry | undefined;
   handleSelect: (selected: File) => Promise<void>;
   handleClear: () => void;
@@ -59,6 +63,9 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   // History length at the moment of logging — logging re-enables after a correction
   const [loggedAtLength, setLoggedAtLength] = useState<number | null>(null);
+  // Day the next log lands on; null = today. Backdating is the exception, not a
+  // sticky mode, so this resets after a successful log and on clear.
+  const [logDate, setLogDateState] = useState<string | null>(null);
   // The resized JPEG is cached so corrections re-send the same bytes
   const resizedRef = useRef<Blob | null>(null);
 
@@ -100,7 +107,13 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setHistory([]);
     setError(null);
     setLoggedAtLength(null);
+    setLogDateState(null);
     resizedRef.current = null;
+  }
+
+  // Selecting today (or clearing the input) is just "not backdating"
+  function setLogDate(key: string | null) {
+    setLogDateState(key && key !== dayKey(new Date()) ? key : null);
   }
 
   async function handleLog() {
@@ -109,15 +122,21 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const thumbnail = resizedRef.current ? await makeThumbnail(resizedRef.current) : null;
-      const result = await logMealAction({
-        id: crypto.randomUUID(),
-        loggedAt: new Date().toISOString(),
-        description: description.trim(),
-        analysis: latest.analysis,
-        thumbnail,
-      });
+      // When backdating, the server assigns the timestamp within the day's
+      // bounds; the loggedAt sent here is only a placeholder
+      const result = await logMealAction(
+        {
+          id: crypto.randomUUID(),
+          loggedAt: new Date().toISOString(),
+          description: description.trim(),
+          analysis: latest.analysis,
+          thumbnail,
+        },
+        logDate ? dayBounds(logDate) : undefined,
+      );
       if (result.error) throw new Error(result.error);
       setLoggedAtLength(history.length);
+      setLogDateState(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save the meal");
     } finally {
@@ -199,6 +218,8 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         logging,
         error,
         loggedAtLength,
+        logDate,
+        setLogDate,
         latest,
         handleSelect,
         handleClear,

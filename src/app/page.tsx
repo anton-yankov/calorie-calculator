@@ -5,9 +5,11 @@ import { useEffect, useRef } from "react";
 import { AnalysisCard, CompactAnalysis } from "@/components/AnalysisCard";
 import { useAnalysis } from "@/components/AnalysisProvider";
 import { CorrectionBar } from "@/components/CorrectionBar";
+import { DatePicker } from "@/components/DatePicker";
 import { SkeletonEstimate, Spinner } from "@/components/loaders";
 import { PhotoInput } from "@/components/PhotoInput";
 import { TodayStrip } from "@/components/TodayStrip";
+import { dayKey, dayLabel } from "@/lib/day";
 
 function CorrectionBubble({ text }: { text: string }) {
   return (
@@ -32,6 +34,8 @@ export default function Home() {
     logging,
     error,
     loggedAtLength,
+    logDate,
+    setLogDate,
     latest,
     handleSelect,
     handleClear,
@@ -39,6 +43,8 @@ export default function Home() {
     analyze,
     handleGramsChange,
   } = useAnalysis();
+
+  const todayKey = dayKey(new Date());
 
   const threadEndRef = useRef<HTMLDivElement>(null);
 
@@ -162,6 +168,14 @@ export default function Home() {
         {latest && !pendingCorrection && (
           <>
             <div className="flex items-center gap-2">
+              {/* Which day the meal lands on — capped at today, no future meals */}
+              <DatePicker
+                value={logDate ?? todayKey}
+                max={todayKey}
+                disabled={logging || loggedAtLength === history.length}
+                onChange={setLogDate}
+                ariaLabel="Day to log this meal to"
+              />
               <button
                 type="button"
                 disabled={loading || logging || loggedAtLength === history.length}
@@ -169,7 +183,13 @@ export default function Home() {
                 className="flex flex-1 items-center justify-center gap-2 rounded-panel border border-success px-4 py-2.5 text-sm font-semibold text-success transition-colors hover:bg-success-soft disabled:border-line disabled:text-muted"
               >
                 {logging && <Spinner className="h-3.5 w-3.5" />}
-                {logging ? "Logging…" : loggedAtLength === history.length ? "Logged ✓" : "Log meal"}
+                {logging
+                  ? "Logging…"
+                  : loggedAtLength === history.length
+                    ? "Logged ✓"
+                    : logDate
+                      ? `Log to ${dayLabel(logDate)}`
+                      : "Log meal"}
               </button>
               {loggedAtLength === history.length && (
                 <Link

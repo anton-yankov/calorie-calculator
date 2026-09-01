@@ -8,6 +8,7 @@ import {
   deleteMealById,
   getMealById,
   insertMeals,
+  latestLoggedAtBetween,
   sumTotalsBetween,
   updateMealById,
 } from "@/lib/meals";
@@ -57,9 +58,47 @@ function message(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
-export async function logMealAction(meal: LoggedMeal): Promise<ActionResult> {
+/**
+ * When `backdate` is given (a past day's local-midnight bounds, computed
+ * client-side because day boundaries depend on the viewer's timezone), the
+ * meal's timestamp is assigned here instead of taken from the client: noon of
+ * that day if it's empty, otherwise just after the day's latest meal — so
+ * backdated meals read in the order they were logged and can never land close
+ * enough to midnight to flip days for a viewer in another timezone.
+ */
+export async function logMealAction(
+  meal: LoggedMeal,
+  backdate?: { startIso: string; endIso: string },
+): Promise<ActionResult> {
   if (!(await isAuthed())) return { error: "Authentication required" };
   if (!isValidMeal(meal)) return { error: "Invalid meal data" };
+  if (backdate) {
+    const start = Date.parse(backdate.startIso);
+    const end = Date.parse(backdate.endIso);
+    const twoDays = 48 * 60 * 60 * 1000;
+    if (
+      Number.isNaN(start) ||
+      Number.isNaN(end) ||
+      end <= start ||
+      end - start > twoDays ||
+      start > Date.now()
+    ) {
+      return { error: "Invalid backdate" };
+    }
+    try {
+      const latestIso = await latestLoggedAtBetween(backdate.startIso, backdate.endIso);
+      const last = latestIso === null ? null : Date.parse(latestIso);
+      // A minute after the day's latest meal, halving toward midnight when
+      // there's less than that left so the timestamp never leaves the day
+      const stamp =
+        last === null
+          ? start + (end - start) / 2
+          : Math.min(last + 60_000, last + (end - last) / 2);
+      meal = { ...meal, loggedAt: new Date(stamp).toISOString() };
+    } catch (err) {
+      return { error: message(err, "Couldn't save the meal") };
+    }
+  }
   try {
     await insertMeals([meal]);
   } catch (err) {

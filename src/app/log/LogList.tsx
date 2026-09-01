@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteMealAction, logMealAction, relogMealAction, updateMealAction } from "@/app/actions";
+import { DatePicker } from "@/components/DatePicker";
 import { GoalBars } from "@/components/GoalBars";
+import { dayKey, dayLabel } from "@/lib/day";
 import type { LoggedMeal } from "@/lib/log";
 import { scaleFood, sumTotals } from "@/lib/scale";
 import type { FoodItem, MealTotals } from "@/lib/schema";
@@ -11,25 +13,6 @@ import type { Goals } from "@/lib/settings";
 
 const fmt = (n: number) => (Number.isInteger(n) ? n.toString() : n.toFixed(1));
 const pad = (n: number) => String(n).padStart(2, "0");
-
-// Day grouping happens on the client so days follow the viewer's timezone,
-// not the server's (Vercel runs in UTC).
-function dayKey(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function dayLabel(key: string): string {
-  const today = dayKey(new Date().toISOString());
-  const yesterday = dayKey(new Date(Date.now() - 86_400_000).toISOString());
-  if (key === today) return "Today";
-  if (key === yesterday) return "Yesterday";
-  return new Date(`${key}T12:00:00`).toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 /** Grams cell in edit mode — local draft so the field can be empty mid-edit. */
 function GramsInput({
@@ -68,6 +51,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
   const [editing, setEditing] = useState(false);
   // Edit drafts; grams edits rescale from the saved analysis (the baseline)
   const [draftFoods, setDraftFoods] = useState<FoodItem[] | null>(null);
+  const [dateDraft, setDateDraft] = useState("");
   const [timeDraft, setTimeDraft] = useState("");
 
   const foods = draftFoods ?? meal.analysis.foods;
@@ -80,6 +64,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
 
   function startEdit() {
     const d = new Date(meal.loggedAt);
+    setDateDraft(dayKey(d));
     setTimeDraft(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
     setDraftFoods(meal.analysis.foods.map((f) => ({ ...f })));
     setEditing(true);
@@ -102,8 +87,10 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
 
   function handleSave() {
     if (!draftFoods) return;
-    // Same local date, edited wall-clock time
+    // Edited local date and wall-clock time; either draft falls back to the original
     const when = new Date(meal.loggedAt);
+    const [y, mo, d] = dateDraft.split("-").map(Number);
+    if (y && mo && d) when.setFullYear(y, mo - 1, d);
     const [h, m] = timeDraft.split(":").map(Number);
     if (Number.isFinite(h) && Number.isFinite(m)) when.setHours(h!, m!, 0, 0);
     const analysis = { ...meal.analysis, foods: draftFoods, totals: sumTotals(draftFoods) };
@@ -267,16 +254,24 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
       <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs font-semibold">
         {editing ? (
           <>
-            <label className="flex items-center gap-1.5 font-normal text-muted">
-              Time
+            <span className="flex items-center gap-1.5 font-normal text-muted">
+              When
+              <DatePicker
+                value={dateDraft}
+                max={dayKey(new Date())}
+                disabled={pending}
+                onChange={setDateDraft}
+                className="rounded-md border-line bg-background px-1.5 py-0.5 text-xs"
+              />
               <input
                 type="time"
                 value={timeDraft}
                 disabled={pending}
+                aria-label="Time"
                 onChange={(e) => setTimeDraft(e.target.value)}
                 className="rounded-md border border-line bg-background px-1.5 py-0.5 font-mono text-xs text-foreground focus:border-accent focus:outline-none"
               />
-            </label>
+            </span>
             <button
               type="button"
               disabled={pending}
