@@ -14,6 +14,7 @@ export interface BarcodeProduct {
   imageUrl: string | null;
   servingGrams: number | null;
   per100g: ProductNutrition;
+  source: "open-food-facts" | "saved";
 }
 
 function productName(product: Pick<BarcodeProduct, "brand" | "name">): string {
@@ -32,7 +33,10 @@ export function barcodeProductToFood(product: BarcodeProduct, grams: number): Fo
     carbs_g: product.per100g.carbs_g * ratio,
     fat_g: product.per100g.fat_g * ratio,
     confidence: "high",
-    assumptions: `Barcode ${product.barcode}; nutrition per 100 g from Open Food Facts.`,
+    assumptions:
+      product.source === "saved"
+        ? `Barcode ${product.barcode}; nutrition from a saved manual entry.`
+        : `Barcode ${product.barcode}; nutrition per 100 g from Open Food Facts.`,
   };
 }
 

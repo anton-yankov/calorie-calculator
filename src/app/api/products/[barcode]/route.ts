@@ -1,3 +1,4 @@
+import { getSavedBarcodeProduct, saveBarcodeProduct } from "@/lib/barcode-products";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
 
 export const runtime = "nodejs";
@@ -26,6 +27,15 @@ interface OpenFoodFactsProduct {
 interface OpenFoodFactsResponse {
   status?: unknown;
   product?: OpenFoodFactsProduct;
+}
+
+interface SaveProductBody {
+  name?: unknown;
+  per100g?: Partial<Record<keyof ProductNutrition, unknown>>;
+}
+
+function submittedNutritionValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
 function finite(value: unknown): number | null {
@@ -57,6 +67,16 @@ export async function GET(_request: Request, context: { params: Promise<{ barcod
   const { barcode } = await context.params;
   if (!BARCODE_PATTERN.test(barcode)) {
     return Response.json({ error: "Enter a 7–14 digit food barcode." }, { status: 400 });
+  }
+
+  try {
+    const saved = await getSavedBarcodeProduct(barcode);
+    if (saved) {
+      return Response.json(saved, { headers: { "Cache-Control": "private, no-store" } });
+    }
+  } catch (error) {
+    // A temporary database problem should not prevent the public catalog lookup.
+    console.error("saved product lookup failed:", error);
   }
 
   const url = new URL(
@@ -125,9 +145,52 @@ export async function GET(_request: Request, context: { params: Promise<{ barcod
     imageUrl: text(source.image_front_small_url) || null,
     servingGrams: serving !== null && serving > 0 ? serving : null,
     per100g,
+    source: "open-food-facts",
   };
 
   return Response.json(product, {
     headers: { "Cache-Control": "private, max-age=300" },
   });
+}
+
+export async function POST(request: Request, context: { params: Promise<{ barcode: string }> }) {
+  const { barcode } = await context.params;
+  if (!BARCODE_PATTERN.test(barcode)) {
+    return Response.json({ error: "Enter a 7–14 digit food barcode." }, { status: 400 });
+  }
+
+  let body: SaveProductBody;
+  try {
+    body = (await request.json()) as SaveProductBody;
+  } catch {
+    return Response.json({ error: "Invalid product data." }, { status: 400 });
+  }
+
+  const name = text(body?.name);
+  const per100g: ProductNutrition = {
+    calories: submittedNutritionValue(body?.per100g?.calories) ?? Number.NaN,
+    protein_g: submittedNutritionValue(body?.per100g?.protein_g) ?? Number.NaN,
+    carbs_g: submittedNutritionValue(body?.per100g?.carbs_g) ?? Number.NaN,
+    fat_g: submittedNutritionValue(body?.per100g?.fat_g) ?? Number.NaN,
+  };
+  if (!name || Object.values(per100g).some((value) => !Number.isFinite(value))) {
+    return Response.json(
+      { error: "Enter a product name and all four nutrition values per 100 g." },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const product = await saveBarcodeProduct(barcode, name, per100g);
+    return Response.json(product, {
+      status: 201,
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  } catch (error) {
+    console.error("barcode product save failed:", error);
+    return Response.json(
+      { error: "Couldn't save this barcode. Try again shortly." },
+      { status: 500 },
+    );
+  }
 }

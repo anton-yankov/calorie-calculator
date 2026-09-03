@@ -24,13 +24,15 @@ app.
    per day, and tracks progress bars against your daily goals. Entries can be
    edited (grams and time), re-logged with one tap for repeat meals, or
    deleted with undo.
+4. **Scan** — look up packaged foods by barcode. Products missing from Open
+   Food Facts can be entered manually and are saved for future scans.
 
 ## Tech stack
 
 - [Next.js](https://nextjs.org) (App Router, Server Actions) + React + TypeScript
 - Tailwind CSS v4
 - OpenAI Responses API with strict structured outputs for the vision analysis
-- Supabase (Postgres) for the meal log and goals
+- Supabase (Postgres) for the meal log, goals, and saved barcode products
 - [sonner](https://sonner.emilkowal.ski/) for toasts
 - Deployed on Vercel
 
@@ -55,7 +57,7 @@ Environment variables (see `.env.example`):
 
 Database: create a Supabase project and run `supabase/schema.sql` in the SQL
 Editor. It creates `public.meals` (the log) and `public.settings` (daily
-goals).
+goals), and `public.barcode_products` (manually entered barcode nutrition).
 
 ## Deploying
 
