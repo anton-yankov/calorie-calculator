@@ -58,8 +58,6 @@ Environment variables (see `.env.example`):
 Database: create a Supabase project and run `supabase/schema.sql` in the SQL
 Editor. It creates `public.meals` (the log) and `public.settings` (daily
 goals), and `public.barcode_products` (manually entered barcode nutrition).
-For an existing database, run the new file in `supabase/migrations/` instead
-of rerunning the complete schema.
 
 ## Deploying
 
