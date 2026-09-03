@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { IScannerControls } from "@zxing/browser";
 
 interface BarcodeScannerProps {
   onDetected: (barcode: string) => void;
@@ -24,10 +25,14 @@ function cameraMessage(error: unknown): string {
 
 export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<{ stop: () => void } | null>(null);
+  const controlsRef = useRef<IScannerControls | null>(null);
   const detectedRef = useRef(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [torchAvailable, setTorchAvailable] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchPending, setTorchPending] = useState(false);
+  const [torchError, setTorchError] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [manualError, setManualError] = useState<string | null>(null);
 
@@ -87,6 +92,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           return;
         }
         controlsRef.current = controls;
+        setTorchAvailable(Boolean(controls.switchTorch));
       } catch (error) {
         if (!cancelled) setCameraError(cameraMessage(error));
       }
@@ -101,6 +107,25 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
       if (stream instanceof MediaStream) stream.getTracks().forEach((track) => track.stop());
     };
   }, [onDetected]);
+
+  async function toggleTorch() {
+    const switchTorch = controlsRef.current?.switchTorch;
+    if (!switchTorch || torchPending) return;
+
+    const nextTorchOn = !torchOn;
+    setTorchPending(true);
+    setTorchError(null);
+
+    try {
+      await switchTorch(nextTorchOn);
+      setTorchOn(nextTorchOn);
+    } catch {
+      setTorchAvailable(false);
+      setTorchError("The flashlight isn't available on this camera.");
+    } finally {
+      setTorchPending(false);
+    }
+  }
 
   function submitManual(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -156,6 +181,24 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
         <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-[1.75/1] w-[82%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-panel border-2 border-foreground/85 shadow-[0_0_0_999px_rgba(27,26,22,0.28)]">
           <span className="barcode-scan-line absolute left-[4%] top-[12%] h-0.5 w-[92%] bg-accent shadow-[0_0_16px_3px_rgba(224,138,92,0.65)]" />
         </div>
+        {torchAvailable && (
+          <button
+            type="button"
+            aria-label={torchOn ? "Turn flashlight off" : "Turn flashlight on"}
+            aria-pressed={torchOn}
+            disabled={torchPending}
+            onClick={() => void toggleTorch()}
+            className="absolute right-5 top-5 flex h-11 items-center gap-2 rounded-full border border-white/35 bg-black/55 px-4 text-sm font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/70 disabled:cursor-wait disabled:opacity-60"
+          >
+            <span aria-hidden="true">{torchOn ? "●" : "○"}</span>
+            {torchOn ? "Light on" : "Light"}
+          </button>
+        )}
+        {torchError && (
+          <p className="absolute right-5 top-5 max-w-56 rounded-panel bg-black/70 px-3 py-2 text-right text-xs text-white backdrop-blur">
+            {torchError}
+          </p>
+        )}
         <p className="absolute bottom-5 left-0 right-0 px-5 text-center text-sm font-medium text-foreground drop-shadow">
           Hold the code inside the frame
         </p>

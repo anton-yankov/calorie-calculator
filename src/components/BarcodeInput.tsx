@@ -27,15 +27,16 @@ function ManualNutrition({
 }: {
   barcode: string;
   initialName: string;
-  onAdd: (food: FoodItem) => void;
+  onAdd: (food: FoodItem, name: string, per100g: ProductNutrition) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(initialName);
   const [grams, setGrams] = useState("100");
   const [nutrition, setNutrition] = useState({ calories: "", protein: "", carbs: "", fat: "" });
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const portion = Number(grams);
     const per100g: ProductNutrition = {
@@ -54,7 +55,15 @@ function ManualNutrition({
       setError("Enter a name, portion, and all four values per 100 g.");
       return;
     }
-    onAdd(manualProductToFood(name, portion, per100g, barcode));
+    setSaving(true);
+    setError(null);
+    try {
+      await onAdd(manualProductToFood(name, portion, per100g, barcode), name.trim(), per100g);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't save this barcode.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const nutritionFields = [
@@ -120,12 +129,14 @@ function ManualNutrition({
       <div className="mt-4 flex gap-2">
         <button
           type="submit"
+          disabled={saving}
           className="flex-1 rounded-panel bg-accent px-4 py-2.5 text-sm font-semibold text-background"
         >
-          Add to meal
+          {saving ? "Saving…" : "Save and add to meal"}
         </button>
         <button
           type="button"
+          disabled={saving}
           onClick={onCancel}
           className="rounded-panel border border-line px-4 py-2.5 text-sm font-semibold text-muted"
         >
@@ -213,16 +224,22 @@ function ProductConfirmation({
         </button>
       </div>
       <p className="border-t border-line px-4 py-2 text-[10px] text-muted">
-        Product data from{" "}
-        <a
-          href="https://world.openfoodfacts.org"
-          target="_blank"
-          rel="noreferrer"
-          className="underline decoration-line underline-offset-2 hover:text-foreground"
-        >
-          Open Food Facts
-        </a>
-        . Confirm it against the package.
+        {product.source === "saved" ? (
+          "Nutrition saved from an earlier manual entry. Confirm it against the package."
+        ) : (
+          <>
+            Product data from{" "}
+            <a
+              href="https://world.openfoodfacts.org"
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-line underline-offset-2 hover:text-foreground"
+            >
+              Open Food Facts
+            </a>
+            . Confirm it against the package.
+          </>
+        )}
       </p>
     </section>
   );
@@ -276,6 +293,19 @@ export function BarcodeInput({
     toast.success(`${food.name} added`);
   }
 
+  async function saveManual(food: FoodItem, name: string, per100g: ProductNutrition) {
+    const response = await fetch(`/api/products/${encodeURIComponent(barcode)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, per100g }),
+    });
+    const body = (await response.json()) as BarcodeProduct | LookupError;
+    if (!response.ok || "error" in body) {
+      throw new Error("error" in body ? body.error : "Couldn't save this barcode.");
+    }
+    add(food);
+  }
+
   function clear() {
     setProduct(null);
     setLookupError(null);
@@ -306,7 +336,7 @@ export function BarcodeInput({
             key={barcode}
             barcode={barcode}
             initialName={manualName}
-            onAdd={add}
+            onAdd={saveManual}
             onCancel={clear}
           />
         </div>
