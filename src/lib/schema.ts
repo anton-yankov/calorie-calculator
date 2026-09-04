@@ -9,6 +9,10 @@ export interface FoodItem {
   fat_g: number;
   confidence: Confidence;
   assumptions: string;
+  /** Barcode this food was scanned from; absent for photo or text foods */
+  barcode?: string;
+  /** Small JPEG data URL copied from the product at add time; absent if none */
+  imageUrl?: string;
 }
 
 export interface MealTotals {

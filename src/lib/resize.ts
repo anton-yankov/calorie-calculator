@@ -46,11 +46,25 @@ export async function toDisplayableBlob(file: File): Promise<Blob> {
   return heicTo({ blob: file, type: "image/jpeg", quality: 0.92 });
 }
 
-/** Tiny JPEG data URL (~160px long edge) for meal-log entries. */
-export async function makeThumbnail(source: Blob, longEdge = 160): Promise<string> {
-  const url = URL.createObjectURL(source);
+/** Long edge of the full-size meal photo kept for the viewer. */
+export const MEAL_PHOTO_EDGE = 800;
+/** Long edge of a product image in the library. */
+export const PRODUCT_IMAGE_EDGE = 640;
+/** Long edge of the product image copy that travels with a food into a meal. */
+export const FOOD_IMAGE_EDGE = 320;
+
+/**
+ * JPEG data URL at most `longEdge` px on its long side. The source may be a
+ * Blob or an existing data URL (same-origin, so canvas can read it); a data
+ * URL that's already small enough is returned as is.
+ */
+export async function makeThumbnail(source: Blob | string, longEdge = 160): Promise<string> {
+  const url = typeof source === "string" ? source : URL.createObjectURL(source);
   try {
     const img = await loadImage(url);
+    if (typeof source === "string" && Math.max(img.naturalWidth, img.naturalHeight) <= longEdge) {
+      return source;
+    }
     const scale = Math.min(1, longEdge / Math.max(img.naturalWidth, img.naturalHeight));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
@@ -58,9 +72,9 @@ export async function makeThumbnail(source: Blob, longEdge = 160): Promise<strin
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D context unavailable");
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.7);
+    return canvas.toDataURL("image/jpeg", longEdge > 320 ? 0.75 : 0.7);
   } finally {
-    URL.revokeObjectURL(url);
+    if (typeof source !== "string") URL.revokeObjectURL(url);
   }
 }
 

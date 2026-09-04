@@ -12,6 +12,19 @@ export const BARCODE_PATTERN = /^\d{7,14}$/;
 
 /** Product images are small locally generated JPEG data URLs (see makeThumbnail). */
 export const MAX_PRODUCT_IMAGE_LENGTH = 300_000;
+/** A meal's full-size photo (~800px JPEG data URL). */
+export const MAX_MEAL_PHOTO_LENGTH = 400_000;
+/** The image copied onto a scanned food (~320px JPEG data URL). */
+export const MAX_FOOD_IMAGE_LENGTH = 100_000;
+
+/** True for a JPEG data URL no longer than `maxLength`. */
+export function isJpegDataUrl(value: unknown, maxLength: number): value is string {
+  return (
+    typeof value === "string" &&
+    value.length <= maxLength &&
+    /^data:image\/jpeg;base64,[a-z0-9+/=]+$/i.test(value)
+  );
+}
 
 /**
  * Validates a submitted product image: `null` clears it, a small JPEG data
@@ -19,14 +32,7 @@ export const MAX_PRODUCT_IMAGE_LENGTH = 300_000;
  */
 export function submittedProductImage(value: unknown): string | null | undefined {
   if (value === null) return null;
-  if (
-    typeof value === "string" &&
-    value.length <= MAX_PRODUCT_IMAGE_LENGTH &&
-    /^data:image\/jpeg;base64,[a-z0-9+/=]+$/i.test(value)
-  ) {
-    return value;
-  }
-  return undefined;
+  return isJpegDataUrl(value, MAX_PRODUCT_IMAGE_LENGTH) ? value : undefined;
 }
 
 /** Validates the four per-100 g values; every one must be a finite non-negative number. */
@@ -59,7 +65,15 @@ function productName(product: Pick<BarcodeProduct, "brand" | "name">): string {
   return `${product.brand} ${product.name}`;
 }
 
-export function barcodeProductToFood(product: BarcodeProduct, grams: number): FoodItem {
+/**
+ * `imageUrl` is the copy that travels with the food into the meal — already
+ * shrunk by the caller (see foodImageFrom), so it stays small in the log.
+ */
+export function barcodeProductToFood(
+  product: BarcodeProduct,
+  grams: number,
+  imageUrl: string | null = null,
+): FoodItem {
   const ratio = grams / 100;
   return {
     name: productName(product),
@@ -73,6 +87,8 @@ export function barcodeProductToFood(product: BarcodeProduct, grams: number): Fo
       product.source === "saved"
         ? `Barcode ${product.barcode}; nutrition from a saved manual entry.`
         : `Barcode ${product.barcode}; nutrition per 100 g from Open Food Facts.`,
+    barcode: product.barcode,
+    ...(imageUrl ? { imageUrl } : {}),
   };
 }
 
@@ -81,6 +97,7 @@ export function manualProductToFood(
   grams: number,
   per100g: ProductNutrition,
   barcode?: string,
+  imageUrl: string | null = null,
 ): FoodItem {
   const ratio = grams / 100;
   return {
@@ -94,5 +111,49 @@ export function manualProductToFood(
     assumptions: barcode
       ? `Nutrition entered manually for barcode ${barcode}.`
       : "Nutrition entered manually per 100 g.",
+    ...(barcode ? { barcode } : {}),
+    ...(imageUrl ? { imageUrl } : {}),
   };
+}
+
+const norm = (name: string) => name.trim().toLowerCase();
+
+/** The previous estimate without client-only fields, for sending back to the model. */
+export function stripFoodExtras(foods: readonly FoodItem[]): FoodItem[] {
+  return foods.map((food) => {
+    const copy = { ...food };
+    delete copy.barcode;
+    delete copy.imageUrl;
+    return copy;
+  });
+}
+
+/**
+ * After a correction the model returns fresh foods without barcode or image.
+ * Re-attach them from the previous estimate, matching by barcode when the
+ * name still contains it, otherwise by name. Each previous food is used once.
+ */
+export function reattachFoodExtras(
+  foods: readonly FoodItem[],
+  previous: readonly FoodItem[],
+): FoodItem[] {
+  const pool = previous.filter((f) => f.barcode || f.imageUrl);
+  if (pool.length === 0) return [...foods];
+  const remaining = [...pool];
+  const take = (pick: (f: FoodItem) => boolean) => {
+    const index = remaining.findIndex(pick);
+    return index === -1 ? null : remaining.splice(index, 1)[0]!;
+  };
+  return foods.map((food) => {
+    if (food.barcode || food.imageUrl) return food;
+    const match =
+      take((p) => !!p.barcode && food.assumptions.includes(p.barcode)) ??
+      take((p) => norm(p.name) === norm(food.name));
+    if (!match) return food;
+    return {
+      ...food,
+      ...(match.barcode ? { barcode: match.barcode } : {}),
+      ...(match.imageUrl ? { imageUrl: match.imageUrl } : {}),
+    };
+  });
 }

@@ -1,9 +1,18 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { AnalysisProvider } from "@/components/AnalysisProvider";
+import { LightboxProvider } from "@/components/ImageLightbox";
 import { TopNav } from "@/components/TopNav";
 import "./globals.css";
+
+// viewport-fit=cover makes the safe-area-inset env() values real inside the
+// installed app (translucent status bar), which the image viewer pads by
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 const inter = Inter({
   variable: "--font-inter",
@@ -44,7 +53,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <TopNav />
-        <AnalysisProvider>{children}</AnalysisProvider>
+        <LightboxProvider>
+          <AnalysisProvider>{children}</AnalysisProvider>
+        </LightboxProvider>
         <Toaster
           position="bottom-center"
           toastOptions={{

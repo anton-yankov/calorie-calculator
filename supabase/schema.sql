@@ -6,8 +6,14 @@ create table public.meals (
   logged_at timestamptz not null,
   description text not null default '',
   analysis jsonb not null,
-  thumbnail text
+  thumbnail text,
+  -- ~800px JPEG data URL for the full-size viewer; null when the meal has no
+  -- image. Never selected with the list — fetched on demand when tapped.
+  photo text
 );
+
+-- Existing projects: add the column to the already-created table.
+-- alter table public.meals add column photo text;
 
 create index meals_logged_at_idx on public.meals (logged_at desc);
 
