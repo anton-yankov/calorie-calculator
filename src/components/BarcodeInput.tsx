@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
+import { ZoomableImage } from "@/components/ImageLightbox";
 import { Spinner } from "@/components/loaders";
 import { NutritionLabelInput } from "@/components/NutritionLabelInput";
 import { ProductPhotoInput } from "@/components/ProductPhotoInput";
@@ -12,8 +13,19 @@ import {
   type BarcodeProduct,
   type ProductNutrition,
 } from "@/lib/products";
+import { FOOD_IMAGE_EDGE, makeThumbnail } from "@/lib/resize";
 import type { FoodItem } from "@/lib/schema";
 import type { NutritionLabelAnalysis } from "@/lib/nutrition-label";
+
+/** The small copy of a product image that travels with the food into the meal. */
+async function foodImageFrom(imageUrl: string | null): Promise<string | null> {
+  if (!imageUrl) return null;
+  try {
+    return await makeThumbnail(imageUrl, FOOD_IMAGE_EDGE);
+  } catch {
+    return null; // the food still gets added, just without a picture
+  }
+}
 
 interface LookupError {
   error: string;
@@ -68,7 +80,7 @@ function ManualNutrition({
     setError(null);
     try {
       await onAdd(
-        manualProductToFood(name, portion, per100g, barcode),
+        manualProductToFood(name, portion, per100g, barcode, await foodImageFrom(imageUrl)),
         name.trim(),
         per100g,
         imageUrl,
@@ -196,18 +208,29 @@ function ProductConfirmation({
   onCancel: () => void;
 }) {
   const [grams, setGrams] = useState(String(Math.round(product.servingGrams ?? 100)));
+  const [adding, setAdding] = useState(false);
   const portion = Number(grams);
   const ratio = Number.isFinite(portion) && portion > 0 ? portion / 100 : 0;
+
+  async function add() {
+    setAdding(true);
+    try {
+      onAdd(barcodeProductToFood(product, portion, await foodImageFrom(product.imageUrl)));
+    } finally {
+      setAdding(false);
+    }
+  }
 
   return (
     <section className="overflow-hidden rounded-panel border border-line bg-surface">
       <div className="flex gap-3 p-4">
         {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external crowdsourced product image
-          <img
+          <ZoomableImage
             src={product.imageUrl}
-            alt=""
-            className="h-16 w-16 shrink-0 rounded-panel bg-background object-contain"
+            alt={product.name}
+            label={`View image of ${product.name}`}
+            className="h-16 w-16 shrink-0 rounded-panel border border-transparent bg-background"
+            imgClassName="object-contain"
           />
         ) : (
           <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-panel border border-line bg-background font-mono text-xl text-muted">
@@ -248,11 +271,11 @@ function ProductConfirmation({
       <div className="flex gap-2 border-t border-line p-3">
         <button
           type="button"
-          disabled={!Number.isFinite(portion) || portion <= 0}
-          onClick={() => onAdd(barcodeProductToFood(product, portion))}
+          disabled={adding || !Number.isFinite(portion) || portion <= 0}
+          onClick={() => void add()}
           className="flex-1 rounded-panel bg-accent px-4 py-2.5 text-sm font-semibold text-background disabled:opacity-40"
         >
-          Add to meal
+          {adding ? "Adding…" : "Add to meal"}
         </button>
         <button
           type="button"

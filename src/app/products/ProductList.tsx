@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteProductAction, saveProductAction } from "@/app/actions";
+import { ZoomableImage } from "@/components/ImageLightbox";
 import { ProductPhotoInput } from "@/components/ProductPhotoInput";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
 
@@ -33,14 +34,20 @@ function BarcodeGlyph() {
 }
 
 function ProductImage({ product }: { product: BarcodeProduct }) {
+  if (product.imageUrl) {
+    return (
+      <ZoomableImage
+        src={product.imageUrl}
+        alt={product.name}
+        label={`View image of ${product.name}`}
+        className="h-[72px] w-[72px] shrink-0 rounded-lg border border-line bg-background"
+        imgClassName="object-contain"
+      />
+    );
+  }
   return (
     <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-background">
-      {product.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- small data URL
-        <img src={product.imageUrl} alt="" className="h-full w-full object-contain" />
-      ) : (
-        <BarcodeGlyph />
-      )}
+      <BarcodeGlyph />
     </div>
   );
 }

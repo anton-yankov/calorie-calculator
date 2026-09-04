@@ -8,6 +8,7 @@ import type { LoggedMeal } from "@/lib/log";
 import {
   deleteMealById,
   getMealById,
+  getMealPhotoById,
   insertMeals,
   latestLoggedAtBetween,
   sumTotalsBetween,
@@ -15,11 +16,14 @@ import {
 } from "@/lib/meals";
 import {
   BARCODE_PATTERN,
+  isJpegDataUrl,
+  MAX_FOOD_IMAGE_LENGTH,
+  MAX_MEAL_PHOTO_LENGTH,
   submittedNutrition,
   submittedProductImage,
   type ProductNutrition,
 } from "@/lib/products";
-import type { MealAnalysis, MealTotals } from "@/lib/schema";
+import type { FoodItem, MealAnalysis, MealTotals } from "@/lib/schema";
 import { getGoals, saveGoals, type Goals } from "@/lib/settings";
 
 /**
@@ -37,11 +41,22 @@ export interface ActionResult {
   error?: string;
 }
 
+/** The optional client-side fields on a food: a barcode and a small JPEG copy of its image. */
+function isValidFood(food: FoodItem): boolean {
+  if (typeof food !== "object" || food === null) return false;
+  if (food.barcode !== undefined && !BARCODE_PATTERN.test(String(food.barcode))) return false;
+  if (food.imageUrl !== undefined && !isJpegDataUrl(food.imageUrl, MAX_FOOD_IMAGE_LENGTH)) {
+    return false;
+  }
+  return true;
+}
+
 function isValidAnalysis(analysis: MealAnalysis): boolean {
   return (
     typeof analysis === "object" &&
     analysis !== null &&
     Array.isArray(analysis.foods) &&
+    analysis.foods.every(isValidFood) &&
     typeof analysis.totals === "object" &&
     analysis.totals !== null
   );
@@ -57,6 +72,9 @@ function isValidMeal(meal: LoggedMeal): boolean {
     !Number.isNaN(Date.parse(meal.loggedAt)) &&
     typeof meal.description === "string" &&
     (meal.thumbnail === null || typeof meal.thumbnail === "string") &&
+    (meal.photo === undefined ||
+      meal.photo === null ||
+      isJpegDataUrl(meal.photo, MAX_MEAL_PHOTO_LENGTH)) &&
     isValidAnalysis(meal.analysis)
   );
 }
@@ -155,16 +173,34 @@ export async function relogMealAction(id: string): Promise<ActionResult & { newI
   }
 }
 
-export async function deleteMealAction(id: string): Promise<ActionResult> {
+/**
+ * Returns the deleted meal in full (the list omits the large photo) so the
+ * client's Undo can re-insert exactly what was removed.
+ */
+export async function deleteMealAction(id: string): Promise<ActionResult & { meal?: LoggedMeal }> {
   if (!(await isAuthed())) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
+  let meal: LoggedMeal | null;
   try {
-    await deleteMealById(id);
+    meal = await deleteMealById(id);
   } catch (err) {
     return { error: message(err, "Couldn't delete the meal") };
   }
   revalidatePath("/log");
-  return {};
+  return meal ? { meal } : {};
+}
+
+/** The large photo of one meal, fetched only when its thumbnail is tapped. */
+export async function getMealPhotoAction(
+  id: string,
+): Promise<ActionResult & { photo?: string | null }> {
+  if (!(await isAuthed())) return { error: "Authentication required" };
+  if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
+  try {
+    return { photo: await getMealPhotoById(id) };
+  } catch (err) {
+    return { error: message(err, "Couldn't load the photo") };
+  }
 }
 
 export async function saveGoalsAction(goals: Goals): Promise<ActionResult> {

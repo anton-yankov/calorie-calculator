@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useLightbox } from "@/components/ImageLightbox";
 import { Spinner } from "@/components/loaders";
-import { makeThumbnail, toDisplayableBlob } from "@/lib/resize";
+import { makeThumbnail, PRODUCT_IMAGE_EDGE, toDisplayableBlob } from "@/lib/resize";
 
 export function ProductPhotoInput({
   imageUrl,
@@ -16,6 +17,7 @@ export function ProductPhotoInput({
   onChange: (imageUrl: string | null) => void | Promise<void>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { open } = useLightbox();
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +28,7 @@ export function ProductPhotoInput({
       // Match meal photos: normalize HEIC when needed, remove metadata, and
       // persist a small JPEG data URL rather than the original upload.
       const displayable = await toDisplayableBlob(file);
-      const thumbnail = await makeThumbnail(displayable, 320);
+      const thumbnail = await makeThumbnail(displayable, PRODUCT_IMAGE_EDGE);
       await onChange(thumbnail);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't prepare this image.");
@@ -64,11 +66,15 @@ export function ProductPhotoInput({
         }}
       />
       <div className="flex items-center gap-3">
+        {/* With an image the tile previews it; the text buttons change or remove
+            it. Without one, the tile opens the picker. */}
         <button
           type="button"
-          disabled={unavailable}
-          aria-label={imageUrl ? `Change image for ${productName}` : `Add image for ${productName}`}
-          onClick={() => inputRef.current?.click()}
+          disabled={preparing || (!imageUrl && disabled)}
+          aria-label={imageUrl ? `View image of ${productName}` : `Add image for ${productName}`}
+          onClick={() =>
+            imageUrl ? open({ src: imageUrl, alt: productName }) : inputRef.current?.click()
+          }
           className="group relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-panel border border-line bg-background transition hover:border-accent disabled:opacity-50"
         >
           {imageUrl ? (

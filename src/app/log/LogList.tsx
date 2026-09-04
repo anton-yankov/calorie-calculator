@@ -2,9 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { deleteMealAction, logMealAction, relogMealAction, updateMealAction } from "@/app/actions";
+import {
+  deleteMealAction,
+  getMealPhotoAction,
+  logMealAction,
+  relogMealAction,
+  updateMealAction,
+} from "@/app/actions";
 import { DatePicker } from "@/components/DatePicker";
 import { GoalBars } from "@/components/GoalBars";
+import { ZoomableImage } from "@/components/ImageLightbox";
 import { dayKey, dayLabel } from "@/lib/day";
 import type { LoggedMeal } from "@/lib/log";
 import { scaleFood, sumTotals } from "@/lib/scale";
@@ -135,12 +142,14 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
         toast.error(result.error);
         return;
       }
-      // Undo re-inserts the exact same row — the client still holds all of it
+      // Undo re-inserts the row the server returned: the list copy held here
+      // never includes the large photo, the deleted row does
+      const removed = result.meal ?? meal;
       toast("Meal deleted", {
         action: {
           label: "Undo",
           onClick: () =>
-            void logMealAction(meal).then((r) => {
+            void logMealAction(removed).then((r) => {
               if (r.error) toast.error(r.error);
             }),
         },
@@ -155,11 +164,17 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
       <summary className="block cursor-pointer select-none [&::-webkit-details-marker]:hidden">
         <div className="flex items-center gap-3 px-4 py-3">
           {meal.thumbnail ? (
-            // eslint-disable-next-line @next/next/no-img-element -- small data URL
-            <img
+            // Opens on the thumbnail at once, then swaps in the large photo.
+            // Meals logged before photos were kept just stay on the thumbnail.
+            <ZoomableImage
               src={meal.thumbnail}
-              alt=""
-              className="h-12 w-12 shrink-0 rounded-panel object-cover"
+              alt={names || "Meal"}
+              label={`View photo of ${names || "meal"}`}
+              load={async () => {
+                const result = await getMealPhotoAction(meal.id);
+                return result.photo ?? null;
+              }}
+              className="h-12 w-12 shrink-0 rounded-panel border border-transparent"
             />
           ) : (
             <span
@@ -212,7 +227,18 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
             {foods.map((food, i) => (
               <tr key={`${food.name}-${i}`} className="border-t border-line/60">
                 <td className="px-4 py-1.5 font-sans text-[13px] font-medium text-foreground">
-                  {food.name}
+                  <span className="flex items-center gap-2">
+                    {food.imageUrl && (
+                      <ZoomableImage
+                        src={food.imageUrl}
+                        alt={food.name}
+                        label={`View image of ${food.name}`}
+                        className="h-6 w-6 shrink-0 rounded border border-line bg-background"
+                        imgClassName="object-contain"
+                      />
+                    )}
+                    {food.name}
+                  </span>
                 </td>
                 <td className="px-2 py-1.5 text-right">
                   {editing ? (

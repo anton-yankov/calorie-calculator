@@ -14,19 +14,47 @@ const PRODUCT_FIELDS = [
   "product_name",
   "product_name_en",
   "brands",
+  "image_front_url",
   "image_front_small_url",
   "nutriments",
   "serving_quantity",
 ].join(",");
+
+/** Catalog images larger than this are dropped rather than inlined. */
+const MAX_CATALOG_IMAGE_BYTES = 200_000;
 
 interface OpenFoodFactsProduct {
   code?: unknown;
   product_name?: unknown;
   product_name_en?: unknown;
   brands?: unknown;
+  image_front_url?: unknown;
   image_front_small_url?: unknown;
   serving_quantity?: unknown;
   nutriments?: Record<string, unknown>;
+}
+
+/**
+ * Fetches the catalog image (~400px front shot) and returns it as a JPEG data
+ * URL, so the client gets one image shape for saved and catalog products and
+ * can copy it into a meal without a cross-origin canvas. The browser could not
+ * do this itself: Open Food Facts images are cross-origin. Any failure means
+ * no image, never a failed lookup.
+ */
+async function inlineCatalogImage(product: OpenFoodFactsProduct): Promise<string | null> {
+  const url = text(product.image_front_url) || text(product.image_front_small_url);
+  if (!url || !/^https:\/\/[^/]*openfoodfacts\.org\//.test(url)) return null;
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(3_000) });
+    if (!response.ok) return null;
+    if (!(response.headers.get("content-type") ?? "").startsWith("image/jpeg")) return null;
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_CATALOG_IMAGE_BYTES) return null;
+    return `data:image/jpeg;base64,${Buffer.from(bytes).toString("base64")}`;
+  } catch (error) {
+    console.error("catalog image fetch failed:", error);
+    return null;
+  }
 }
 
 interface OpenFoodFactsResponse {
@@ -144,7 +172,7 @@ export async function GET(_request: Request, context: { params: Promise<{ barcod
     barcode: text(source.code) || barcode,
     name,
     brand: text(source.brands),
-    imageUrl: text(source.image_front_small_url) || null,
+    imageUrl: await inlineCatalogImage(source),
     servingGrams: serving !== null && serving > 0 ? serving : null,
     per100g,
     source: "open-food-facts",

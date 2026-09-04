@@ -3,7 +3,8 @@
 import { createContext, useContext, useRef, useState } from "react";
 import { logMealAction } from "@/app/actions";
 import { dayBounds, dayKey } from "@/lib/day";
-import { makeThumbnail, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
+import { reattachFoodExtras, stripFoodExtras } from "@/lib/products";
+import { makeThumbnail, MEAL_PHOTO_EDGE, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
 import { scaleFood, sumTotals } from "@/lib/scale";
 import type { FoodItem, MealAnalysis } from "@/lib/schema";
 
@@ -117,12 +118,34 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setLogDateState(key && key !== dayKey(new Date()) ? key : null);
   }
 
+  /**
+   * The meal's cover, chosen once at log time: the meal photo if there is one
+   * (resized here if "Analyze" never ran, e.g. photo + barcode only), else the
+   * first scanned food's image, else nothing. Both sizes come from the same
+   * source so the list thumbnail and the viewer photo always match.
+   */
+  async function makeCover(
+    foods: readonly FoodItem[],
+  ): Promise<{ thumbnail: string | null; photo: string | null }> {
+    if (sourceBlob) {
+      if (!resizedRef.current) resizedRef.current = await resizeToJpeg(sourceBlob);
+      const [photo, thumbnail] = await Promise.all([
+        makeThumbnail(resizedRef.current, MEAL_PHOTO_EDGE),
+        makeThumbnail(resizedRef.current),
+      ]);
+      return { thumbnail, photo };
+    }
+    const image = foods.find((f) => f.imageUrl)?.imageUrl;
+    if (!image) return { thumbnail: null, photo: null };
+    return { thumbnail: await makeThumbnail(image), photo: image };
+  }
+
   async function handleLog() {
     if (!latest || logging) return;
     setLogging(true);
     setError(null);
     try {
-      const thumbnail = resizedRef.current ? await makeThumbnail(resizedRef.current) : null;
+      const { thumbnail, photo } = await makeCover(latest.analysis.foods);
       // When backdating, the server assigns the timestamp within the day's
       // bounds; the loggedAt sent here is only a placeholder
       const result = await logMealAction(
@@ -132,6 +155,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
           description: description.trim(),
           analysis: latest.analysis,
           thumbnail,
+          photo,
         },
         logDate ? dayBounds(logDate) : undefined,
       );
@@ -208,15 +232,22 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       }
       if (description.trim()) form.append("description", description.trim());
       if (correction && latest) {
-        form.append("previousResult", JSON.stringify(latest.analysis));
+        // The model never sees the client-only barcode/image fields
+        const previous = { ...latest.analysis, foods: stripFoodExtras(latest.analysis.foods) };
+        form.append("previousResult", JSON.stringify(previous));
         form.append("correction", correction);
       }
 
       const res = await fetch("/api/analyze", { method: "POST", body: form });
-      const body = (await res.json()) as MealAnalysis | { error: string };
-      if (!res.ok || "error" in body) {
-        throw new Error("error" in body ? body.error : `Request failed (${res.status})`);
+      const raw = (await res.json()) as MealAnalysis | { error: string };
+      if (!res.ok || "error" in raw) {
+        throw new Error("error" in raw ? raw.error : `Request failed (${res.status})`);
       }
+      // A corrected estimate comes back without barcodes/images — carry them over
+      const body: MealAnalysis =
+        correction && latest
+          ? { ...raw, foods: reattachFoodExtras(raw.foods, latest.analysis.foods) }
+          : raw;
       setHistory((prev) =>
         correction
           ? [...prev, { correction, analysis: body, baseline: body }]

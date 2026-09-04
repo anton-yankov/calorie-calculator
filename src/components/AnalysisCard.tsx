@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ZoomableImage } from "@/components/ImageLightbox";
 import type { Confidence, FoodItem, MealAnalysis } from "@/lib/schema";
 
 const confidenceStyles: Record<Confidence, string> = {
@@ -49,6 +50,15 @@ function FoodRow({
   return (
     <li className="px-4 py-3">
       <div className="flex items-center gap-2">
+        {food.imageUrl && (
+          <ZoomableImage
+            src={food.imageUrl}
+            alt={food.name}
+            label={`View image of ${food.name}`}
+            className="h-8 w-8 shrink-0 rounded-md border border-line bg-background"
+            imgClassName="object-contain"
+          />
+        )}
         <span className="min-w-0 flex-1 truncate font-medium">{food.name}</span>
         {isNew && (
           <span className="shrink-0 rounded-full border border-success/50 bg-success-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-success">
