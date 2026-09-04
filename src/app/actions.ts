@@ -131,6 +131,7 @@ export async function logMealAction(
     return { error: message(err, "Couldn't save the meal") };
   }
   revalidatePath("/log");
+  revalidatePath("/stats");
   return {};
 }
 
@@ -155,6 +156,7 @@ export async function updateMealAction(
     return { error: message(err, "Couldn't update the meal") };
   }
   revalidatePath("/log");
+  revalidatePath("/stats");
   return {};
 }
 
@@ -168,6 +170,7 @@ export async function relogMealAction(id: string): Promise<ActionResult & { newI
     const newId = crypto.randomUUID();
     await insertMeals([{ ...meal, id: newId, loggedAt: new Date().toISOString() }]);
     revalidatePath("/log");
+    revalidatePath("/stats");
     return { newId };
   } catch (err) {
     return { error: message(err, "Couldn't log the meal again") };
@@ -188,6 +191,7 @@ export async function deleteMealAction(id: string): Promise<ActionResult & { mea
     return { error: message(err, "Couldn't delete the meal") };
   }
   revalidatePath("/log");
+  revalidatePath("/stats");
   return meal ? { meal } : {};
 }
 
@@ -223,6 +227,7 @@ export async function saveGoalsAction(goals: Goals): Promise<ActionResult> {
     return { error: message(err, "Couldn't save the goals") };
   }
   revalidatePath("/log");
+  revalidatePath("/stats");
   revalidatePath("/");
   return {};
 }

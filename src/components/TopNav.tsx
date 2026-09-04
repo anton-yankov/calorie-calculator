@@ -7,6 +7,7 @@ const tabs = [
   { href: "/", label: "Analyze" },
   { href: "/log", label: "Log" },
   { href: "/products", label: "Products" },
+  { href: "/stats", label: "Stats" },
 ] as const;
 
 export function TopNav() {
@@ -32,7 +33,8 @@ export function TopNav() {
                 key={tab.href}
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={`rounded-full px-4 py-1.5 text-center text-xs font-semibold transition-colors ${
+                // Four tabs only fit beside the wordmark on a 375px phone at this tighter size
+                className={`rounded-full px-2.5 py-1.5 text-center text-[11px] font-semibold transition-colors sm:px-4 sm:text-xs ${
                   active ? "bg-accent text-background" : "text-muted hover:text-foreground"
                 }`}
               >

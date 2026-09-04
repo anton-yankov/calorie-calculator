@@ -41,6 +41,29 @@ function toRow(meal: LoggedMeal): MealRow {
   };
 }
 
+/** A meal reduced to when it was eaten and its totals — all the stats page needs. */
+export interface MealTotalRow {
+  loggedAt: string;
+  totals: MealTotals;
+}
+
+/**
+ * Every meal's timestamp and totals, oldest first — no thumbnails, no food
+ * lists, so a year of meals is ~100 KB. Days are grouped on the client (only
+ * the viewer knows their timezone), so this stays a plain row scan.
+ */
+export async function listMealTotals(): Promise<MealTotalRow[]> {
+  await connection();
+  const { data, error } = await supabase()
+    .from("meals")
+    .select("logged_at, totals:analysis->totals")
+    .order("logged_at", { ascending: true });
+  if (error) throw new Error(`Couldn't load stats: ${error.message}`);
+  return (data as unknown as { logged_at: string; totals: MealTotals | null }[])
+    .filter((row) => row.totals !== null)
+    .map((row) => ({ loggedAt: row.logged_at, totals: row.totals as MealTotals }));
+}
+
 export async function listMeals(): Promise<LoggedMeal[]> {
   // The log must never be prerendered at build time — always fetch per request
   await connection();
