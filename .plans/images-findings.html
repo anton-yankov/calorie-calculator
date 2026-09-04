@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Images: Lightbox, Barcode Photos & Product Edits — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill {
+    font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+
+  pre {
+    background: var(--code-bg); color: var(--ink);
+    border-radius: var(--radius); font-size: 13.5px; line-height: 1.55;
+    margin: 16px 0; padding: 18px 20px; overflow-x: auto;
+  }
+  code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  :not(pre) > code {
+    background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px;
+  }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 0 0 18px 52px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+
+  @media print {
+    body { background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    pre { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Findings · images</div>
+  <h1>Images: lightbox, barcode photos &amp; product edits</h1>
+  <p class="subtitle">Three questions about how photos move through the app, answered from the code. Where something is broken, a fix is proposed. Nothing has been implemented yet.</p>
+  <div class="meta">
+    <span><strong>Date:</strong> 2026-09-04</span>
+    <span><strong>Status:</strong> findings, awaiting go-ahead</span>
+    <span><strong>Touches:</strong> Log · Analyze · Products</span>
+  </div>
+</header>
+
+<div class="card">
+  <p style="margin:0 0 8px"><strong>At a glance</strong></p>
+  <table style="margin:0">
+    <tr><th>Question</th><th>Short answer</th></tr>
+    <tr><td>Tap to expand log images</td><td>Doable, but the stored image is only 160px wide. A lightbox needs a larger copy saved alongside the thumbnail.</td></tr>
+    <tr><td>Barcode image missing in Log</td><td>The image is dropped the moment "Add to meal" is tapped. Food items have no image field, so nothing downstream can show it.</td></tr>
+    <tr><td>Editing a product</td><td>Only affects future scans. Past meals are frozen snapshots and are never updated.</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>Tap to expand images in the meal log</h2>
+<p class="lede">The log entry thumbnail is a 48px square inside the row's collapsible header. Making it tappable is easy; making the expanded view look good is the real work.</p>
+
+<h3>What is in the way</h3>
+<ul>
+  <li><strong>The stored image is tiny.</strong> On log, the meal photo is shrunk to a 160px JPEG data URL by <code>makeThumbnail</code> in <code>src/lib/resize.ts</code>, and that is the only copy saved. Blown up to a phone screen at 3x pixel density, a 160px image is a smear.</li>
+  <li><strong>The image sits inside the row toggle.</strong> It lives in the <code>&lt;summary&gt;</code> of a <code>&lt;details&gt;</code> element in <code>src/app/log/LogList.tsx</code>. A tap on it currently opens or closes the row, so the expand control has to cancel that default.</li>
+</ul>
+
+<figure>
+<svg viewBox="0 0 860 150" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="20" y="40" width="170" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="105" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">Camera photo</text>
+  <text x="105" y="84" text-anchor="middle" font-size="11.5" fill="#A5A195">up to 4000px</text>
+  <line x1="190" y1="70" x2="250" y2="70" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="250" y="40" width="170" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="335" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">Sent to the model</text>
+  <text x="335" y="84" text-anchor="middle" font-size="11.5" fill="#A5A195">1024px JPEG, kept in memory</text>
+  <line x1="420" y1="70" x2="480" y2="70" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="480" y="40" width="170" height="60" rx="10" fill="#3A2A20"/>
+  <text x="565" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">Saved thumbnail</text>
+  <text x="565" y="84" text-anchor="middle" font-size="11.5" fill="#E08A5C">160px, the only stored copy</text>
+  <line x1="650" y1="70" x2="710" y2="70" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="710" y="40" width="130" height="60" rx="10" fill="#EDEAE0"/>
+  <text x="775" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#1B1A16">Log row</text>
+  <text x="775" y="84" text-anchor="middle" font-size="11.5" fill="#55524A">48px square</text>
+</svg>
+<figcaption>Today's photo pipeline. The 1024px copy is discarded after analysis; only the 160px thumbnail reaches the database.</figcaption>
+</figure>
+
+<h3>Recommended approach</h3>
+<ol class="steps">
+  <li>
+    <strong>Save a larger copy next to the thumbnail</strong>
+    <span class="step-note">Add a <code>photo</code> column to the meals table holding an ~800px JPEG data URL. The 160px thumbnail stays for the list; the list query keeps selecting only the thumbnail so the Log page payload does not grow.</span>
+  </li>
+  <li>
+    <strong>Fetch the large photo on demand</strong>
+    <span class="step-note">A small server action returns one meal's photo by id. It is called when the user taps, not on page load, so a log with hundreds of meals stays fast.</span>
+  </li>
+  <li>
+    <strong>One shared lightbox component</strong>
+    <span class="step-note">Lift the native <code>&lt;dialog&gt;</code> viewer that already exists in <code>src/components/PhotoInput.tsx</code> into an <code>ImageLightbox</code> component. It already gives Escape to close, tap anywhere to close, a dimmed backdrop and a focus trap, and it works well on mobile. Reuse it for meal photos, Products tab images and the barcode confirmation card so every image in the app behaves the same way.</span>
+  </li>
+  <li>
+    <strong>Stop the tap from toggling the row</strong>
+    <span class="step-note">Wrap the thumbnail in a button that prevents the default summary click, so tapping the photo only opens the viewer. The rest of the header row still expands the entry.</span>
+  </li>
+</ol>
+
+<div class="callout"><strong>Existing meals:</strong> they only have the 160px thumbnail. The viewer can still open and show it, just not sharply. I lean toward showing it anyway, since a somewhat larger view is still useful, rather than hiding the control on old entries.</div>
+
+<p>SQL to run in Supabase for this change:</p>
+<pre><code>alter table public.meals add column photo text;</code></pre>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Why barcode images never reach the log</h2>
+<p class="lede">The picture is visible on the barcode confirmation card and nowhere after. It is not a display bug in the Log tab; the data simply is not there.</p>
+
+<h3>Where it is lost</h3>
+<p>The confirmation card in <code>src/components/BarcodeInput.tsx</code> renders <code>product.imageUrl</code>. When you tap "Add to meal", the product is converted into a food item by <code>barcodeProductToFood</code> in <code>src/lib/products.ts</code>. A food item has name, grams, calories, macros, confidence and an assumptions sentence, and no image field at all. From that point on nothing in the app knows the picture existed.</p>
+
+<p>The logged meal's only image is the meal photo thumbnail, made from the camera photo in <code>handleLog</code> in <code>src/components/AnalysisProvider.tsx</code>. A barcode-only meal has no camera photo, so it gets the plate emoji placeholder.</p>
+
+<figure>
+<svg viewBox="0 0 860 170" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="20" y="30" width="180" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="110" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">BarcodeProduct</text>
+  <text x="110" y="74" text-anchor="middle" font-size="11.5" fill="#7FBF92">has imageUrl</text>
+  <line x1="200" y1="60" x2="290" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="245" y="50" text-anchor="middle" font-size="11" fill="#A5A195">Add to meal</text>
+  <rect x="290" y="30" width="180" height="60" rx="10" fill="#3A2A20"/>
+  <text x="380" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">FoodItem</text>
+  <text x="380" y="74" text-anchor="middle" font-size="11.5" fill="#E08A5C">no image field: dropped here</text>
+  <line x1="470" y1="60" x2="560" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="515" y="50" text-anchor="middle" font-size="11" fill="#A5A195">Log meal</text>
+  <rect x="560" y="30" width="180" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="650" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">LoggedMeal</text>
+  <text x="650" y="74" text-anchor="middle" font-size="11.5" fill="#A5A195">thumbnail from camera only</text>
+  <line x1="740" y1="60" x2="790" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+  <text x="815" y="66" text-anchor="middle" font-size="22">🍽</text>
+  <text x="430" y="140" text-anchor="middle" font-size="12" fill="#A5A195">The same gap shows on the Analyze tab: once the item is in the estimate list, its picture is gone.</text>
+</svg>
+<figcaption>Where the barcode image is lost. The conversion to a food item keeps the numbers and discards the picture.</figcaption>
+</figure>
+
+<h3>Suggested fix</h3>
+<ol class="steps">
+  <li>
+    <strong>Give food items an optional image</strong>
+    <span class="step-note">Add <code>imageUrl</code> to the food item type in <code>src/lib/schema.ts</code> and set it from both barcode helpers. Saved products already store a small JPEG data URL. Open Food Facts gives an external URL, which can be stored as is.</span>
+  </li>
+  <li>
+    <strong>Fall back to a food image when there is no photo</strong>
+    <span class="step-note">In the log action, when the meal has no camera photo, use the first food that carries an image as the meal thumbnail. When there is a photo, the photo wins.</span>
+  </li>
+  <li>
+    <strong>Show the image per row</strong>
+    <span class="step-note">Optional but worth it: a small product image on each food row in the estimate card and in the log's food table. This also gives the lightbox from section 01 something to open per item.</span>
+  </li>
+</ol>
+
+<div class="callout"><strong>One caveat:</strong> the schema sent to OpenAI is strict, so the image field stays client side only. After a text correction the model returns fresh food items, and images would be re-attached by matching food names against the previous estimate. A renamed item would lose its picture, which seems acceptable.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Editing a product does not touch past meals</h2>
+<p class="lede">Each logged meal is a full snapshot. The Products tab edits a single lookup row, and nothing links the two.</p>
+
+<p>A logged meal stores a complete copy of its foods, including name, grams, calories and macros, in the meals table's analysis JSON. Saving on the Products tab calls <code>saveProductAction</code> in <code>src/app/actions.ts</code>, which upserts one row in the barcode products table and nothing else. The only trace of the barcode inside a logged food is the free-text assumptions sentence, which is not something the code reads back.</p>
+
+<figure>
+<svg viewBox="0 0 860 200" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="330" y="20" width="200" height="60" rx="10" fill="#EDEAE0"/>
+  <text x="430" y="46" text-anchor="middle" font-size="13" font-weight="700" fill="#1B1A16">barcode_products</text>
+  <text x="430" y="64" text-anchor="middle" font-size="11.5" fill="#55524A">one row per barcode, edited here</text>
+  <line x1="430" y1="80" x2="430" y2="130" stroke="#7FBF92" stroke-width="1.5" marker-end="url(#arr3)"/>
+  <text x="520" y="110" text-anchor="middle" font-size="11" fill="#7FBF92">read on the next scan</text>
+  <rect x="330" y="130" width="200" height="50" rx="10" fill="#22312A"/>
+  <text x="430" y="160" text-anchor="middle" font-size="13" font-weight="700" fill="#7FBF92">Future meals</text>
+  <rect x="40" y="130" width="200" height="50" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="140" y="152" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">Past meals</text>
+  <text x="140" y="170" text-anchor="middle" font-size="11.5" fill="#A5A195">snapshot in meals.analysis</text>
+  <line x1="240" y1="155" x2="300" y2="155" stroke="#A5A195" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="270" y="145" text-anchor="middle" font-size="11" fill="#A5A195">no link</text>
+  <rect x="620" y="130" width="200" height="50" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="720" y="152" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">"Log again"</text>
+  <text x="720" y="170" text-anchor="middle" font-size="11.5" fill="#A5A195">copies the past meal as is</text>
+  <line x1="240" y1="165" x2="620" y2="165" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr3)" opacity="0"/>
+</svg>
+<figcaption>Product edits flow only downward into future scans. Past meals and "Log again" are disconnected from the product row.</figcaption>
+</figure>
+
+<table>
+  <tr><th>Action on Products tab</th><th>Effect on past meals</th><th>Effect on future scans</th></tr>
+  <tr><td>Edit name or nutrition</td><td>None. Old name, calories, macros and image stay.</td><td>Next scan of that barcode uses the new values.</td></tr>
+  <tr><td>Change or remove image</td><td>None.</td><td>Next scan shows the new image.</td></tr>
+  <tr><td>Delete product</td><td>None. Meals that used it are untouched.</td><td>Next scan falls back to Open Food Facts or manual entry.</td></tr>
+  <tr><td>"Log again" on an old meal</td><td>Duplicates the old meal exactly, with the old numbers, not the product's current ones.</td><td>Not involved.</td></tr>
+</table>
+
+<div class="callout good"><strong>This is the behaviour I'd want from a food log.</strong> A day's total should reflect what you knew when you ate. If you ever want a "fix this product and apply to the last N meals" action, it needs a barcode field on each food item first, which pairs naturally with the image field from section 02.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>Proposed next step</h2>
+<p class="lede">Sections 01 and 02 fit together as one change.</p>
+
+<div class="pill-row">
+  <span class="pill in">✓ imageUrl on food items</span>
+  <span class="pill in">✓ photo column on meals</span>
+  <span class="pill in">✓ shared ImageLightbox</span>
+  <span class="pill in">✓ barcode image as fallback thumbnail</span>
+  <span class="pill out">✗ propagating product edits to past meals</span>
+</div>
+
+<p>The food item gets an image, the meal gets a larger stored photo, and both feed the same lightbox used across the Log, Analyze and Products tabs. Product edit propagation stays out of scope unless you decide you want it.</p>
+
+<footer class="doc">
+  Calorie Calculator · image findings · 2026-09-04
+</footer>
+
+</div>
+</body>
+</html>

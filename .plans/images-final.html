@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Images: Final Implementation Plan — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  td .mono, .mono { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 13.5px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill {
+    font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+
+  pre {
+    background: var(--code-bg); color: var(--ink);
+    border-radius: var(--radius); font-size: 13.5px; line-height: 1.55;
+    margin: 16px 0; padding: 18px 20px; overflow-x: auto;
+  }
+  code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  :not(pre) > code {
+    background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px;
+  }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 0 0 18px 52px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+
+  @media print {
+    body { background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    pre { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Implementation plan · final</div>
+  <h1>Images: final implementation plan</h1>
+  <p class="subtitle">Tap-to-expand images everywhere, barcode images that survive into the log, and a clear snapshot rule for product edits. Reviewed against the shared brief and the code. Ready to implement on approval.</p>
+  <div class="meta">
+    <span><strong>Date:</strong> 2026-09-04</span>
+    <span><strong>Status:</strong> awaiting approval</span>
+    <span><strong>Supersedes:</strong> image findings + the meal image behaviour brief</span>
+    <span><strong>Code changes:</strong> none yet</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>Review of the shared brief</h2>
+<p class="lede">The brief and my findings agree on the diagnosis and the snapshot principle. Checking both against the code turned up eight things neither document covered.</p>
+
+<h3>What the brief adds, kept in this plan</h3>
+<ul>
+  <li><strong>Snapshot the image at log time.</strong> A logged meal should not point at an Open Food Facts URL or a product row that can change or disappear later. My first draft stored the external URL; the brief is right and this plan copies the image.</li>
+  <li><strong>Keep the barcode as a structured field</strong> on the scanned food, not only as prose in the assumptions sentence. It costs nothing now and unlocks a future "apply this fix to past meals" tool.</li>
+  <li><strong>Preview and replace stay separate</strong> on the Products tab. Tapping the picture previews it; the existing "Change image" text button still replaces it.</li>
+  <li><strong>Concrete mobile requirements:</strong> whole image is the tap target, full viewport with safe-area padding, a 44px or larger close button, backdrop tap and Escape to close.</li>
+</ul>
+
+<h3>What both documents missed</h3>
+<table>
+  <tr><th>Gap</th><th>Why it matters</th><th>Handled in</th></tr>
+  <tr><td>Viewer inside the row toggle</td><td>The log thumbnail lives inside a <code>&lt;summary&gt;</code>. A dialog rendered there is in the top layer visually but still a DOM child, so every tap inside the open viewer bubbles up and toggles the meal card. The viewer must be a single app-level component, not one per row.</td><td>§04</td></tr>
+  <tr><td>Undo after delete loses the photo</td><td>The Log page will stop loading the large photo per row for speed. Delete's Undo re-inserts the client's copy of the meal, which would then have no photo. The delete action must return the full deleted row so Undo can restore it.</td><td>§06</td></tr>
+  <tr><td>Photo picked but never analysed logs no cover</td><td>The thumbnail is made from the resized copy that only exists after "Analyze" runs. Pick a photo, scan a barcode, tap Log, and the meal saves with no image even though a photo is on screen. Cover selection must resize from the source photo when needed.</td><td>§03</td></tr>
+  <tr><td>Open Food Facts images are cross-origin</td><td>The browser cannot draw a cross-origin image to a canvas to shrink it, so the snapshot cannot be made client-side. The barcode lookup route fetches the image server-side and returns it inline.</td><td>§03</td></tr>
+  <tr><td>The log loads every meal at once</td><td>The Log page selects all meals with all columns and has no paging. Anything added per food row lands in that payload for every meal ever logged, so per-food image copies have to stay small.</td><td>§02, §07</td></tr>
+  <tr><td>Server action body cap</td><td>Server actions reject bodies over 1 MB by default. A meal with an 800px photo plus several barcode foods with images must stay well under that.</td><td>§02</td></tr>
+  <tr><td>Safe-area padding needs the viewport flag</td><td>The app has no viewport export, so <code>viewport-fit=cover</code> is not set and the safe-area environment variables read as zero inside the installed app. The close button would sit under the notch.</td><td>§04</td></tr>
+  <tr><td>Storage choice was left open</td><td>The brief prefers Supabase Storage plus a URL; my draft used a data URL column. Neither justified the choice. A recommendation with reasons is below.</td><td>§02</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Data model and image sizes</h2>
+<p class="lede">Three places hold images after this change. Each has a size budget chosen for where it gets loaded.</p>
+
+<figure>
+<svg viewBox="0 0 860 250" xmlns="http://www.w3.org/2000/svg" font-family="Inter, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="20" y="20" width="250" height="210" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="145" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">meals</text>
+  <text x="145" y="72" text-anchor="middle" font-size="12" font-family="JetBrains Mono, monospace" fill="#A5A195">thumbnail  160px  list</text>
+  <text x="145" y="94" text-anchor="middle" font-size="12" font-family="JetBrains Mono, monospace" fill="#E08A5C">photo      800px  new</text>
+  <text x="145" y="116" text-anchor="middle" font-size="12" font-family="JetBrains Mono, monospace" fill="#A5A195">analysis   jsonb</text>
+  <text x="145" y="138" text-anchor="middle" font-size="11.5" fill="#A5A195">└ foods[].imageUrl 320px</text>
+  <text x="145" y="156" text-anchor="middle" font-size="11.5" fill="#A5A195">└ foods[].barcode</text>
+  <text x="145" y="205" text-anchor="middle" font-size="11" fill="#7FBF92">photo fetched only on tap</text>
+
+  <rect x="305" y="20" width="250" height="110" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="430" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">barcode_products</text>
+  <text x="430" y="72" text-anchor="middle" font-size="12" font-family="JetBrains Mono, monospace" fill="#E08A5C">image_url  640px  was 320</text>
+  <text x="430" y="94" text-anchor="middle" font-size="11.5" fill="#A5A195">bounded count, loaded with the list</text>
+  <text x="430" y="112" text-anchor="middle" font-size="11.5" fill="#A5A195">no schema change</text>
+
+  <rect x="590" y="20" width="250" height="110" rx="10" fill="#3A2A20"/>
+  <text x="715" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">Open Food Facts</text>
+  <text x="715" y="72" text-anchor="middle" font-size="12" font-family="JetBrains Mono, monospace" fill="#E08A5C">image_front_url  ~400px</text>
+  <text x="715" y="94" text-anchor="middle" font-size="11.5" fill="#E08A5C">fetched server-side in the lookup,</text>
+  <text x="715" y="112" text-anchor="middle" font-size="11.5" fill="#E08A5C">returned as a data URL</text>
+
+  <line x1="430" y1="130" x2="300" y2="185" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="715" y1="130" x2="300" y2="200" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="600" y="190" text-anchor="middle" font-size="11" fill="#A5A195">"Add to meal" copies the image onto the food (shrunk to 320px)</text>
+</svg>
+<figcaption>Where images live after the change. The meal is the durable snapshot; products and the catalog are only sources.</figcaption>
+</figure>
+
+<table>
+  <tr><th>Image</th><th>Long edge</th><th>Approx. size as data URL</th><th>Loaded when</th></tr>
+  <tr><td>Meal thumbnail</td><td class="mono">160px</td><td class="mono">5–8 KB</td><td>Log list, every meal (unchanged)</td></tr>
+  <tr><td>Meal photo (new)</td><td class="mono">800px</td><td class="mono">80–160 KB</td><td>Only when a log thumbnail is tapped</td></tr>
+  <tr><td>Food image copy (new)</td><td class="mono">320px</td><td class="mono">15–30 KB</td><td>Log list, per barcode food in the analysis JSON</td></tr>
+  <tr><td>Product library image</td><td class="mono">640px (was 320)</td><td class="mono">40–90 KB</td><td>Products tab, every product</td></tr>
+</table>
+
+<p>A worst-case meal, one photo plus five barcode foods, is about 300 KB in the log action body, well under the 1 MB cap. The existing 300 KB limit on product images still holds a 640px JPEG comfortably.</p>
+
+<h3>Type changes</h3>
+<pre><code>// src/lib/schema.ts
+export interface FoodItem {
+  // ...existing fields
+  /** Barcode this food was scanned from; absent for photo or text foods */
+  barcode?: string;
+  /** Small JPEG data URL copied from the product at add time; absent if none */
+  imageUrl?: string;
+}
+
+// src/lib/log.ts
+export interface LoggedMeal {
+  // ...existing fields
+  /** ~800px JPEG data URL for the viewer; null if the meal has no image.
+   *  Omitted from list queries and fetched on demand. */
+  photo?: string | null;
+}</code></pre>
+<p>The strict JSON schema sent to OpenAI is unchanged. The two new fields are optional client-side data that the model never sees or returns. The previous estimate that goes back with a correction is stripped of them before sending, and after a correction the images are re-attached by matching the barcode, then the food name.</p>
+
+<h3>Storage decision: data URL column, not Supabase Storage</h3>
+<div class="callout"><strong>Recommendation: add a <code>photo</code> text column on meals.</strong> It matches how every other image in the app is stored, needs no bucket, no storage policies and no signed URLs, and delete plus Undo keep working as a plain row round-trip. Supabase Storage would be the better home once photo volume matters, and the on-demand fetch action in this plan is exactly the seam where a later switch would happen: only the action's body changes, nothing on the client. At three to five meals a day this column adds roughly 150 to 250 MB a year, which the free tier database holds for a couple of years before that migration becomes worth it.</div>
+
+<p>SQL to run once, before deploying:</p>
+<pre><code>alter table public.meals add column photo text;</code></pre>
+<p>No grant changes: the app uses the secret key and table-level privileges already cover new columns. The <code>barcode_products</code> table is untouched.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Getting images into the meal</h2>
+<p class="lede">Two changes to the capture pipeline: barcode products keep their image through "Add to meal", and the meal cover is chosen once at log time.</p>
+
+<ol class="steps">
+  <li>
+    <strong>Catalog images arrive inline</strong>
+    <span class="step-note">The barcode lookup route in <code>src/app/api/products/[barcode]/route.ts</code> requests <code>image_front_url</code> and, when present, fetches it server-side with a short timeout and returns it as a JPEG data URL in <code>imageUrl</code>. Failure means <code>imageUrl: null</code>, never a failed lookup. Saved products already return data URLs, so the client sees one shape for both sources.</span>
+  </li>
+  <li>
+    <strong>"Add to meal" copies the image onto the food</strong>
+    <span class="step-note"><code>barcodeProductToFood</code> and <code>manualProductToFood</code> in <code>src/lib/products.ts</code> set <code>barcode</code> and <code>imageUrl</code>. The confirmation card shrinks the product image to 320px with <code>makeThumbnail</code> before adding, so the meal's JSON copy stays small while the product library keeps the 640px original.</span>
+  </li>
+  <li>
+    <strong>Cover chosen at log time</strong>
+    <span class="step-note">In <code>handleLog</code> in <code>src/components/AnalysisProvider.tsx</code>: if there is a source photo, resize it if the analyse step has not already done so, then make an 800px <code>photo</code> and a 160px <code>thumbnail</code> from it. Otherwise take the first food with an image and use it for both. Otherwise both are null. This also fixes the "photo picked but never analysed" case.</span>
+  </li>
+  <li>
+    <strong>Corrections keep the images</strong>
+    <span class="step-note">Before sending a correction, the previous estimate is stripped of <code>barcode</code> and <code>imageUrl</code>. When the new estimate arrives, each food is matched to the previous one by barcode first, then by normalised name, and inherits both fields. An item the model renamed without a barcode loses its picture, which is acceptable.</span>
+  </li>
+</ol>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>One shared image viewer</h2>
+<p class="lede">A single <code>ImageLightbox</code> mounted once in the root layout, opened from anywhere through a small hook.</p>
+
+<div class="card">
+  <p style="margin:0 0 6px"><strong>Shape</strong></p>
+  <p style="margin:0">A <code>LightboxProvider</code> in <code>src/app/layout.tsx</code> owns the open state and renders one native <code>&lt;dialog&gt;</code>. Any component calls <code>useLightbox().open({ src, alt, load? })</code>. When <code>load</code> is given, the viewer opens immediately on the small image it already has and swaps to the large one when the loader resolves, so a tap never waits on the network to show something.</p>
+</div>
+
+<h3>Why one, mounted in the layout</h3>
+<ul>
+  <li>It is outside every <code>&lt;summary&gt;</code>, so taps inside the viewer cannot toggle a meal card.</li>
+  <li>One dialog instead of one per row, product card and food row.</li>
+  <li>The Analyze page's existing preview dialog in <code>src/components/PhotoInput.tsx</code> is replaced by a call to the same hook, so its behaviour stays identical while the code is shared.</li>
+</ul>
+
+<h3>Mobile behaviour</h3>
+<table>
+  <tr><th>Requirement</th><th>How</th></tr>
+  <tr><td>Whole image is the tap target</td><td>Every image is wrapped in a button with no extra chrome. In the log header the button calls <code>preventDefault</code> so the row does not toggle.</td></tr>
+  <tr><td>Full viewport, nothing cropped</td><td>Dialog fills the dynamic viewport; the image is <code>object-contain</code> inside padding that includes the safe-area insets. Add a <code>viewport</code> export with <code>viewportFit: "cover"</code> to the layout so those insets are real in the installed app.</td></tr>
+  <tr><td>Effortless close</td><td>A 44px close button inset from the top-right safe area, backdrop tap anywhere, Escape on desktop. Page scroll is locked while open.</td></tr>
+  <tr><td>Loading state</td><td>While the large photo loads, the small image shows with a subtle spinner in the corner; if the fetch fails the small image simply stays.</td></tr>
+  <tr><td>Preview and replace stay distinct</td><td>In the product editor and the manual nutrition form, the picture previews; "Change image" and "Remove" remain the only ways to edit it.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>Surface by surface</h2>
+<p class="lede">Every image in the app becomes tappable. Only the log thumbnail needs the on-demand loader.</p>
+
+<table>
+  <tr><th>Surface</th><th>Image shown</th><th>Tap opens</th></tr>
+  <tr><td>Analyze photo</td><td>Selected meal photo (unchanged)</td><td>The full-size object URL, as today, via the shared viewer</td></tr>
+  <tr><td>Estimate food row</td><td>New 32px product image on barcode foods; none on photo foods</td><td>The food's 320px copy</td></tr>
+  <tr><td>Barcode confirmation</td><td>Product image (unchanged)</td><td>The product image at its stored size</td></tr>
+  <tr><td>Log meal header</td><td>160px thumbnail (unchanged)</td><td>Thumbnail immediately, then the 800px photo once fetched. Older meals without a photo just show the thumbnail larger.</td></tr>
+  <tr><td>Log food table</td><td>New 24px image beside barcode food names</td><td>The food's 320px copy</td></tr>
+  <tr><td>Product card</td><td>Library image (unchanged)</td><td>The 640px library image</td></tr>
+  <tr><td>Product editor and manual form</td><td>Picture tile</td><td>Previews the draft image; the text buttons still change or remove it</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>Server side</h2>
+<p class="lede">One new action, two adjusted ones, and validation for the new fields.</p>
+
+<ul>
+  <li><strong>List query excludes the photo.</strong> <code>listMeals</code> in <code>src/lib/meals.ts</code> selects every column except <code>photo</code>, so the Log page payload does not change size.</li>
+  <li><strong>New <code>getMealPhotoAction(id)</code></strong> returns the single photo string. It is the only place that reads the column on a page load, and the only thing that would change under a future move to Supabase Storage.</li>
+  <li><strong>Delete returns the row.</strong> <code>deleteMealAction</code> deletes with <code>select()</code> and returns the full meal including <code>photo</code>. The Log's Undo re-inserts that returned copy instead of the client's list copy.</li>
+  <li><strong>Log again</strong> already reads the full row by id and copies it, so the duplicate keeps the photo with no change.</li>
+  <li><strong>Validation.</strong> <code>isValidMeal</code> accepts <code>photo</code> as null or a JPEG data URL under 400 KB. Each food's optional <code>imageUrl</code> must be a JPEG data URL under 100 KB and <code>barcode</code> must match the existing barcode pattern. Anything else is rejected as invalid meal data.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>Product edits and past meals</h2>
+<p class="lede">No behaviour change. This section records the rule so it stays deliberate.</p>
+
+<div class="callout good"><strong>Logged meals are immutable snapshots.</strong> Editing or deleting a product on the Products tab changes only future scans. Past meals keep their name, nutrition and, after this change, their image. "Log again" duplicates the old snapshot without consulting the product. This is the correct default for a food diary.</div>
+
+<p>The new <code>barcode</code> field on foods is what a future "apply this product fix to past meals" tool would key on. That tool is not part of this plan.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">08</span>Scope, risks and open items</h2>
+
+<div class="pill-row">
+  <span class="pill in">✓ shared ImageLightbox in the layout</span>
+  <span class="pill in">✓ meals.photo column + on-demand fetch</span>
+  <span class="pill in">✓ barcode + imageUrl on food items</span>
+  <span class="pill in">✓ catalog image inlined by the lookup route</span>
+  <span class="pill in">✓ cover chosen at log time (fixes never-analysed case)</span>
+  <span class="pill in">✓ product library images at 640px</span>
+  <span class="pill in">✓ delete returns the row for Undo</span>
+  <span class="pill in">✓ viewport-fit cover</span>
+  <span class="pill out">✗ Supabase Storage migration</span>
+  <span class="pill out">✗ pinch-to-zoom inside the viewer</span>
+  <span class="pill out">✗ log paging</span>
+  <span class="pill out">✗ propagating product edits to past meals</span>
+</div>
+
+<table>
+  <tr><th>Risk or note</th><th>Position</th></tr>
+  <tr><td>Log grows without paging</td><td>Pre-existing. This plan keeps the per-meal list payload almost flat (only barcode foods add 15 to 30 KB each). Paging the log is a separate piece of work worth doing before the log reaches a few hundred meals.</td></tr>
+  <tr><td>Older meals stay soft in the viewer</td><td>They only have the 160px thumbnail. The viewer shows it at up to twice its natural size rather than stretched to the full screen, which reads as a small preview instead of a blur.</td></tr>
+  <tr><td>Pinch-to-zoom</td><td>The native dialog does not zoom the image independently of the page. Left out; can be added later with a small touch handler if it turns out to matter.</td></tr>
+  <tr><td>Catalog lookup gets slower</td><td>Fetching the Open Food Facts image inside the lookup adds roughly 200 to 500 ms on a hit. Capped by a 3 second timeout that falls back to no image.</td></tr>
+  <tr><td>Existing saved products keep 320px images</td><td>They expand to a medium view. Re-adding the image on the Products tab upgrades one to 640px.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">09</span>Implementation order</h2>
+<p class="lede">Nine steps, each leaving the app working. Run the SQL first.</p>
+
+<ol class="steps">
+  <li>
+    <strong>Run the SQL</strong>
+    <span class="step-note">Add the <code>photo</code> column in the Supabase SQL editor and mirror it in <code>supabase/schema.sql</code>.</span>
+  </li>
+  <li>
+    <strong>Types and validation</strong>
+    <span class="step-note"><code>FoodItem</code> gets <code>barcode</code> and <code>imageUrl</code>; <code>LoggedMeal</code> gets <code>photo</code>; <code>isValidMeal</code> and a new <code>isValidFood</code> check in <code>src/app/actions.ts</code>.</span>
+  </li>
+  <li>
+    <strong>Meals data layer and actions</strong>
+    <span class="step-note">List without photo, <code>getMealPhotoAction</code>, delete returning the row, and the Log's Undo using it.</span>
+  </li>
+  <li>
+    <strong>Lightbox provider and viewport</strong>
+    <span class="step-note">New <code>src/components/ImageLightbox.tsx</code> mounted in the layout, plus the <code>viewport</code> export with <code>viewportFit: "cover"</code>. Migrate the Analyze photo preview onto it and delete the old dialog.</span>
+  </li>
+  <li>
+    <strong>Barcode images survive</strong>
+    <span class="step-note">Lookup route inlines the catalog image; product-to-food helpers copy barcode and a 320px image; product library images move to 640px in <code>ProductPhotoInput</code>.</span>
+  </li>
+  <li>
+    <strong>Cover selection at log time</strong>
+    <span class="step-note"><code>handleLog</code> builds photo and thumbnail from the source photo or the first food image, resizing the source itself when analyse never ran.</span>
+  </li>
+  <li>
+    <strong>Corrections keep images</strong>
+    <span class="step-note">Strip the two fields before sending; re-attach on the reply by barcode, then name.</span>
+  </li>
+  <li>
+    <strong>Tappable surfaces</strong>
+    <span class="step-note">Log header and food table, estimate rows, barcode confirmation, product card, product editor and manual form all open the viewer.</span>
+  </li>
+  <li>
+    <strong>Verify on a phone</strong>
+    <span class="step-note">Barcode-only meal shows its image in the Log; photo-plus-barcode meal shows the photo; photo-never-analysed meal shows the photo; delete then Undo keeps the photo; viewer opens from every surface without toggling rows; close button clears the notch in the installed app. Then <code>npm run typecheck</code> and <code>npm run lint</code>.</span>
+  </li>
+</ol>
+
+<h3>Files touched</h3>
+<table>
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><span class="mono">supabase/schema.sql</span></td><td>photo column on meals</td></tr>
+  <tr><td><span class="mono">src/lib/schema.ts</span></td><td>barcode, imageUrl on FoodItem</td></tr>
+  <tr><td><span class="mono">src/lib/log.ts</span></td><td>photo on LoggedMeal</td></tr>
+  <tr><td><span class="mono">src/lib/meals.ts</span></td><td>list without photo, get photo by id, delete returning row</td></tr>
+  <tr><td><span class="mono">src/lib/products.ts</span></td><td>helpers copy barcode and image; image validation caps</td></tr>
+  <tr><td><span class="mono">src/lib/resize.ts</span></td><td>helper to make a data URL from an existing data URL at a given size</td></tr>
+  <tr><td><span class="mono">src/app/actions.ts</span></td><td>getMealPhotoAction, delete returns row, validation for new fields</td></tr>
+  <tr><td><span class="mono">src/app/api/products/[barcode]/route.ts</span></td><td>inline the catalog image</td></tr>
+  <tr><td><span class="mono">src/app/layout.tsx</span></td><td>LightboxProvider, viewport export</td></tr>
+  <tr><td><span class="mono">src/components/ImageLightbox.tsx</span></td><td>new: provider, hook, dialog</td></tr>
+  <tr><td><span class="mono">src/components/AnalysisProvider.tsx</span></td><td>cover selection, correction image re-attach</td></tr>
+  <tr><td><span class="mono">src/components/PhotoInput.tsx</span></td><td>use the shared viewer, drop the local dialog</td></tr>
+  <tr><td><span class="mono">src/components/AnalysisCard.tsx</span></td><td>row image, tappable</td></tr>
+  <tr><td><span class="mono">src/components/BarcodeInput.tsx</span></td><td>shrink image on add, tappable confirmation image</td></tr>
+  <tr><td><span class="mono">src/components/ProductPhotoInput.tsx</span></td><td>640px, tile previews instead of opening the picker</td></tr>
+  <tr><td><span class="mono">src/app/log/LogList.tsx</span></td><td>tappable thumbnail with on-demand photo, food row images, Undo from returned row</td></tr>
+  <tr><td><span class="mono">src/app/products/ProductList.tsx</span></td><td>tappable product image</td></tr>
+</table>
+
+<footer class="doc">
+  Calorie Calculator · images final implementation plan · 2026-09-04 · implement only after approval
+</footer>
+
+</div>
+</body>
+</html>

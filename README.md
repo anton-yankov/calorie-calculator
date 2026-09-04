@@ -61,9 +61,9 @@ Environment variables (see `.env.example`):
 Database: create a Supabase project and run `supabase/schema.sql` in the SQL
 Editor. It creates `public.meals` (the log) and `public.settings` (daily
 goals), and `public.barcode_products` (manually entered barcode nutrition).
-For an existing database created before product images were added, run
-`supabase/add-product-images.sql` once instead; one created before product
-deletion was added also needs `supabase/allow-product-deletes.sql`.
+For an existing database, run the commented `alter table` statements in
+`supabase/schema.sql` for any columns it is missing (product images and the
+default scan amount were added later).
 
 ## Deploying
 

@@ -63,8 +63,15 @@ create table public.barcode_products (
   carbs_per_100g double precision not null check (carbs_per_100g >= 0),
   fat_per_100g double precision not null check (fat_per_100g >= 0),
   image_url text,
+  -- Amount (g or ml) prefilled when the barcode is scanned; null starts at 100.
+  serving_grams double precision check (serving_grams > 0),
   updated_at timestamptz not null default now()
 );
+
+-- Existing projects: add the columns to the already-created table.
+-- alter table public.barcode_products add column image_url text;
+-- alter table public.barcode_products
+--   add column serving_grams double precision check (serving_grams > 0);
 
 alter table public.barcode_products enable row level security;
 

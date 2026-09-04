@@ -12,7 +12,48 @@ interface BarcodeProductRow {
   carbs_per_100g: number;
   fat_per_100g: number;
   image_url?: string | null;
+  serving_grams?: number | null;
   updated_at: string;
+}
+
+const BASE_COLUMNS =
+  "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, updated_at";
+
+/**
+ * Column sets to try in order, newest first. Older Supabase projects may not
+ * have the nullable columns added later (see supabase/schema.sql); reading
+ * without them keeps scans working between deploying this code and running
+ * the SQL.
+ */
+const COLUMN_SETS = [
+  `${BASE_COLUMNS}, image_url, serving_grams`,
+  `${BASE_COLUMNS}, image_url`,
+  BASE_COLUMNS,
+];
+
+const OPTIONAL_COLUMNS = ["image_url", "serving_grams"];
+
+interface QueryResult {
+  data: unknown;
+  error: { message: string } | null;
+}
+
+/** Runs `query` with each column set until one the database knows succeeds. */
+async function withColumnFallback<T>(
+  query: (columns: string) => PromiseLike<QueryResult>,
+  describe: string,
+): Promise<T | null> {
+  let lastError: string | null = null;
+  for (const columns of COLUMN_SETS) {
+    const { data, error } = await query(columns);
+    if (!error) return data as T | null;
+    lastError = error.message;
+    const missingColumn = OPTIONAL_COLUMNS.some(
+      (column) => columns.includes(column) && error.message.includes(column),
+    );
+    if (!missingColumn) break;
+  }
+  throw new Error(`${describe}: ${lastError}`);
 }
 
 function toProduct(row: BarcodeProductRow): BarcodeProduct {
@@ -21,7 +62,7 @@ function toProduct(row: BarcodeProductRow): BarcodeProduct {
     name: row.name,
     brand: "",
     imageUrl: row.image_url ?? null,
-    servingGrams: null,
+    servingGrams: row.serving_grams ?? null,
     per100g: {
       calories: row.calories_per_100g,
       protein_g: row.protein_per_100g,
@@ -33,30 +74,12 @@ function toProduct(row: BarcodeProductRow): BarcodeProduct {
 }
 
 export async function getSavedBarcodeProduct(barcode: string): Promise<BarcodeProduct | null> {
-  const { data, error } = await supabase()
-    .from("barcode_products")
-    .select(
-      "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, image_url, updated_at",
-    )
-    .eq("barcode", barcode)
-    .maybeSingle();
-  if (error?.message.includes("image_url")) {
-    // Keep scans working between deploying this code and running the nullable
-    // column migration in an existing Supabase project.
-    const legacy = await supabase()
-      .from("barcode_products")
-      .select(
-        "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, updated_at",
-      )
-      .eq("barcode", barcode)
-      .maybeSingle();
-    if (legacy.error) {
-      throw new Error(`Couldn't look up the saved product: ${legacy.error.message}`);
-    }
-    return legacy.data ? toProduct(legacy.data as BarcodeProductRow) : null;
-  }
-  if (error) throw new Error(`Couldn't look up the saved product: ${error.message}`);
-  return data ? toProduct(data as BarcodeProductRow) : null;
+  const row = await withColumnFallback<BarcodeProductRow>(
+    (columns) =>
+      supabase().from("barcode_products").select(columns).eq("barcode", barcode).maybeSingle(),
+    "Couldn't look up the saved product",
+  );
+  return row ? toProduct(row) : null;
 }
 
 export async function saveBarcodeProduct(
@@ -64,6 +87,7 @@ export async function saveBarcodeProduct(
   name: string,
   per100g: ProductNutrition,
   imageUrl: string | null,
+  servingGrams: number | null,
 ): Promise<BarcodeProduct> {
   const row: BarcodeProductRow = {
     barcode,
@@ -73,39 +97,26 @@ export async function saveBarcodeProduct(
     carbs_per_100g: per100g.carbs_g,
     fat_per_100g: per100g.fat_g,
     image_url: imageUrl,
+    serving_grams: servingGrams,
     updated_at: new Date().toISOString(),
   };
   const { data, error } = await supabase()
     .from("barcode_products")
     .upsert(row, { onConflict: "barcode" })
-    .select(
-      "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, image_url, updated_at",
-    )
+    .select(COLUMN_SETS[0])
     .single();
   if (error) throw new Error(`Couldn't save the barcode product: ${error.message}`);
-  return toProduct(data as BarcodeProductRow);
+  return toProduct(data as unknown as BarcodeProductRow);
 }
 
 export async function listSavedBarcodeProducts(): Promise<BarcodeProduct[]> {
   await connection();
-  const { data, error } = await supabase()
-    .from("barcode_products")
-    .select(
-      "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, image_url, updated_at",
-    )
-    .order("name", { ascending: true });
-  if (error?.message.includes("image_url")) {
-    const legacy = await supabase()
-      .from("barcode_products")
-      .select(
-        "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, updated_at",
-      )
-      .order("name", { ascending: true });
-    if (legacy.error) throw new Error(`Couldn't load saved products: ${legacy.error.message}`);
-    return (legacy.data as BarcodeProductRow[]).map(toProduct);
-  }
-  if (error) throw new Error(`Couldn't load saved products: ${error.message}`);
-  return (data as BarcodeProductRow[]).map(toProduct);
+  const rows = await withColumnFallback<BarcodeProductRow[]>(
+    (columns) =>
+      supabase().from("barcode_products").select(columns).order("name", { ascending: true }),
+    "Couldn't load saved products",
+  );
+  return (rows ?? []).map(toProduct);
 }
 
 export async function deleteSavedBarcodeProduct(barcode: string): Promise<void> {

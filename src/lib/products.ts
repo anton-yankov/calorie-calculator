@@ -35,6 +35,15 @@ export function submittedProductImage(value: unknown): string | null | undefined
   return isJpegDataUrl(value, MAX_PRODUCT_IMAGE_LENGTH) ? value : undefined;
 }
 
+/**
+ * Validates a submitted default amount: `null`/`undefined` means none, a
+ * positive finite number keeps it, anything else is rejected (returns `undefined`).
+ */
+export function submittedServingGrams(value: unknown): number | null | undefined {
+  if (value === null || value === undefined) return null;
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
 /** Validates the four per-100 g values; every one must be a finite non-negative number. */
 export function submittedNutrition(value: unknown): ProductNutrition | null {
   if (typeof value !== "object" || value === null) return null;
@@ -54,6 +63,10 @@ export interface BarcodeProduct {
   name: string;
   brand: string;
   imageUrl: string | null;
+  /**
+   * The amount to prefill when this product is scanned: the catalog serving
+   * (or package) size, or the amount entered when a product was saved manually.
+   */
   servingGrams: number | null;
   per100g: ProductNutrition;
   source: "open-food-facts" | "saved";

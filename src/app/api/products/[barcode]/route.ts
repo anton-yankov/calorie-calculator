@@ -3,6 +3,7 @@ import {
   BARCODE_PATTERN,
   submittedNutrition,
   submittedProductImage,
+  submittedServingGrams,
   type BarcodeProduct,
   type ProductNutrition,
 } from "@/lib/products";
@@ -18,6 +19,9 @@ const PRODUCT_FIELDS = [
   "image_front_small_url",
   "nutriments",
   "serving_quantity",
+  "serving_quantity_unit",
+  "product_quantity",
+  "product_quantity_unit",
 ].join(",");
 
 /** Catalog images larger than this are dropped rather than inlined. */
@@ -31,6 +35,9 @@ interface OpenFoodFactsProduct {
   image_front_url?: unknown;
   image_front_small_url?: unknown;
   serving_quantity?: unknown;
+  serving_quantity_unit?: unknown;
+  product_quantity?: unknown;
+  product_quantity_unit?: unknown;
   nutriments?: Record<string, unknown>;
 }
 
@@ -66,6 +73,7 @@ interface SaveProductBody {
   name?: unknown;
   per100g?: unknown;
   imageUrl?: unknown;
+  servingGrams?: unknown;
 }
 
 function finite(value: unknown): number | null {
@@ -91,6 +99,25 @@ function nutrition(product: OpenFoodFactsProduct): ProductNutrition | null {
   if (calories === null || protein === null || carbs === null || fat === null) return null;
 
   return { calories, protein_g: protein, carbs_g: carbs, fat_g: fat };
+}
+
+/** A positive amount in grams or millilitres; other units can't scale per-100 g nutrition. */
+function amount(quantity: unknown, unit: unknown): number | null {
+  const value = finite(quantity);
+  if (value === null || value <= 0) return null;
+  const normalized = text(unit).toLowerCase();
+  return normalized === "" || normalized === "g" || normalized === "ml" ? value : null;
+}
+
+/**
+ * The amount to prefill: the serving size when the catalog has one, otherwise
+ * the whole package (many single-serve products only list a net weight).
+ */
+function defaultAmount(product: OpenFoodFactsProduct): number | null {
+  return (
+    amount(product.serving_quantity, product.serving_quantity_unit) ??
+    amount(product.product_quantity, product.product_quantity_unit)
+  );
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ barcode: string }> }) {
@@ -167,13 +194,12 @@ export async function GET(_request: Request, context: { params: Promise<{ barcod
     );
   }
 
-  const serving = finite(source.serving_quantity);
   const product: BarcodeProduct = {
     barcode: text(source.code) || barcode,
     name,
     brand: text(source.brands),
     imageUrl: await inlineCatalogImage(source),
-    servingGrams: serving !== null && serving > 0 ? serving : null,
+    servingGrams: defaultAmount(source),
     per100g,
     source: "open-food-facts",
   };
@@ -199,7 +225,8 @@ export async function POST(request: Request, context: { params: Promise<{ barcod
   const name = text(body?.name);
   const imageUrl = body.imageUrl === undefined ? null : submittedProductImage(body.imageUrl);
   const per100g = submittedNutrition(body?.per100g);
-  if (!name || imageUrl === undefined || !per100g) {
+  const servingGrams = submittedServingGrams(body.servingGrams);
+  if (!name || imageUrl === undefined || !per100g || servingGrams === undefined) {
     return Response.json(
       { error: "Enter a product name and all four nutrition values per 100 g or ml." },
       { status: 400 },
@@ -207,7 +234,7 @@ export async function POST(request: Request, context: { params: Promise<{ barcod
   }
 
   try {
-    const product = await saveBarcodeProduct(barcode, name, per100g, imageUrl);
+    const product = await saveBarcodeProduct(barcode, name, per100g, imageUrl, servingGrams);
     return Response.json(product, {
       status: 201,
       headers: { "Cache-Control": "private, no-store" },

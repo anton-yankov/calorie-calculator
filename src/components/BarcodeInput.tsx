@@ -47,6 +47,7 @@ function ManualNutrition({
     name: string,
     per100g: ProductNutrition,
     imageUrl: string | null,
+    servingGrams: number,
   ) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -84,6 +85,7 @@ function ManualNutrition({
         name.trim(),
         per100g,
         imageUrl,
+        portion,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save this barcode.");
@@ -176,6 +178,9 @@ function ManualNutrition({
           <span className="pr-3 font-normal">g / ml</span>
         </span>
       </label>
+      <p className="mt-1 text-[10px] text-muted">
+        Prefilled the next time this barcode is scanned. Change it later under Products.
+      </p>
       {error && <p className="mt-3 text-xs text-danger">{error}</p>}
       <div className="mt-4 flex gap-2">
         <button
@@ -360,11 +365,12 @@ export function BarcodeInput({
     name: string,
     per100g: ProductNutrition,
     imageUrl: string | null,
+    servingGrams: number,
   ) {
     const response = await fetch(`/api/products/${encodeURIComponent(barcode)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, per100g, imageUrl }),
+      body: JSON.stringify({ name, per100g, imageUrl, servingGrams }),
     });
     const body = (await response.json()) as BarcodeProduct | LookupError;
     if (!response.ok || "error" in body) {

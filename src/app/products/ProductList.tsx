@@ -101,6 +101,8 @@ interface Draft {
   carbs: string;
   fat: string;
   imageUrl: string | null;
+  /** Amount prefilled on scan; empty for none. */
+  serving: string;
 }
 
 function draftFrom(product: BarcodeProduct): Draft {
@@ -111,7 +113,15 @@ function draftFrom(product: BarcodeProduct): Draft {
     carbs: fmt(product.per100g.carbs_g),
     fat: fmt(product.per100g.fat_g),
     imageUrl: product.imageUrl,
+    serving: product.servingGrams === null ? "" : fmt(product.servingGrams),
   };
+}
+
+/** The draft's default amount as a number, `null` when left empty, `undefined` when invalid. */
+function servingFrom(draft: Draft): number | null | undefined {
+  if (draft.serving.trim() === "") return null;
+  const number = Number(draft.serving);
+  return Number.isFinite(number) && number > 0 ? number : undefined;
 }
 
 function ProductEditor({
@@ -146,6 +156,10 @@ function ProductEditor({
       });
     if (!complete) {
       setError("Enter a name and all four values per 100 g or ml.");
+      return;
+    }
+    if (servingFrom(draft) === undefined) {
+      setError("The default amount must be a positive number, or left empty.");
       return;
     }
     setError(null);
@@ -193,6 +207,28 @@ function ProductEditor({
             </label>
           ))}
         </fieldset>
+        <label className="block text-xs font-semibold text-muted">
+          Default amount when scanned
+          <span className="mt-1 flex items-center rounded-panel border border-line bg-background focus-within:border-accent sm:w-48">
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="any"
+              placeholder="100"
+              value={draft.serving}
+              disabled={pending}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, serving: event.target.value }))
+              }
+              className="min-w-0 flex-1 bg-transparent px-3 py-2 font-mono text-sm tabular-nums text-foreground focus:outline-none"
+            />
+            <span className="pr-3 font-normal">g / ml</span>
+          </span>
+          <span className="mt-1 block font-normal">
+            Leave empty to start from 100 g. A whole package or one serving is usually handiest.
+          </span>
+        </label>
         {error && <p className="text-xs text-danger">{error}</p>}
       </div>
       <div className="flex gap-2 border-t border-line p-3">
@@ -231,6 +267,7 @@ function ProductCard({ product }: { product: BarcodeProduct }) {
           fat_g: Number(draft.fat),
         },
         imageUrl: draft.imageUrl,
+        servingGrams: servingFrom(draft) ?? null,
       });
       if (result.error) {
         toast.error(result.error);
@@ -257,6 +294,7 @@ function ProductCard({ product }: { product: BarcodeProduct }) {
               name: product.name,
               per100g: product.per100g,
               imageUrl: product.imageUrl,
+              servingGrams: product.servingGrams,
             }).then((r) => {
               if (r.error) toast.error(r.error);
             }),
@@ -277,7 +315,10 @@ function ProductCard({ product }: { product: BarcodeProduct }) {
           <h2 className="break-words font-serif text-lg font-semibold leading-tight">
             {product.name}
           </h2>
-          <p className="mt-1 font-mono text-xs tabular-nums text-muted">{product.barcode}</p>
+          <p className="mt-1 font-mono text-xs tabular-nums text-muted">
+            {product.barcode}
+            {product.servingGrams !== null && ` · ${fmt(product.servingGrams)} g per scan`}
+          </p>
         </div>
         <p className="shrink-0 text-right font-mono tabular-nums">
           <span className="block text-xl font-bold leading-none">

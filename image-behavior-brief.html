@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Meal Image Behavior — Product &amp; Engineering Brief</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --surface-raised: #2A281F;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  button { font: inherit; }
+  a { color: var(--accent); text-underline-offset: 3px; }
+  code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 28px; }
+  .kicker {
+    font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1, h2 { font-family: Georgia, "Times New Roman", serif; }
+  h1 { font-size: clamp(32px, 7vw, 48px); line-height: 1.08; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 680px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 10px 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); }
+  .actions { display: flex; gap: 10px; margin-top: 20px; }
+  .button {
+    min-height: 44px; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--surface); color: var(--ink); padding: 9px 16px; cursor: pointer;
+  }
+  .button:hover, .button:focus-visible { border-color: var(--accent); outline: none; }
+  nav {
+    position: sticky; top: 0; z-index: 5; margin: 0 -10px 36px; padding: 10px;
+    display: flex; gap: 8px; overflow-x: auto; background: rgba(27,26,22,.93);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  }
+  nav a {
+    flex: 0 0 auto; min-height: 42px; display: inline-flex; align-items: center;
+    padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+    color: var(--ink-soft); text-decoration: none; font-size: 13px; font-weight: 650;
+  }
+  nav a:hover, nav a:focus-visible { color: var(--ink); border-color: var(--accent); outline: none; }
+  section { scroll-margin-top: 82px; }
+  h2 {
+    font-size: 28px; line-height: 1.2; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num { font-family: "SFMono-Regular", Consolas, monospace; font-size: 14px; color: var(--accent); }
+  h3 { font-size: 17px; margin: 28px 0 8px; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0;
+  }
+  .callout.good { border-color: var(--green); background: var(--green-soft); }
+  .status {
+    display: grid; grid-template-columns: 1fr 1fr; border-block: 1px solid var(--line);
+    margin: 22px 0 8px;
+  }
+  .status > div { padding: 18px 0; }
+  .status > div + div { border-left: 1px solid var(--line); padding-left: 22px; }
+  .eyebrow { color: var(--ink-soft); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+  .status strong { display: block; font-size: 17px; margin-top: 2px; }
+  .flow { margin: 24px 0; padding: 20px 0; overflow-x: auto; }
+  .flow-track { min-width: 700px; display: grid; grid-template-columns: 1fr 44px 1fr 44px 1fr; align-items: center; }
+  .node { min-height: 116px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .node.focus { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .node strong { display: block; margin-bottom: 5px; }
+  .node span { color: var(--ink-soft); font-size: 13px; line-height: 1.45; display: block; }
+  .node.focus span { color: #5c594f; }
+  .arrow { text-align: center; color: var(--ink-soft); font-size: 24px; }
+  .flow figcaption { color: var(--ink-soft); text-align: center; font-size: 13px; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface); border: 1px solid var(--line); font-size: 14px; }
+  th { text-align: left; padding: 10px 14px; background: var(--surface-raised); color: var(--ink-soft); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; border-bottom: 1px solid var(--line); }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 650; }
+  .yes { color: var(--green); font-weight: 700; }
+  .no { color: var(--accent); font-weight: 700; }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 22px 0; }
+  ol.steps li { counter-increment: step; position: relative; padding: 0 0 22px 52px; }
+  ol.steps li::before {
+    content: counter(step); position: absolute; left: 0; top: 0; width: 32px; height: 32px;
+    border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center;
+    font-family: "SFMono-Regular", Consolas, monospace; font-size: 14px; font-weight: 700;
+  }
+  ol.steps li:not(:last-child)::after { content: ""; position: absolute; left: 15px; top: 37px; bottom: 5px; width: 2px; background: var(--line); }
+  ol.steps strong { display: block; }
+  .step-note { color: var(--ink-soft); font-size: 14.5px; }
+  details { border-top: 1px solid var(--line); }
+  details:last-of-type { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; padding: 14px 0; font-weight: 650; color: var(--ink); }
+  details p { color: var(--ink-soft); margin: 0 0 16px; }
+  footer { margin-top: 72px; border-top: 1px solid var(--line); padding-top: 20px; color: var(--ink-soft); font-size: 13px; }
+  @media (max-width: 640px) {
+    .page { padding: 32px 18px 72px; }
+    header.doc { margin-bottom: 18px; }
+    nav { margin-inline: -8px; }
+    .status { grid-template-columns: 1fr; }
+    .status > div + div { border-left: 0; border-top: 1px solid var(--line); padding-left: 0; }
+    h2 { margin-top: 46px; font-size: 25px; }
+    table { display: block; overflow-x: auto; white-space: normal; }
+    th, td { min-width: 150px; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  @media print {
+    nav, .actions { display: none; }
+    body { background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { max-width: none; padding: 24px; }
+    section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="doc">
+    <div class="kicker">Product &amp; engineering brief</div>
+    <h1>Meal image behavior</h1>
+    <p class="subtitle">How image expansion should work, why barcode images disappear from the Log, and whether Product edits affect meals already recorded.</p>
+    <div class="meta">
+      <span><strong>Status:</strong> Diagnosis complete</span>
+      <span><strong>Scope:</strong> Analyze · Log · Products</span>
+      <span><strong>Priority:</strong> Mobile-first</span>
+      <span><strong>Code changes:</strong> None</span>
+    </div>
+    <div class="actions">
+      <button class="button" id="print-brief" type="button">Print / save PDF</button>
+    </div>
+  </header>
+
+  <nav aria-label="Document sections">
+    <a href="#summary">Summary</a>
+    <a href="#viewer">Image viewer</a>
+    <a href="#barcode">Barcode gap</a>
+    <a href="#history">Product edits</a>
+    <a href="#recommendation">Recommendation</a>
+  </nav>
+
+  <section id="summary">
+    <h2><span class="num">01</span>Executive summary</h2>
+    <p class="lede">The current behavior is internally consistent, but image data is split across two models that never meet when a meal is saved.</p>
+    <div class="status">
+      <div>
+        <span class="eyebrow">Root cause</span>
+        <strong>Product images are not copied into meals</strong>
+      </div>
+      <div>
+        <span class="eyebrow">Historical behavior</span>
+        <strong>Logged meals are independent snapshots</strong>
+      </div>
+    </div>
+    <div class="callout good"><strong>Recommended principle:</strong> preserve historical meals exactly as logged, while choosing and snapshotting a meal-cover image at log time.</div>
+  </section>
+
+  <section id="viewer">
+    <h2><span class="num">02</span>Tap-to-expand images</h2>
+    <p class="lede">The Analyze photo already opens full-screen. Log thumbnails, scanned-product images, and Product-library images do not.</p>
+    <table>
+      <thead><tr><th>Surface</th><th>Today</th><th>Proposed behavior</th></tr></thead>
+      <tbody>
+        <tr><td>Analyze photo</td><td><span class="yes">Already expands</span></td><td>Move onto the shared viewer without changing the interaction.</td></tr>
+        <tr><td>Log thumbnail</td><td><span class="no">Not expandable</span></td><td>Tap opens the viewer without toggling the meal card.</td></tr>
+        <tr><td>Barcode result</td><td><span class="no">Not expandable</span></td><td>Tap previews the package image before adding it.</td></tr>
+        <tr><td>Product library</td><td><span class="no">Not expandable</span></td><td>Tap previews; a separate button continues to change the image.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Mobile interaction requirements</h3>
+    <ol class="steps">
+      <li><strong>Open from the image itself</strong><span class="step-note">The whole visible image is the tap target—no small magnifier control.</span></li>
+      <li><strong>Use the full viewport</strong><span class="step-note">Dark backdrop, contained image, phone safe-area padding, and no accidental cropping.</span></li>
+      <li><strong>Make closing effortless</strong><span class="step-note">A visible 44–48px close button, backdrop tap, and Escape on desktop.</span></li>
+      <li><strong>Keep actions unambiguous</strong><span class="step-note">Previewing and replacing an image remain separate actions.</span></li>
+    </ol>
+
+    <div class="callout"><strong>Quality constraint:</strong> Log images are currently saved at roughly 160px and manually uploaded product images at 320px. They can be expanded, but they will look soft. Good full-screen viewing requires a larger stored preview.</div>
+  </section>
+
+  <section id="barcode">
+    <h2><span class="num">03</span>Why barcode images disappear</h2>
+    <p class="lede">The image is saved correctly on the product. It is lost from the meal workflow when the product is converted into a food item.</p>
+    <figure class="flow">
+      <div class="flow-track">
+        <div class="node"><strong>Barcode product</strong><span>Name, barcode, nutrition, and image URL are available in Analyze.</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="node focus"><strong>Convert to FoodItem</strong><span>Only name, portion, macros, confidence, and assumptions survive.</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="node"><strong>Logged meal</strong><span>Thumbnail comes only from the main meal photo; otherwise it is null.</span></div>
+      </div>
+      <figcaption>The product image has no field or reference through which it can reach the logged meal.</figcaption>
+    </figure>
+    <p>If a meal contains a photographed plate plus a scanned product, the plate photo becomes the Log thumbnail. If the meal is barcode-only, the Log receives no thumbnail and displays the plate placeholder.</p>
+
+    <h3>Preferred fix</h3>
+    <ol class="steps">
+      <li><strong>Carry structured source metadata</strong><span class="step-note">Keep the barcode and product image with the scanned food while it is in the active analysis.</span></li>
+      <li><strong>Choose the meal cover at log time</strong><span class="step-note">Meal photo first; otherwise the first scanned product image; otherwise no image.</span></li>
+      <li><strong>Snapshot the chosen image</strong><span class="step-note">Historical meals should not depend on a product record or an external Open Food Facts URL that can later change.</span></li>
+    </ol>
+  </section>
+
+  <section id="history">
+    <h2><span class="num">04</span>Do Product edits change old meals?</h2>
+    <p class="lede">No. A logged meal is a snapshot, not a live reference to the Product library.</p>
+    <table>
+      <thead><tr><th>Action</th><th>Effect on previous meals</th><th>Effect going forward</th></tr></thead>
+      <tbody>
+        <tr><td>Edit product nutrition</td><td>None</td><td>The next scan uses the new values.</td></tr>
+        <tr><td>Edit product name</td><td>None</td><td>The next scan uses the new name.</td></tr>
+        <tr><td>Edit or remove product image</td><td>None today</td><td>The next scan shows the updated image.</td></tr>
+        <tr><td>Delete product</td><td>None</td><td>A later scan falls back to catalog lookup or manual entry.</td></tr>
+        <tr><td>Log an old meal again</td><td>Creates a copy of the old snapshot</td><td>It does not refresh from Products.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout good"><strong>This is the right default for a food diary.</strong> Past calories and macros should continue to represent what was recorded at that time, even when the reusable product definition is corrected later.</div>
+  </section>
+
+  <section id="recommendation">
+    <h2><span class="num">05</span>Recommended implementation direction</h2>
+    <p class="lede">Treat viewing, list thumbnails, and durable image storage as related but separate concerns.</p>
+    <ol class="steps">
+      <li><strong>Build one shared image viewer</strong><span class="step-note">Use it across Analyze, Log, barcode confirmation, Product cards, and product editing.</span></li>
+      <li><strong>Add barcode image fallback for meal covers</strong><span class="step-note">This resolves the visible bug for barcode-only meals without changing historical nutrition semantics.</span></li>
+      <li><strong>Store a larger durable preview</strong><span class="step-note">Prefer Supabase Storage plus a URL/reference; retain a tiny thumbnail for fast Log rendering.</span></li>
+      <li><strong>Keep logged meals immutable by default</strong><span class="step-note">Future product edits apply only to future scans. Any bulk historical correction should be a separate, explicit tool.</span></li>
+    </ol>
+
+    <h3>Technical evidence</h3>
+    <details>
+      <summary>Meal thumbnail creation</summary>
+      <p><code>AnalysisProvider.handleLog()</code> derives the thumbnail only from the resized main meal photo. A barcode-only meal therefore logs <code>thumbnail: null</code>.</p>
+    </details>
+    <details>
+      <summary>Product-to-food conversion</summary>
+      <p><code>barcodeProductToFood()</code> does not copy <code>imageUrl</code> or a structured <code>barcode</code> onto <code>FoodItem</code>. The barcode survives only as prose inside <code>assumptions</code>.</p>
+    </details>
+    <details>
+      <summary>Historical meal storage</summary>
+      <p>The meal table stores its own analysis JSON and thumbnail. Product edits update a separate <code>barcode_products</code> row, and re-logging duplicates the existing meal row.</p>
+    </details>
+  </section>
+
+  <footer>Calorie Calculator · Meal image behavior brief · Prepared for product and engineering discussion</footer>
+</main>
+<script>
+  document.getElementById("print-brief").addEventListener("click", function () {
+    window.print();
+  });
+</script>
+</body>
+</html>

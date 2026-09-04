@@ -21,6 +21,7 @@ import {
   MAX_MEAL_PHOTO_LENGTH,
   submittedNutrition,
   submittedProductImage,
+  submittedServingGrams,
   type ProductNutrition,
 } from "@/lib/products";
 import type { FoodItem, MealAnalysis, MealTotals } from "@/lib/schema";
@@ -259,6 +260,8 @@ export interface ProductFields {
   name: string;
   per100g: ProductNutrition;
   imageUrl: string | null;
+  /** The amount prefilled when the product is scanned; null for no default. */
+  servingGrams: number | null;
 }
 
 /**
@@ -277,11 +280,12 @@ export async function saveProductAction(
   const name = typeof fields?.name === "string" ? fields.name.trim() : "";
   const per100g = submittedNutrition(fields?.per100g);
   const imageUrl = submittedProductImage(fields?.imageUrl);
-  if (!name || !per100g || imageUrl === undefined) {
+  const servingGrams = submittedServingGrams(fields?.servingGrams);
+  if (!name || !per100g || imageUrl === undefined || servingGrams === undefined) {
     return { error: "Enter a product name and all four nutrition values per 100 g or ml" };
   }
   try {
-    await saveBarcodeProduct(barcode, name, per100g, imageUrl);
+    await saveBarcodeProduct(barcode, name, per100g, imageUrl, servingGrams);
   } catch (err) {
     return { error: message(err, "Couldn't save the product") };
   }

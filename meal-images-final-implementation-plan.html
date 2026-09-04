@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Final Implementation Plan — Meal Images &amp; Product History</title>
+<style>
+  :root {
+    --bg:#1B1A16; --surface:#24221C; --raised:#2A281F; --ink:#EDEAE0;
+    --soft:#A5A195; --accent:#E08A5C; --accent-soft:#3A2A20;
+    --green:#7FBF92; --green-soft:#22312A; --line:#38352C;
+    --code-bg:#2d2d2d; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;color-scheme:dark;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  button{font:inherit} a{color:var(--accent);text-underline-offset:3px}
+  code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+  :not(pre)>code{background:#2E2C24;padding:2px 6px;border-radius:5px;font-size:13.5px}
+  .page{max-width:920px;margin:auto;padding:48px 24px 96px}
+  header.doc{border-bottom:2px solid var(--ink);padding-bottom:28px;margin-bottom:28px}
+  .kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:10px}
+  h1,h2{font-family:Georgia,"Times New Roman",serif}
+  h1{font-size:clamp(32px,7vw,48px);line-height:1.08;margin:0 0 12px}
+  .subtitle{color:var(--soft);font-size:17px;max-width:700px;margin:0}
+  .meta{margin-top:18px;display:flex;gap:10px 18px;flex-wrap:wrap;font-size:13px;color:var(--soft)}
+  .meta strong{color:var(--ink)}
+  .actions{display:flex;gap:10px;margin-top:20px}
+  .button{min-height:44px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);padding:9px 16px;cursor:pointer}
+  .button:hover,.button:focus-visible{border-color:var(--accent);outline:none}
+  nav{position:sticky;top:0;z-index:5;margin:0 -10px 36px;padding:10px;display:flex;gap:8px;overflow-x:auto;background:rgba(27,26,22,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  nav a{flex:0 0 auto;min-height:42px;display:inline-flex;align-items:center;padding:6px 12px;border:1px solid var(--line);border-radius:999px;color:var(--soft);text-decoration:none;font-size:13px;font-weight:650}
+  nav a:hover,nav a:focus-visible{color:var(--ink);border-color:var(--accent);outline:none}
+  section{scroll-margin-top:82px}
+  h2{font-size:28px;line-height:1.2;margin:56px 0 8px;display:flex;align-items:baseline;gap:12px}
+  h2 .num{font:700 14px "SFMono-Regular",Consolas,monospace;color:var(--accent)}
+  h3{font-size:17px;margin:30px 0 8px}
+  p{margin:10px 0}.lede{color:var(--soft);margin-top:0}
+  ul{padding-left:22px}li{margin:6px 0}
+  .callout{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--radius) var(--radius) 0;padding:14px 18px;margin:18px 0}
+  .callout.good{border-color:var(--green);background:var(--green-soft)}
+  .decision{display:grid;grid-template-columns:1fr 1fr;border-block:1px solid var(--line);margin:22px 0}
+  .decision>div{padding:18px 0}.decision>div:nth-child(even){border-left:1px solid var(--line);padding-left:22px}
+  .eyebrow{color:var(--soft);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+  .decision strong{display:block;font-size:17px;margin-top:2px}
+  table{width:100%;border-collapse:collapse;margin:18px 0;background:var(--surface);border:1px solid var(--line);font-size:14px}
+  th{text-align:left;padding:10px 14px;background:var(--raised);color:var(--soft);font-size:12px;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+  td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}tr:last-child td{border-bottom:0}td:first-child{font-weight:650}
+  .keep{color:var(--green);font-weight:700}.change{color:var(--accent);font-weight:700}
+  .flow{margin:26px 0;padding:12px 0;overflow-x:auto}.flow-track{min-width:760px;display:grid;grid-template-columns:1fr 44px 1fr 44px 1fr;align-items:center}
+  .node{min-height:125px;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+  .node.focus{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .node strong,.node span{display:block}.node span{margin-top:5px;color:var(--soft);font-size:13px;line-height:1.45}.node.focus span{color:#5c594f}
+  .arrow{text-align:center;color:var(--soft);font-size:24px}.flow figcaption{text-align:center;color:var(--soft);font-size:13px;margin-top:10px}
+  ol.steps{counter-reset:step;list-style:none;padding:0;margin:22px 0}
+  ol.steps li{counter-increment:step;position:relative;padding:0 0 23px 52px}
+  ol.steps li::before{content:counter(step);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font:700 14px "SFMono-Regular",Consolas,monospace}
+  ol.steps li:not(:last-child)::after{content:"";position:absolute;left:15px;top:37px;bottom:5px;width:2px;background:var(--line)}
+  ol.steps strong{display:block}.step-note{color:var(--soft);font-size:14.5px}
+  pre{background:var(--code-bg);color:var(--ink);border-radius:var(--radius);font-size:13.5px;line-height:1.55;margin:16px 0;padding:18px 20px;overflow:auto}
+  .file-list{border-top:1px solid var(--line);margin-top:18px}.file-row{display:grid;grid-template-columns:minmax(220px,.8fr) 1.5fr;gap:22px;padding:13px 0;border-bottom:1px solid var(--line)}
+  .file-row code{font-weight:650;color:var(--ink)}.file-row span{color:var(--soft);font-size:14px}
+  .checks{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin-top:18px}.check{border-top:1px solid var(--line);padding:12px 0 12px 28px;position:relative}.check::before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:800}
+  details{border-top:1px solid var(--line)}details:last-of-type{border-bottom:1px solid var(--line)}summary{cursor:pointer;padding:14px 0;font-weight:650}details p{color:var(--soft);margin:0 0 16px}
+  footer{margin-top:72px;border-top:1px solid var(--line);padding-top:20px;color:var(--soft);font-size:13px}
+  @media(max-width:680px){.page{padding:32px 18px 72px}header.doc{margin-bottom:18px}nav{margin-inline:-8px}.decision{grid-template-columns:1fr}.decision>div:nth-child(even){border-left:0;border-top:1px solid var(--line);padding-left:0}.decision>div:nth-child(3){border-top:1px solid var(--line)}h2{font-size:25px;margin-top:46px}table{display:block;overflow-x:auto}.file-row{grid-template-columns:1fr;gap:4px}.checks{grid-template-columns:1fr}}
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  @media print{nav,.actions{display:none}body{background:var(--bg);-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{max-width:none;padding:24px}section{break-inside:avoid}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="doc">
+    <div class="kicker">Final plan · pending approval</div>
+    <h1>Meal images &amp; product history</h1>
+    <p class="subtitle">An implementation-ready plan for consistent image expansion, barcode-photo persistence, and predictable historical product behavior.</p>
+    <div class="meta">
+      <span><strong>Status:</strong> Ready for approval</span>
+      <span><strong>Implementation:</strong> Not started</span>
+      <span><strong>Primary surface:</strong> Mobile PWA</span>
+      <span><strong>Database:</strong> One nullable column</span>
+    </div>
+    <div class="actions"><button class="button" id="print-plan" type="button">Print / save PDF</button></div>
+  </header>
+
+  <nav aria-label="Plan sections">
+    <a href="#review">Review</a><a href="#decisions">Decisions</a><a href="#experience">Experience</a>
+    <a href="#data">Data flow</a><a href="#implementation">Implementation</a><a href="#acceptance">Acceptance</a>
+  </nav>
+
+  <section id="review">
+    <h2><span class="num">01</span>Review of the draft</h2>
+    <p class="lede">The shared plan diagnosed the three core behaviors correctly. Its lightbox direction and historical-snapshot conclusion should remain.</p>
+    <table>
+      <thead><tr><th>Draft proposal</th><th>Verdict</th><th>Final-plan adjustment</th></tr></thead>
+      <tbody>
+        <tr><td>Shared native-dialog lightbox</td><td class="keep">Keep</td><td>Make it controlled, accessible, resilient to load errors, and reusable across every visible image.</td></tr>
+        <tr><td>Larger meal photo loaded on demand</td><td class="keep">Keep</td><td>Explicitly exclude it from Log list queries and preserve it through delete/undo and “Log again.”</td></tr>
+        <tr><td>Add <code>imageUrl</code> to <code>FoodItem</code></td><td class="change">Change</td><td>Keep barcode cover media in analysis-session state. Do not mix UI media into the strict OpenAI schema.</td></tr>
+        <tr><td>Reattach images by matching corrected food names</td><td class="change">Remove</td><td>Name matching is fragile when the model renames, reorders, splits, or combines foods.</td></tr>
+        <tr><td>Show images beside every food row</td><td class="change">Defer</td><td>This was not required and would add table/layout complexity. The meal cover solves the reported Log issue.</td></tr>
+        <tr><td>Products edits do not rewrite history</td><td class="keep">Keep</td><td>Make the same rule apply to copied cover images and re-logged meals.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Items the draft missed</h3>
+    <ul>
+      <li>The nutrition-label preview is another visible image and should use the same viewer.</li>
+      <li><code>listMeals()</code> currently uses <code>select("*")</code>; adding a large photo without changing that query would load every full image on every Log visit.</li>
+      <li>Delete/undo currently restores the client’s meal object. If list results omit the large photo, undo would silently restore the meal without it unless the delete action returns the full deleted snapshot.</li>
+      <li>“Log again” must continue copying the original full photo as well as its nutrition snapshot.</li>
+      <li>The plan needs loading, failure, accessibility, safe-area, and focus-return behavior for the viewer.</li>
+      <li>Server Actions have a 1 MB default body limit in this installed Next.js version; generated image payloads need a deliberate size ceiling rather than an assumed resolution.</li>
+      <li>External Open Food Facts images can disappear or change. They can be used pragmatically, but they are not as durable as locally saved JPEG data URLs.</li>
+      <li>The nullable database change must be applied before code that selects the new column.</li>
+    </ul>
+  </section>
+
+  <section id="decisions">
+    <h2><span class="num">02</span>Final product decisions</h2>
+    <p class="lede">These rules remove ambiguity from implementation and QA.</p>
+    <div class="decision">
+      <div><span class="eyebrow">Cover precedence</span><strong>Meal photo → first scanned image → placeholder</strong></div>
+      <div><span class="eyebrow">Multiple barcodes</span><strong>First available product image wins</strong></div>
+      <div><span class="eyebrow">History</span><strong>Meals remain immutable snapshots</strong></div>
+      <div><span class="eyebrow">Correction flow</span><strong>Session cover survives corrections</strong></div>
+    </div>
+    <ul>
+      <li>A fresh analysis, new photo selection, or Clear resets the barcode cover candidate. Gram edits and correction requests do not.</li>
+      <li>A photographed meal always uses the photographed plate as its Log cover, even when barcodes are added.</li>
+      <li>Existing meals remain valid. Their 160px thumbnail opens if no larger photo exists.</li>
+      <li>Product edits apply to future scans only. Existing meals and “Log again” retain the old nutrition and image snapshot.</li>
+      <li>Product-row images inside analysis and meal food tables are out of scope for this change.</li>
+    </ul>
+    <div class="callout"><strong>Catalog-image caveat:</strong> manually saved product images are copied data URLs and therefore stable. Open Food Facts images remain external URLs in this iteration; the UI will handle failure cleanly, but long-term archival would require downloading them into owned storage.</div>
+  </section>
+
+  <section id="experience">
+    <h2><span class="num">03</span>Image-viewer experience</h2>
+    <p class="lede">One interaction pattern across Analyze, barcode entry, Products, nutrition labels, and the Log.</p>
+    <table>
+      <thead><tr><th>Surface</th><th>Tap behavior</th><th>Special handling</th></tr></thead>
+      <tbody>
+        <tr><td>Analyze meal photo</td><td>Open immediately at best in-memory quality.</td><td>Retain Change and Remove as separate controls.</td></tr>
+        <tr><td>Nutrition-label preview</td><td>Open the original displayable object URL.</td><td>Retake remains a separate button.</td></tr>
+        <tr><td>Barcode confirmation</td><td>Open the catalog or saved product image.</td><td>Show a neutral error if the remote image fails.</td></tr>
+        <tr><td>Product library</td><td>Open the saved product image.</td><td>In edit mode, image tap previews; Change image stays explicit.</td></tr>
+        <tr><td>Log thumbnail</td><td>Open instantly with the thumbnail, then replace it with the large photo when loaded.</td><td>Do not toggle the surrounding meal details row.</td></tr>
+      </tbody>
+    </table>
+    <ol class="steps">
+      <li><strong>Full-viewport native dialog</strong><span class="step-note">Use <code>100dvh</code>, a dark backdrop, <code>object-contain</code>, and safe-area padding so portrait and landscape photos remain visible on phones.</span></li>
+      <li><strong>Obvious, forgiving close controls</strong><span class="step-note">A 48px close button in the top-right safe area, backdrop tap, and Escape. Image taps themselves do not accidentally trigger unrelated actions.</span></li>
+      <li><strong>Accessible state management</strong><span class="step-note">Descriptive trigger labels, meaningful alt text, focus trap from <code>&lt;dialog&gt;</code>, cancel handling, and focus returned to the trigger after close.</span></li>
+      <li><strong>Progressive loading</strong><span class="step-note">For Log entries, display the existing thumbnail immediately, show a subtle loading indicator, then swap in the large image. On failure, keep the thumbnail and offer Retry.</span></li>
+    </ol>
+    <p>The implementation will continue using native <code>&lt;img&gt;</code> rather than <code>next/image</code>: these sources mix object URLs, data URLs, and externally hosted catalog URLs, and their dimensions are not known ahead of time.</p>
+  </section>
+
+  <section id="data">
+    <h2><span class="num">04</span>Data and persistence design</h2>
+    <p class="lede">The meal stores a fast thumbnail plus an optional larger display copy. Barcode cover media stays outside the model-generated nutrition schema.</p>
+    <figure class="flow">
+      <div class="flow-track">
+        <div class="node"><strong>Active analysis</strong><span>Meal photo blob and a session-level first barcode image candidate.</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="node focus"><strong>Log-time cover selection</strong><span>Create 160px thumbnail + bounded large photo, or copy the barcode image when no meal photo exists.</span></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="node"><strong>Meal snapshot</strong><span>Analysis JSON, thumbnail, and nullable photo. Product edits have no link back.</span></div>
+      </div>
+      <figcaption>Media is selected once when logging and becomes part of the historical meal snapshot.</figcaption>
+    </figure>
+
+    <h3>Database change</h3>
+    <p>Run this SQL before deploying the application changes:</p>
+    <pre><code>alter table public.meals add column if not exists photo text;</code></pre>
+    <p>During implementation, update <code>supabase/schema.sql</code> as the canonical fresh-install schema. No migration file will be added, following the project convention.</p>
+
+    <h3>Payload and query rules</h3>
+    <ul>
+      <li>Replace Log-page <code>select("*")</code> with explicit summary fields that exclude <code>photo</code>.</li>
+      <li>Fetch one meal’s <code>photo</code> by validated UUID only when its viewer opens; authenticate the action and return only the image string.</li>
+      <li>Generate the large meal JPEG from the already resized 1024px analysis image and enforce a conservative encoded-size cap so the entire log Server Action remains under Next.js’s 1 MB default.</li>
+      <li>Accept only bounded JPEG data URLs or allowlisted HTTPS Open Food Facts image URLs as persisted media.</li>
+      <li>Cache a fetched full image in the mounted meal row so reopening the viewer does not call the server again.</li>
+    </ul>
+  </section>
+
+  <section id="implementation">
+    <h2><span class="num">05</span>Implementation sequence</h2>
+    <p class="lede">Each phase leaves a clear verification point and avoids mixing model schema changes into UI work.</p>
+    <ol class="steps">
+      <li><strong>Add bounded image helpers and types</strong><span class="step-note">Extend <code>LoggedMeal</code>/<code>MealRow</code> with nullable <code>photo</code>; add a reusable JPEG data-URL helper and server-side media validation. Leave <code>FoodItem</code> and the OpenAI schema unchanged.</span></li>
+      <li><strong>Persist and read full meal photos safely</strong><span class="step-note">Create both image sizes at log time, add a minimal authenticated read action, and change list queries to omit the large field.</span></li>
+      <li><strong>Preserve lifecycle operations</strong><span class="step-note">Ensure update leaves media untouched, “Log again” copies it, and delete returns the complete deleted snapshot needed for Undo so the full photo is not lost.</span></li>
+      <li><strong>Carry the barcode cover in session state</strong><span class="step-note">Pass <code>product.imageUrl</code> alongside the converted food from both saved/manual and catalog paths. First non-null image wins; reset it on Clear, new photo, or a fresh replacement analysis.</span></li>
+      <li><strong>Extract the shared viewer</strong><span class="step-note">Move the existing dialog behavior into a controlled <code>ImageLightbox</code> with focus restoration, backdrop discrimination, loading, error, and Retry states.</span></li>
+      <li><strong>Wire every visible image surface</strong><span class="step-note">Analyze photo, nutrition label, barcode confirmation, Product card, product editor, and Log thumbnail. Keep preview and edit/retake actions distinct.</span></li>
+      <li><strong>Verify and document</strong><span class="step-note">Run static checks/build, test the full matrix below on narrow and wide viewports, and update README behavior notes.</span></li>
+    </ol>
+
+    <h3>Expected files</h3>
+    <div class="file-list">
+      <div class="file-row"><code>src/components/ImageLightbox.tsx</code><span>New shared controlled dialog.</span></div>
+      <div class="file-row"><code>src/components/PhotoInput.tsx</code><span>Adopt shared viewer.</span></div>
+      <div class="file-row"><code>src/components/NutritionLabelInput.tsx</code><span>Make the label preview expandable.</span></div>
+      <div class="file-row"><code>src/components/ProductPhotoInput.tsx</code><span>Separate preview from Change image.</span></div>
+      <div class="file-row"><code>src/components/BarcodeInput.tsx</code><span>Preview product image and pass cover candidate.</span></div>
+      <div class="file-row"><code>src/components/AnalysisProvider.tsx</code><span>Own cover precedence, reset rules, and two-size meal image creation.</span></div>
+      <div class="file-row"><code>src/app/log/LogList.tsx</code><span>Open from thumbnail, lazy-load full photo, preserve details toggle and Undo.</span></div>
+      <div class="file-row"><code>src/app/products/ProductList.tsx</code><span>Open Product card images.</span></div>
+      <div class="file-row"><code>src/lib/log.ts · src/lib/meals.ts</code><span>Add nullable photo, summary/full queries, and lifecycle preservation.</span></div>
+      <div class="file-row"><code>src/lib/resize.ts · src/app/actions.ts</code><span>Bounded encoding, authenticated lazy read, validation, delete snapshot return.</span></div>
+      <div class="file-row"><code>supabase/schema.sql · README.md</code><span>Canonical schema and documented behavior.</span></div>
+    </div>
+  </section>
+
+  <section id="acceptance">
+    <h2><span class="num">06</span>Acceptance criteria</h2>
+    <p class="lede">Approval of this plan means implementation will be considered complete only when every applicable check passes.</p>
+    <div class="checks">
+      <div class="check">Every visible user-supplied or product image opens in the shared viewer.</div>
+      <div class="check">The viewer works at 320px mobile width and desktop width without cropping the image.</div>
+      <div class="check">Close button, backdrop tap, Escape, focus trap, and focus return behave correctly.</div>
+      <div class="check">Tapping a Log thumbnail does not open or close meal details.</div>
+      <div class="check">A photographed meal logs with a sharp large image and a fast list thumbnail.</div>
+      <div class="check">A barcode-only meal with an image shows that image in the Log.</div>
+      <div class="check">A barcode-only meal without an image still shows the plate placeholder.</div>
+      <div class="check">For multiple scanned products, the first available image is the cover.</div>
+      <div class="check">A meal photo takes precedence over all scanned product images.</div>
+      <div class="check">Old 160px-only meals still open in the viewer without errors.</div>
+      <div class="check">Full meal photos are absent from the initial Log-page payload.</div>
+      <div class="check">Viewer fetch failure retains the thumbnail and exposes Retry.</div>
+      <div class="check">Edit, delete/undo, and “Log again” preserve the full meal image.</div>
+      <div class="check">Changing a Product leaves old meals unchanged and affects the next scan.</div>
+      <div class="check">A broken external product image degrades to the existing placeholder.</div>
+      <div class="check"><code>npm run format:check</code>, <code>npm run lint</code>, <code>npm run typecheck</code>, and <code>npm run build</code> pass.</div>
+    </div>
+
+    <h3>Explicitly out of scope</h3>
+    <ul>
+      <li>Retroactively rewriting historical meals after Product edits.</li>
+      <li>Product images beside individual food rows.</li>
+      <li>Pinch-to-zoom, swipe galleries, image editing, or multi-image meal albums.</li>
+      <li>Downloading Open Food Facts images into owned storage; this is the logical follow-up if archival durability becomes important.</li>
+    </ul>
+    <div class="callout good"><strong>Approval gate:</strong> no application implementation begins until this plan is approved. Once approved, the work will follow the sequence and scope above, with any required Supabase SQL provided inline.</div>
+
+    <h3>Supporting evidence</h3>
+    <details><summary>Why media stays out of FoodItem</summary><p><code>FoodItem</code> is the output of a strict OpenAI JSON schema. Adding client-only image data creates correction-round reconciliation work and fragile name matching. A session-level cover candidate satisfies the requested Log behavior without changing model output.</p></details>
+    <details><summary>Why the large image is fetched on demand</summary><p>The Log may contain hundreds of meals. Loading a roughly 1024px data URL for every row would inflate the server payload even though almost none are opened. The list needs only the 160px thumbnail.</p></details>
+    <details><summary>Why Product edits remain non-retroactive</summary><p>Logged meals store complete analysis snapshots and do not hold a live product relation. This protects historical totals. “Log again” intentionally copies the recorded snapshot rather than silently recalculating it.</p></details>
+  </section>
+
+  <footer>Calorie Calculator · Final meal-images implementation plan · 2026-09-04</footer>
+</main>
+<script>
+  document.getElementById("print-plan").addEventListener("click",function(){window.print()});
+</script>
+</body>
+</html>
