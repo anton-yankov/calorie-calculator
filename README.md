@@ -29,6 +29,10 @@ app.
    entered manually), saved with an optional image, and reused on future scans.
    The Products page lists those saved entries and lets you edit their name,
    nutrition, and image, or delete them with undo.
+5. **Stats** — calories and protein per day charted against your goals, with
+   Monday-to-Sunday weekly-average lines, four headline numbers, and a 7d/30d/90d/All range.
+   Longer ranges bucket into Monday-to-Sunday weeks. Every chart has a table
+   twin. Days are grouped in your timezone, exactly like the log.
 
 ## Tech stack
 

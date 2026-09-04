@@ -25,10 +25,17 @@ export function dayBounds(key: string): { startIso: string; endIso: string } {
 }
 
 /** Local midnight of the Monday that starts the week containing `d`. */
-function weekStart(d: Date): Date {
+export function weekStart(d: Date): Date {
   const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
   return start;
+}
+
+/** The YYYY-MM-DD key `n` days after `key` (negative for earlier); noon-based so DST can't skip a day. */
+export function addDays(key: string, n: number): string {
+  const d = new Date(`${key}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return dayKey(d);
 }
 
 /** "dd.mm", with the year appended only when it isn't the current one. */

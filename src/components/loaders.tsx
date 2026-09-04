@@ -20,8 +20,8 @@ export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-function GhostBar({ className }: { className: string }) {
-  return <div className={`ghost-shimmer rounded bg-line ${className}`} />;
+function GhostBar({ className, style }: { className: string; style?: React.CSSProperties }) {
+  return <div className={`ghost-shimmer rounded bg-line ${className}`} style={style} />;
 }
 
 /** Ghost version of the meal-log list: one day header + a few entry rows. */
@@ -124,5 +124,44 @@ export function SkeletonEstimate({ label }: { label: string }) {
         <GhostBar className="h-3 w-28" />
       </footer>
     </section>
+  );
+}
+
+const GHOST_BARS = [62, 78, 55, 84, 70, 66, 88, 74, 58, 80, 68, 76, 64, 82];
+
+/**
+ * Ghost version of the stats page: range pill and four tiles in one column,
+ * two chart frames in the other. `contents` lets the page grid place the two
+ * columns itself, exactly where StatsView's columns land.
+ */
+export function SkeletonStats() {
+  return (
+    <div role="status" aria-label="Stats loading" className="contents">
+      <div className="flex flex-col gap-4" aria-hidden>
+        <GhostBar className="h-9 w-44 rounded-full" />
+        <div className="grid grid-cols-2 gap-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="rounded-panel border border-line bg-surface px-4 py-3">
+              <GhostBar className="h-2.5 w-20" />
+              <GhostBar className={`mt-2.5 h-7 ${i % 2 ? "w-14" : "w-20"}`} />
+              <GhostBar className="mt-2.5 h-2.5 w-28" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-col gap-4" aria-hidden>
+        {[0, 1].map((i) => (
+          <div key={i} className="rounded-panel border border-line bg-surface px-4 pb-3 pt-3">
+            <GhostBar className="h-3.5 w-32" />
+            <div className="mt-4 flex h-44 items-end gap-1.5">
+              {GHOST_BARS.map((h, j) => (
+                <GhostBar key={j} className="flex-1 rounded-t" style={{ height: `${h}%` }} />
+              ))}
+            </div>
+            <GhostBar className="mt-3 h-3 w-24" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
