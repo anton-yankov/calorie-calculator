@@ -64,4 +64,4 @@ alter table public.barcode_products enable row level security;
 
 -- Barcode persistence is server-only, like settings. The app's API route is
 -- protected by the site password gate and accesses this table with the secret key.
-grant select, insert, update on public.barcode_products to service_role;
+grant select, insert, update, delete on public.barcode_products to service_role;

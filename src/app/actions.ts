@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE, authTokenFor } from "@/lib/auth";
+import { deleteSavedBarcodeProduct, saveBarcodeProduct } from "@/lib/barcode-products";
 import type { LoggedMeal } from "@/lib/log";
 import {
   deleteMealById,
@@ -12,6 +13,12 @@ import {
   sumTotalsBetween,
   updateMealById,
 } from "@/lib/meals";
+import {
+  BARCODE_PATTERN,
+  submittedNutrition,
+  submittedProductImage,
+  type ProductNutrition,
+} from "@/lib/products";
 import type { MealAnalysis, MealTotals } from "@/lib/schema";
 import { getGoals, saveGoals, type Goals } from "@/lib/settings";
 
@@ -210,4 +217,52 @@ export async function todayProgressAction(
   } catch (err) {
     return { error: message(err, "Couldn't load today's progress") };
   }
+}
+
+export interface ProductFields {
+  name: string;
+  per100g: ProductNutrition;
+  imageUrl: string | null;
+}
+
+/**
+ * Writes a saved product's name, nutrition and image. An upsert on the
+ * barcode, so it both saves edits and restores a product after "Undo" on a
+ * delete — the client still holds the full row.
+ */
+export async function saveProductAction(
+  barcode: string,
+  fields: ProductFields,
+): Promise<ActionResult> {
+  if (!(await isAuthed())) return { error: "Authentication required" };
+  if (typeof barcode !== "string" || !BARCODE_PATTERN.test(barcode)) {
+    return { error: "Invalid barcode" };
+  }
+  const name = typeof fields?.name === "string" ? fields.name.trim() : "";
+  const per100g = submittedNutrition(fields?.per100g);
+  const imageUrl = submittedProductImage(fields?.imageUrl);
+  if (!name || !per100g || imageUrl === undefined) {
+    return { error: "Enter a product name and all four nutrition values per 100 g or ml" };
+  }
+  try {
+    await saveBarcodeProduct(barcode, name, per100g, imageUrl);
+  } catch (err) {
+    return { error: message(err, "Couldn't save the product") };
+  }
+  revalidatePath("/products");
+  return {};
+}
+
+export async function deleteProductAction(barcode: string): Promise<ActionResult> {
+  if (!(await isAuthed())) return { error: "Authentication required" };
+  if (typeof barcode !== "string" || !BARCODE_PATTERN.test(barcode)) {
+    return { error: "Invalid barcode" };
+  }
+  try {
+    await deleteSavedBarcodeProduct(barcode);
+  } catch (err) {
+    return { error: message(err, "Couldn't delete the product") };
+  }
+  revalidatePath("/products");
+  return {};
 }
