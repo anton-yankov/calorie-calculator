@@ -12,7 +12,7 @@ import {
 import { DatePicker } from "@/components/DatePicker";
 import { GoalBars } from "@/components/GoalBars";
 import { ZoomableImage } from "@/components/ImageLightbox";
-import { dayKey, dayLabel } from "@/lib/day";
+import { dayKey, dayLabel, timeLabel } from "@/lib/day";
 import type { LoggedMeal } from "@/lib/log";
 import { scaleFood, sumTotals } from "@/lib/scale";
 import type { FoodItem, MealTotals } from "@/lib/schema";
@@ -64,10 +64,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
   const foods = draftFoods ?? meal.analysis.foods;
   const totals: MealTotals = draftFoods ? sumTotals(draftFoods) : meal.analysis.totals;
   const names = meal.analysis.foods.map((f) => f.name).join(", ");
-  const time = new Date(meal.loggedAt).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const time = timeLabel(meal.loggedAt);
 
   function startEdit() {
     const d = new Date(meal.loggedAt);

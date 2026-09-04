@@ -38,6 +38,7 @@ export default function Home() {
     logDate,
     setLogDate,
     latest,
+    session,
     handleSelect,
     handleClear,
     handleLog,
@@ -47,6 +48,7 @@ export default function Home() {
   } = useAnalysis();
 
   const todayKey = dayKey(new Date());
+  const logged = latest !== undefined && loggedAtLength === history.length;
 
   const threadEndRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +85,12 @@ export default function Home() {
           onClear={handleClear}
         />
 
-        <BarcodeInput disabled={loading || preparing || logging} onAdd={addScannedFood} />
+        {/* Keyed on the session so a full reset also closes an open product panel */}
+        <BarcodeInput
+          key={session}
+          disabled={loading || preparing || logging}
+          onAdd={addScannedFood}
+        />
 
         <div className="relative flex">
           <input
@@ -129,6 +136,19 @@ export default function Home() {
           <p className="rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
             {error}
           </p>
+        )}
+
+        {/* Full reset — the photo ✕ only exists when there is a photo, and a
+            barcode-only or text-only plate would otherwise have no way out */}
+        {(latest || sourceBlob || description.trim()) && !logged && (
+          <button
+            type="button"
+            disabled={loading || preparing || logging}
+            onClick={handleClear}
+            className="self-center text-xs font-semibold text-muted transition-colors hover:text-foreground disabled:opacity-40"
+          >
+            Clear everything
+          </button>
         )}
       </div>
 
@@ -197,13 +217,22 @@ export default function Home() {
                       ? `Log to ${dayLabel(logDate)}`
                       : "Log meal"}
               </button>
-              {loggedAtLength === history.length && (
-                <Link
-                  href="/log"
-                  className="shrink-0 rounded-panel bg-success px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
-                >
-                  View log
-                </Link>
+              {logged && (
+                <>
+                  <Link
+                    href="/log"
+                    className="shrink-0 rounded-panel bg-success px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
+                  >
+                    View log
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    className="shrink-0 rounded-panel border border-line px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-accent"
+                  >
+                    New meal
+                  </button>
+                </>
               )}
             </div>
             <CorrectionBar

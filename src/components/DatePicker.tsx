@@ -10,12 +10,12 @@ const POP_WIDTH = 264;
 
 // 2024-01-01 was a Monday — weeks here start on Monday
 const WEEKDAYS = Array.from({ length: 7 }, (_, i) =>
-  new Date(2024, 0, 1 + i).toLocaleDateString(undefined, { weekday: "narrow" }),
+  new Date(2024, 0, 1 + i).toLocaleDateString("en-GB", { weekday: "narrow" }),
 );
 
 /**
  * Styled replacement for `<input type="date">`: a trigger button labeled with
- * the day ("Today", "Yesterday", "Thu 28 Aug") that opens a calendar popover.
+ * the day ("Today", "Yesterday", "Thu 28.08", "12.08") that opens a calendar popover.
  * The popover is position:fixed and portaled to <body> so it escapes both
  * overflow-hidden ancestors (the log's meal cards clip their children to the
  * panel radius) and transformed ancestors (the page-enter animation), which
@@ -103,7 +103,7 @@ export function DatePicker({
     ...Array.from({ length: offset }, () => null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-  const monthLabel = new Date(year, month, 1).toLocaleDateString(undefined, {
+  const monthLabel = new Date(year, month, 1).toLocaleDateString("en-GB", {
     month: "long",
     year: "numeric",
   });

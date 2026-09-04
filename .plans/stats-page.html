@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stats Page: Calories &amp; Protein Over Time — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  table.wrap td:first-child { white-space: normal; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 13.5px; }
+  .rec { color: var(--green); font-weight: 600; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill {
+    font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+
+  pre {
+    background: var(--code-bg); color: var(--ink);
+    border-radius: var(--radius); font-size: 13.5px; line-height: 1.55;
+    margin: 16px 0; padding: 18px 20px; overflow-x: auto;
+  }
+  code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+  :not(pre) > code {
+    background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px;
+  }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 0 0 18px 52px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+
+  @media print {
+    body { background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    pre { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Feature plan · proposal, no code yet</div>
+  <h1>Stats Page: Calories &amp; Protein Over Time</h1>
+  <p class="subtitle">A fourth tab that turns the meal log into trends: how many calories and how much protein you actually average, day by day and week by week, against the goals you already set on the Log page.</p>
+  <div class="meta">
+    <span><strong>Route:</strong> /stats</span>
+    <span><strong>Data:</strong> existing meals + settings tables</span>
+    <span><strong>SQL:</strong> none for v1</span>
+    <span><strong>Charts:</strong> hand-rolled SVG, no library</span>
+    <span><strong>Date:</strong> 4 Sep 2026</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>The one-minute version</h2>
+<p class="lede">Everything below is detail on this paragraph.</p>
+<div class="card">
+  <p>Add a <strong>Stats</strong> tab next to Analyze, Log and Products. The page loads every meal's timestamp and totals (no thumbnails, no food lists), groups them into days in your phone's timezone exactly like the log does, and shows four stat tiles plus two charts: <strong>calories per day</strong> and <strong>protein per day</strong>, each with your goal drawn as a line and a trailing 7-day average on top. A single range control (7d · 30d · 90d · All) scopes everything. No new tables, no new API routes, no chart library: two small SVG components in the app's own palette. The rest of this document is the layout, the chart rules, the data path, the edge cases, and eleven questions where your answer changes what gets built.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Where it lives</h2>
+<p class="lede">A sibling of the Log and Products pages, built from the same server-component-plus-client-view shape they already use.</p>
+
+<table>
+  <tr><th>File</th><th>Role</th></tr>
+  <tr><td class="mono">src/app/stats/page.tsx</td><td>Server component. Fetches meal totals and goals in parallel per request (after <code>connection()</code>, same as the log), renders the header, hands the data to the client view. Mirrors <code>log/page.tsx</code> including its error card.</td></tr>
+  <tr><td class="mono">src/app/stats/loading.tsx</td><td>Streamed skeleton: header plus ghost tiles and two ghost chart frames, using the existing <code>ghost-shimmer</code> bars from <code>loaders.tsx</code>.</td></tr>
+  <tr><td class="mono">src/app/stats/StatsView.tsx</td><td>Client component. Owns the range state, groups meals by <code>dayKey()</code>, computes tiles and series, renders the charts and their table twins.</td></tr>
+  <tr><td class="mono">src/lib/stats.ts</td><td>Pure functions, no React: <code>groupByDay</code>, <code>bucketByWeek</code>, <code>rollingAverage</code>, tile math. Small enough to unit-test by hand in the console, and keeps <code>StatsView</code> to layout.</td></tr>
+  <tr><td class="mono">src/components/charts/DailyBars.tsx</td><td>The one chart component, used twice. Props: series of {day, value, meals}, optional goal, unit, height. Draws bars, goal hairline, 7-day line, axis ticks, tooltip.</td></tr>
+  <tr><td class="mono">src/components/charts/StatTile.tsx</td><td>Label, value, unit, one-line caption. Four instances in a 2×2 grid on phones, 4-across from <code>sm</code>.</td></tr>
+  <tr><td class="mono">src/components/charts/RangePicker.tsx</td><td>Segmented control styled like the nav pill. Four fixed presets, no custom range in v1.</td></tr>
+  <tr><td class="mono">src/lib/meals.ts</td><td>One new query, <code>listMealTotals()</code>, selecting only <code>logged_at</code> and <code>analysis-&gt;totals</code>. Everything else untouched.</td></tr>
+  <tr><td class="mono">src/components/TopNav.tsx</td><td>Fourth entry in the <code>tabs</code> array. See the width problem below.</td></tr>
+  <tr><td class="mono">src/app/actions.ts</td><td>Add <code>revalidatePath("/stats")</code> beside every existing <code>revalidatePath("/log")</code> so a meal logged, edited or deleted shows up on the next visit without a hard reload.</td></tr>
+</table>
+
+<p>The password gate needs nothing: <code>proxy.ts</code> matches every path that isn't a static asset, so <code>/stats</code> is protected the moment it exists. The page reads through the same server-only Supabase client, so no new grants or policies either.</p>
+
+<h3>The nav doesn't fit a fourth tab on a phone</h3>
+<p>The tab pill is <code>text-xs font-semibold</code> with <code>px-4</code> per tab. Adding "Stats" pushes the pill past what a 375px iPhone leaves next to the wordmark. Estimated widths at the current styling:</p>
+
+<table>
+  <tr><th>Element</th><th>Width</th><th>Note</th></tr>
+  <tr><td>Available row</td><td class="mono">335px</td><td>375px viewport minus <code>px-5</code> on each side</td></tr>
+  <tr><td>Wordmark "Calories"</td><td class="mono">~70px</td><td>Fraunces 18px semibold, plus the 20px gap</td></tr>
+  <tr><td>Pill with 3 tabs today</td><td class="mono">~230px</td><td>Fits with room to spare</td></tr>
+  <tr><td>Pill with 4 tabs, <code>px-4</code></td><td class="mono">~295px</td><td>Overflows by roughly 50px</td></tr>
+  <tr><td>Pill with 4 tabs, <code>px-3</code> below <code>sm</code></td><td class="mono">~265px</td><td>Still about 20px over</td></tr>
+  <tr><td>4 tabs, <code>px-2.5</code> + <code>text-[11px]</code></td><td class="mono">~240px</td><td>Fits on 375px; tight on 360px Androids</td></tr>
+</table>
+
+<div class="callout"><strong>Recommendation:</strong> keep the four-tab pill and tighten it on phones only (<code>px-2.5 text-[11px] sm:px-4 sm:text-xs</code>), then verify on a real 375px and 360px viewport. If it still crowds, the fallback is to shorten the phone wordmark to a small icon rather than dropping a tab. A stats page hidden behind a link on the Log page would be the third option, but you asked for a page, and a tab is how this app says "page".</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>What's on the page</h2>
+<p class="lede">Top to bottom: header, range control, four tiles, two identical chart cards. Nothing else in v1.</p>
+
+<figure>
+<svg viewBox="0 0 860 680" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif"><rect x="40" y="20" width="340" height="640" rx="26" fill="#1B1A16" stroke="#38352C" stroke-width="2"/><clipPath id="phone"><rect x="40" y="20" width="340" height="640" rx="26"/></clipPath><g clip-path="url(#phone)"><rect x="40" y="20" width="340" height="44" fill="#1B1A16"/><line x1="40" y1="64" x2="380" y2="64" stroke="#38352C"/><text x="58" y="48" font-family="'Fraunces', Georgia, serif" font-size="14" font-weight="600" fill="#EDEAE0">Calories</text><rect x="166" y="31" width="194" height="22" rx="11" fill="#24221C" stroke="#38352C"/><text x="196" y="45.5" text-anchor="middle" font-size="8" font-weight="600" fill="#A5A195">Analyze</text><text x="239" y="45.5" text-anchor="middle" font-size="8" font-weight="600" fill="#A5A195">Log</text><text x="285" y="45.5" text-anchor="middle" font-size="8" font-weight="600" fill="#A5A195">Products</text><rect x="314" y="33" width="42" height="18" rx="9" fill="#E08A5C"/><text x="335" y="45.5" text-anchor="middle" font-size="8" font-weight="600" fill="#1B1A16">Stats</text><text x="58" y="84" font-size="7.5" letter-spacing="1" font-weight="700" fill="#E08A5C">TRENDS</text><text x="58" y="110" font-family="'Fraunces', Georgia, serif" font-size="24" font-weight="600" fill="#EDEAE0">Stats</text><text x="58" y="126" font-size="8.5" fill="#A5A195">Calories and protein, day by day, against your goals.</text><line x1="58" y1="136" x2="362" y2="136" stroke="#EDEAE0" stroke-width="1.5"/><rect x="58" y="150" width="150" height="22" rx="11" fill="#24221C" stroke="#38352C"/><text x="78" y="164.5" text-anchor="middle" font-size="8" font-weight="600" fill="#A5A195">7d</text><rect x="97" y="152" width="36" height="18" rx="9" fill="#E08A5C"/><text x="115" y="164.5" text-anchor="middle" font-size="8" font-weight="600" fill="#1B1A16">30d</text><text x="152" y="164.5" text-anchor="middle" font-size="8" font-weight="600" fill="#A5A195">90d</text><text x="189" y="164.5" text-anchor="middle" font-size="8" font-weight="600" fill="#A5A195">All</text><text x="362" y="164.5" text-anchor="end" font-size="7.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">06.08 – 04.09</text><rect x="58" y="184" width="148" height="54" rx="8" fill="#24221C" stroke="#38352C"/>
+  <text x="68" y="198" font-size="7" letter-spacing="0.6" fill="#A5A195" font-weight="700">AVG CALORIES</text>
+  <text x="68" y="218" font-size="17" font-weight="600" fill="#EDEAE0">2,262<tspan font-size="8" fill="#A5A195"> kcal</tspan></text>
+  <text x="68" y="230" font-size="7" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">27 logged days · goal 2,400</text><rect x="214" y="184" width="148" height="54" rx="8" fill="#24221C" stroke="#38352C"/>
+  <text x="224" y="198" font-size="7" letter-spacing="0.6" fill="#A5A195" font-weight="700">AVG PROTEIN</text>
+  <text x="224" y="218" font-size="17" font-weight="600" fill="#EDEAE0">141<tspan font-size="8" fill="#A5A195"> g</tspan></text>
+  <text x="224" y="230" font-size="7" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">goal 150 g</text><rect x="58" y="246" width="148" height="54" rx="8" fill="#24221C" stroke="#38352C"/>
+  <text x="68" y="260" font-size="7" letter-spacing="0.6" fill="#A5A195" font-weight="700">DAYS AT GOAL</text>
+  <text x="68" y="280" font-size="17" font-weight="600" fill="#EDEAE0">7<tspan font-size="8" fill="#A5A195"> of 27</tspan></text>
+  <text x="68" y="292" font-size="7" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">protein 9 of 27</text><rect x="214" y="246" width="148" height="54" rx="8" fill="#24221C" stroke="#38352C"/>
+  <text x="224" y="260" font-size="7" letter-spacing="0.6" fill="#A5A195" font-weight="700">DAYS LOGGED</text>
+  <text x="224" y="280" font-size="17" font-weight="600" fill="#EDEAE0">27<tspan font-size="8" fill="#A5A195"> of 30</tspan></text>
+  <text x="224" y="292" font-size="7" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">3 days empty</text><rect x="58" y="312" width="304" height="150" rx="8" fill="#24221C" stroke="#38352C"/><text x="68" y="328" font-size="9.5" font-weight="700" fill="#EDEAE0">Calories per day</text><rect x="256" y="322" width="8" height="8" rx="2" fill="#E08A5C"/><text x="268" y="329" font-size="7" fill="#A5A195">daily</text><line x1="296" y1="326" x2="308" y2="326" stroke="#EDEAE0" stroke-width="2"/><text x="312" y="329" font-size="7" fill="#A5A195">7-day avg</text><line x1="80" y1="386.0" x2="352" y2="386.0" stroke="#38352C" stroke-width="1"/><line x1="80" y1="340.0" x2="352" y2="340.0" stroke="#38352C" stroke-width="1"/><line x1="80" y1="432" x2="352" y2="432" stroke="#38352C" stroke-width="1"/><path d="M81.0 432.0 V365.7 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M90.1 432.0 V353.5 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M99.1 432.0 V374.2 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M108.2 432.0 V355.2 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M117.3 432.0 V363.0 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><line x1="129.9" y1="430" x2="129.9" y2="434" stroke="#A5A195" stroke-width="1"/><path d="M135.4 432.0 V352.2 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M144.5 432.0 V362.7 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M153.5 432.0 V367.6 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M162.6 432.0 V357.8 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M171.7 432.0 V355.8 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M180.7 432.0 V376.5 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M189.8 432.0 V358.8 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M198.9 432.0 V363.4 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M207.9 432.0 V352.9 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M217.0 432.0 V364.7 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M226.1 432.0 V360.4 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M235.1 432.0 V361.7 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><line x1="247.7" y1="430" x2="247.7" y2="434" stroke="#A5A195" stroke-width="1"/><path d="M253.3 432.0 V354.2 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M262.3 432.0 V362.4 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M271.4 432.0 V366.3 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M280.5 432.0 V356.1 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M289.5 432.0 V366.7 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M298.6 432.0 V358.1 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M307.7 432.0 V364.4 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M316.7 432.0 V352.5 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M325.8 432.0 V363.7 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M334.9 432.0 V359.8 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C"/><path d="M343.9 432.0 V391.6 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V432.0 Z" fill="#E08A5C" fill-opacity="0.18" stroke="#E08A5C" stroke-width="1.2"/><line x1="80" y1="353.1" x2="352" y2="353.1" stroke="#EDEAE0" stroke-width="1"/><text x="352" y="350.1" text-anchor="end" font-size="8" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">goal 2,400</text><polyline points="84.5,362.7 93.6,356.6 102.7,361.5 111.7,359.1 120.8,359.3 129.9,359.3 138.9,357.6 148.0,357.1 157.1,359.5 166.1,356.8 175.2,356.9 184.3,359.1 193.3,358.6 202.4,360.2 211.5,358.8 220.5,358.4 229.6,358.8 238.7,359.6 247.7,357.3 256.8,356.5 265.9,356.4 274.9,358.6 284.0,357.2 293.1,358.2 302.1,357.6 311.2,358.2 320.3,357.9 329.3,358.1 338.4,357.2" fill="none" stroke="#EDEAE0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.9"/><circle cx="338.4" cy="357.2" r="4" fill="#EDEAE0" stroke="#24221C" stroke-width="2"/><text x="76" y="344" text-anchor="end" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">2.8k</text><text x="76" y="390" text-anchor="end" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">1.4k</text><text x="76" y="435" text-anchor="end" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">0</text><text x="80" y="444" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">06.08</text><text x="352" y="444" text-anchor="end" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">today</text><text x="68" y="456" font-size="7" fill="#E08A5C" font-weight="600">Show as table ▾</text><rect x="58" y="472" width="304" height="150" rx="8" fill="#24221C" stroke="#38352C"/><text x="68" y="488" font-size="9.5" font-weight="700" fill="#EDEAE0">Protein per day</text><rect x="256" y="482" width="8" height="8" rx="2" fill="#E08A5C"/><text x="268" y="489" font-size="7" fill="#A5A195">daily</text><line x1="296" y1="486" x2="308" y2="486" stroke="#EDEAE0" stroke-width="2"/><text x="312" y="489" font-size="7" fill="#A5A195">7-day avg</text><line x1="80" y1="546.0" x2="352" y2="546.0" stroke="#38352C" stroke-width="1"/><line x1="80" y1="500.0" x2="352" y2="500.0" stroke="#38352C" stroke-width="1"/><line x1="80" y1="592" x2="352" y2="592" stroke="#38352C" stroke-width="1"/><path d="M81.0 592.0 V527.5 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M90.1 592.0 V515.3 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M99.1 592.0 V534.7 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M108.2 592.0 V517.8 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M117.3 592.0 V523.4 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><line x1="129.9" y1="590" x2="129.9" y2="594" stroke="#A5A195" stroke-width="1"/><path d="M135.4 592.0 V514.2 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M144.5 592.0 V525.0 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M153.5 592.0 V529.1 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M162.6 592.0 V519.4 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M171.7 592.0 V517.3 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M180.7 592.0 V538.3 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M189.8 592.0 V521.9 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M198.9 592.0 V524.0 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M207.9 592.0 V515.3 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M217.0 592.0 V526.5 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M226.1 592.0 V519.9 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M235.1 592.0 V522.9 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><line x1="247.7" y1="590" x2="247.7" y2="594" stroke="#A5A195" stroke-width="1"/><path d="M253.3 592.0 V516.8 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M262.3 592.0 V522.4 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M271.4 592.0 V525.5 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M280.5 592.0 V518.8 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M289.5 592.0 V528.6 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M298.6 592.0 V520.9 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M307.7 592.0 V524.5 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M316.7 592.0 V515.8 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M325.8 592.0 V527.0 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M334.9 592.0 V518.3 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C"/><path d="M343.9 592.0 V553.1 a3 3 0 0 1 3 -3 h1.1 a3 3 0 0 1 3 3 V592.0 Z" fill="#E08A5C" fill-opacity="0.18" stroke="#E08A5C" stroke-width="1.2"/><line x1="80" y1="515.3" x2="352" y2="515.3" stroke="#EDEAE0" stroke-width="1"/><text x="352" y="512.3" text-anchor="end" font-size="8" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">goal 150 g</text><polyline points="84.5,524.5 93.6,518.4 102.7,522.8 111.7,520.8 120.8,520.8 129.9,520.8 138.9,519.2 148.0,518.7 157.1,521.0 166.1,518.5 175.2,518.4 184.3,520.9 193.3,520.6 202.4,522.0 211.5,520.6 220.5,520.2 229.6,520.3 238.7,521.1 247.7,518.7 256.8,517.9 265.9,517.6 274.9,519.3 284.0,518.1 293.1,519.5 302.1,519.2 311.2,519.5 320.3,519.3 329.3,520.0 338.4,519.0" fill="none" stroke="#EDEAE0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.9"/><circle cx="338.4" cy="519.0" r="4" fill="#EDEAE0" stroke="#24221C" stroke-width="2"/><text x="76" y="504" text-anchor="end" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">180</text><text x="76" y="550" text-anchor="end" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">90</text><text x="76" y="595" text-anchor="end" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">0</text><text x="80" y="604" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">06.08</text><text x="352" y="604" text-anchor="end" font-size="6.5" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">today</text><text x="68" y="616" font-size="7" fill="#E08A5C" font-weight="600">Show as table ▾</text></g><line x1="382" y1="48" x2="408" y2="48" stroke="#A5A195" stroke-width="1"/><circle cx="420" cy="48" r="9" fill="#EDEAE0"/><text x="420" y="51.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">1</text><text x="438" y="52" font-size="12" fill="#EDEAE0">New fourth tab. The pill needs tighter padding on</text><text x="438" y="67" font-size="12" fill="#A5A195">phones to fit (see §02).</text><line x1="382" y1="122" x2="408" y2="122" stroke="#A5A195" stroke-width="1"/><circle cx="420" cy="122" r="9" fill="#EDEAE0"/><text x="420" y="125.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">2</text><text x="438" y="126" font-size="12" fill="#EDEAE0">Same header pattern as Log and Products: kicker,</text><text x="438" y="141" font-size="12" fill="#A5A195">serif title, one-line sub.</text><line x1="382" y1="167" x2="408" y2="167" stroke="#A5A195" stroke-width="1"/><circle cx="420" cy="167" r="9" fill="#EDEAE0"/><text x="420" y="170.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">3</text><text x="438" y="171" font-size="12" fill="#EDEAE0">One range control scopes everything below it. Pure</text><text x="438" y="186" font-size="12" fill="#A5A195">client state, no refetch.</text><line x1="382" y1="211" x2="408" y2="211" stroke="#A5A195" stroke-width="1"/><circle cx="420" cy="211" r="9" fill="#EDEAE0"/><text x="420" y="214.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">4</text><text x="438" y="215" font-size="12" fill="#EDEAE0">Four stat tiles: sans, proportional figures, a</text><text x="438" y="230" font-size="12" fill="#A5A195">one-line context caption.</text><line x1="382" y1="346" x2="408" y2="346" stroke="#A5A195" stroke-width="1"/><circle cx="420" cy="346" r="9" fill="#EDEAE0"/><text x="420" y="349.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">5</text><text x="438" y="350" font-size="12" fill="#EDEAE0">Column chart, one bar per day. Goal is an ink</text><text x="438" y="365" font-size="12" fill="#A5A195">hairline labeled at its end.</text><line x1="382" y1="421" x2="408" y2="421" stroke="#A5A195" stroke-width="1"/><circle cx="420" cy="421" r="9" fill="#EDEAE0"/><text x="420" y="424.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">6</text><text x="438" y="425" font-size="12" fill="#EDEAE0">Ink line: trailing 7-day average. Today’s bar is</text><text x="438" y="440" font-size="12" fill="#A5A195">outlined and left out of it.</text><line x1="382" y1="481" x2="408" y2="481" stroke="#A5A195" stroke-width="1"/><circle cx="420" cy="481" r="9" fill="#EDEAE0"/><text x="420" y="484.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">7</text><text x="438" y="485" font-size="12" fill="#EDEAE0">Every chart has a table twin behind a details</text><text x="438" y="500" font-size="12" fill="#A5A195">toggle, like the log’s cards.</text><line x1="382" y1="566" x2="408" y2="566" stroke="#A5A195" stroke-width="1"/><circle cx="420" cy="566" r="9" fill="#EDEAE0"/><text x="420" y="569.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">8</text><text x="438" y="570" font-size="12" fill="#EDEAE0">Protein reuses the same chart component. With no</text><text x="438" y="585" font-size="12" fill="#A5A195">protein goal set it simply has no goal line.</text></svg>
+<figcaption>Phone layout at 375px, in the app's palette. The tiles read first, the charts explain them.</figcaption>
+</figure>
+
+<h3>The stat tiles</h3>
+<table>
+  <tr><th>Tile</th><th>Value</th><th>Caption</th></tr>
+  <tr><td>Avg calories</td><td>Mean of daily calorie totals over <em>logged</em> days in the range, today excluded</td><td>"27 logged days · goal 2,400"</td></tr>
+  <tr><td>Avg protein</td><td>Same, for protein grams</td><td>"goal 150 g", or "no protein goal" when unset</td></tr>
+  <tr><td>Days at goal</td><td>Count of logged days whose calories met the goal (see question 1 on what "met" means)</td><td>"protein 21 of 27" as the second measure</td></tr>
+  <tr><td>Days logged</td><td>Days with at least one meal, out of the calendar days in the range</td><td>"3 days empty"; this is the honesty tile that tells you how much the averages can be trusted</td></tr>
+</table>
+
+<h3>The two charts</h3>
+<p>Both are the same <code>DailyBars</code> component: one column per day, the goal as a labeled hairline, a trailing 7-day average as a line, hairline grid, tick labels in mono. Protein simply gets a different series, unit and goal. If no protein goal is set, the protein chart still renders, just without the goal line.</p>
+
+<h3>The table twin</h3>
+<p>Each chart card ends with a "Show as table" toggle, a plain <code>&lt;details&gt;</code> like the log's meal cards. It lists day, calories, protein, meals, and the delta to goal, in the same dd.mm date format the log now uses. This is what makes the page readable with a screen reader, on a printout, or when you want the exact number without hovering.</p>
+
+<h3>Desktop</h3>
+<p>The page keeps <code>max-w-3xl</code> like Log. Tiles go four across from <code>sm</code>. The charts stay stacked and full width, because a wider chart means more readable days, and side-by-side charts would only halve that.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>How the charts are drawn</h2>
+<p class="lede">The form and marks follow one rulebook so both charts read as one system with the rest of the app.</p>
+
+<figure>
+<svg viewBox="0 0 860 330" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif"><rect x="20" y="20" width="560" height="290" rx="10" fill="#24221C" stroke="#38352C"/><text x="40" y="46" font-size="14" font-weight="700" fill="#EDEAE0">Calories per day</text><rect x="420" y="36" width="10" height="10" rx="2" fill="#E08A5C"/><text x="436" y="45" font-size="11" fill="#A5A195">daily</text><line x1="480" y1="41" x2="498" y2="41" stroke="#EDEAE0" stroke-width="2"/><text x="504" y="45" font-size="11" fill="#A5A195">7-day avg</text><line x1="80" y1="165.0" x2="550" y2="165.0" stroke="#38352C" stroke-width="1"/><line x1="80" y1="70.0" x2="550" y2="70.0" stroke="#38352C" stroke-width="1"/><line x1="80" y1="260" x2="550" y2="260" stroke="#38352C" stroke-width="1"/><path d="M85.8 260.0 V119.8 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M119.4 260.0 V94.7 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><line x1="163.9" y1="258" x2="163.9" y2="262" stroke="#A5A195" stroke-width="1"/><path d="M186.5 260.0 V104.9 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M220.1 260.0 V114.4 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M253.6 260.0 V92.0 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M287.2 260.0 V113.7 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M320.8 260.0 V123.9 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M354.4 260.0 V103.5 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M387.9 260.0 V99.5 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M421.5 260.0 V142.2 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M455.1 260.0 V105.6 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M488.6 260.0 V115.1 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C"/><path d="M522.2 260.0 V173.4 a3 3 0 0 1 3 -3 h16.0 a3 3 0 0 1 3 3 V260.0 Z" fill="#E08A5C" fill-opacity="0.18" stroke="#E08A5C" stroke-width="1.2"/><line x1="80" y1="97.1" x2="550" y2="97.1" stroke="#EDEAE0" stroke-width="1"/><text x="550" y="94.1" text-anchor="end" font-size="11" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">goal 2,400</text><polyline points="96.8,116.8 130.4,104.3 163.9,104.3 197.5,103.5 231.1,105.5 264.6,102.2 298.2,103.6 331.8,104.3 365.4,105.7 398.9,104.4 432.5,109.7 466.1,108.5 499.6,111.8" fill="none" stroke="#EDEAE0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.9"/><circle cx="499.6" cy="111.8" r="4" fill="#EDEAE0" stroke="#24221C" stroke-width="2"/><text x="72" y="74" text-anchor="end" font-size="10" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">2,800</text><text x="72" y="169" text-anchor="end" font-size="10" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">1,400</text><text x="72" y="263" text-anchor="end" font-size="10" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">0</text><text x="80" y="280" font-size="10" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">22.08</text><text x="550" y="280" text-anchor="end" font-size="10" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">today</text><line x1="365.35714285714283" y1="70" x2="365.35714285714283" y2="260" stroke="#A5A195" stroke-width="1" stroke-opacity="0.5"/><rect x="375.35714285714283" y="150" width="118" height="58" rx="8" fill="#2A281F" stroke="#38352C"/><text x="385.35714285714283" y="166" font-size="10" fill="#A5A195">Sat 30.08 · 3 meals</text><text x="385.35714285714283" y="184" font-size="13" font-weight="700" fill="#EDEAE0" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">2,350<tspan font-size="10" font-weight="400" fill="#A5A195"> kcal · −50 vs goal</tspan></text><text x="385.35714285714283" y="200" font-size="10" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">148 g protein</text><circle cx="612" cy="40" r="9" fill="#EDEAE0"/><text x="612" y="43.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">1</text><text x="630" y="44" font-size="11.5" fill="#EDEAE0">Bars ≤ 24px wide, 4px rounded top,</text><text x="630" y="58" font-size="11.5" fill="#A5A195">square at the baseline; one hue</text><text x="630" y="72" font-size="11.5" fill="#A5A195">(accent).</text><circle cx="612" cy="92" r="9" fill="#EDEAE0"/><text x="612" y="95.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">2</text><text x="630" y="96" font-size="11.5" fill="#EDEAE0">2px surface gap between neighbors;</text><text x="630" y="110" font-size="11.5" fill="#A5A195">no strokes drawn around marks.</text><circle cx="612" cy="140" r="9" fill="#EDEAE0"/><text x="612" y="143.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">3</text><text x="630" y="144" font-size="11.5" fill="#EDEAE0">Goal: solid 1px ink hairline,</text><text x="630" y="158" font-size="11.5" fill="#A5A195">labeled at its right end. Grid: two</text><text x="630" y="172" font-size="11.5" fill="#A5A195">hairlines.</text><circle cx="612" cy="192" r="9" fill="#EDEAE0"/><text x="612" y="195.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">4</text><text x="630" y="196" font-size="11.5" fill="#EDEAE0">7-day average: 2px ink line, end dot</text><text x="630" y="210" font-size="11.5" fill="#A5A195">with a 2px surface ring.</text><circle cx="612" cy="240" r="9" fill="#EDEAE0"/><text x="612" y="243.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">5</text><text x="630" y="244" font-size="11.5" fill="#EDEAE0">Missing day: empty slot with a tiny</text><text x="630" y="258" font-size="11.5" fill="#A5A195">tick. Today: outlined, 18% fill.</text><circle cx="612" cy="292" r="9" fill="#EDEAE0"/><text x="612" y="295.5" text-anchor="middle" font-size="10" font-weight="600" fill="#1B1A16" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">6</text><text x="630" y="296" font-size="11.5" fill="#EDEAE0">Tooltip on tap or hover: value</text><text x="630" y="310" font-size="11.5" fill="#A5A195">first, then context. Same text in</text><text x="630" y="324" font-size="11.5" fill="#A5A195">the table twin.</text></svg>
+<figcaption>Chart anatomy. The data is the only loud thing: thin marks, recessive grid, one accent hue.</figcaption>
+</figure>
+
+<table class="wrap">
+  <tr><th>Rule</th><th>Decision</th></tr>
+  <tr><td>Form</td><td>Column chart per day. The reader's job is "how did each day compare to the goal", which is magnitude against a reference, so columns plus a reference line, not a line chart. The 7-day average is the only line, and it shares the same axis and unit, so there is never a second y-axis.</td></tr>
+  <tr><td>Color</td><td>One hue for the bars: the app accent <code>#E08A5C</code>. The goal line and the average line are ink <code>#EDEAE0</code>. Grid is <code>--line</code>. No green/red per bar: the goal line already shows over and under, and coloring bars by outcome would make every under-goal day look like a failure, which is wrong when the goal is a floor.</td></tr>
+  <tr><td>Marks</td><td>Bars capped at 24px wide with a 4px rounded top and square base; 2px surface gap between neighbors; lines 2px with round joins; end dot 8px with a 2px surface ring; grid and baseline 1px solid, never dashed.</td></tr>
+  <tr><td>Labels</td><td>No number on every bar. Labeled: the goal line (at its right end), the y-axis with two or three round ticks, the first and last day on the x-axis. Everything else lives in the tooltip and the table.</td></tr>
+  <tr><td>Legend</td><td>Present because there are two series (daily bars, 7-day average): a small swatch and a short line key in the card header, text in muted ink.</td></tr>
+  <tr><td>Hover and tap</td><td>The bar's full slot (including the gap, at least 24px wide) is the hit target. Pointer over or tap shows a tooltip: date and meal count on top, then the value bold with the delta to goal, then the other measure. On touch, tap pins it and a tap elsewhere dismisses it. The hovered bar lightens slightly.</td></tr>
+  <tr><td>Missing days</td><td>A day with no meals is an empty slot with a tiny tick on the baseline, never a zero bar. Empty days are excluded from averages and from "days at goal".</td></tr>
+  <tr><td>Today</td><td>Today is drawn outlined with an 18% fill, because it is incomplete. It is excluded from the averages and the 7-day line, and labeled "today" on the axis.</td></tr>
+  <tr><td>Long ranges</td><td>7d and 30d draw one bar per day. 90d and All switch to one bar per Monday-to-Sunday week (matching the calendar's week start), showing the weekly <em>average</em> per logged day, with the same goal line. The tooltip then says "Week of 25.08 · 6 logged days". Bars never get thinner than 4px.</td></tr>
+  <tr><td>Sizing</td><td>SVG rendered at the card's measured pixel width via a small <code>ResizeObserver</code> hook, fixed 180px plot height plus a 20px axis band, so text stays crisp at 11px and the card never gets an inner scrollbar.</td></tr>
+  <tr><td>Motion</td><td>None on the bars. The page uses the existing <code>page-enter</code> fade like every other page; refetches hold the previous render at reduced opacity rather than flashing a skeleton.</td></tr>
+  <tr><td>Accessibility</td><td>The SVG carries <code>role="img"</code> with a one-sentence summary ("Calories per day, 6 Aug to 4 Sep, average 2,262 against a 2,400 goal"). The table twin is the keyboard and screen-reader path. Text never wears the data color.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>The data path</h2>
+<p class="lede">One light query, then everything happens on the client, for the same reason the log groups on the client: only the phone knows what day it is.</p>
+
+<figure>
+<svg viewBox="0 0 860 250" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif">
+  <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/></marker></defs><rect x="20" y="30" width="190" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+    <text x="115" y="54" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">Supabase · meals</text>
+    <text x="115" y="72" text-anchor="middle" font-size="11" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">logged_at, analysis->totals</text><rect x="20" y="120" width="190" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+    <text x="115" y="144" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">Supabase · settings</text>
+    <text x="115" y="162" text-anchor="middle" font-size="11" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">calorie_goal, protein_goal</text><rect x="250" y="70" width="240" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+    <text x="370" y="94" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">stats/page.tsx (server)</text>
+    <text x="370" y="112" text-anchor="middle" font-size="11" fill="#A5A195" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">await connection(); Promise.all</text><rect x="545" y="70" width="290" height="60" rx="10" fill="#EDEAE0" stroke="none" stroke-width="1.5"/>
+    <text x="690" y="94" text-anchor="middle" font-size="13" font-weight="700" fill="#1B1A16">StatsView.tsx (client)</text>
+    <text x="690" y="112" text-anchor="middle" font-size="11" fill="#55524A" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace">dayKey() · range filter · buckets</text><line x1="210" y1="60" x2="248" y2="88" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/><line x1="210" y1="150" x2="248" y2="112" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/><line x1="490" y1="100" x2="543" y2="100" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/><text x="516" y="90" text-anchor="middle" font-size="10" fill="#A5A195">props</text><line x1="600" y1="130" x2="600" y2="168" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/><rect x="560" y="170" width="80" height="50" rx="10" fill="#3A2A20" stroke="none" stroke-width="1.5"/>
+    <text x="600" y="194" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">Stat tiles</text>
+    <text x="600" y="212" text-anchor="middle" font-size="11" fill="#E08A5C" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace"></text><line x1="690" y1="130" x2="690" y2="168" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/><rect x="650" y="170" width="80" height="50" rx="10" fill="#3A2A20" stroke="none" stroke-width="1.5"/>
+    <text x="690" y="194" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">Bar charts</text>
+    <text x="690" y="212" text-anchor="middle" font-size="11" fill="#E08A5C" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace"></text><line x1="780" y1="130" x2="780" y2="168" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/><rect x="740" y="170" width="80" height="50" rx="10" fill="#3A2A20" stroke="none" stroke-width="1.5"/>
+    <text x="780" y="194" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">Table twins</text>
+    <text x="780" y="212" text-anchor="middle" font-size="11" fill="#E08A5C" font-family="'JetBrains Mono', ui-monospace, Menlo, monospace"></text><text x="130" y="215" font-size="11" fill="#A5A195">Server never decides what “today” is —</text><text x="130" y="230" font-size="11" fill="#A5A195">day boundaries come from the viewer’s clock, as in the log.</text></svg>
+<figcaption>The server returns rows, the client turns them into days. No aggregation SQL, no timezone parameter.</figcaption>
+</figure>
+
+<h3>Why not aggregate in the database</h3>
+<p>Daily totals need day boundaries, and day boundaries need the viewer's timezone, which the server on Vercel doesn't have. The log already solves this by grouping with <code>dayKey()</code> on the client, and the Today strip solves it by having the client send ISO bounds. A SQL <code>group by date_trunc</code> would need the IANA zone passed in and a Postgres function to hold it, which is a real option later (sketched in §10) but not needed at this data volume.</p>
+
+<h3>The payload</h3>
+<table>
+  <tr><th>Query</th><th>Per row</th><th>One year at 3 meals/day</th></tr>
+  <tr><td>Current <code>listMeals()</code></td><td class="mono">~5–20 KB</td><td class="mono">5–20 MB (thumbnails and food lists)</td></tr>
+  <tr><td>New <code>listMealTotals()</code></td><td class="mono">~110 bytes</td><td class="mono">~120 KB</td></tr>
+</table>
+<p>So the page fetches <em>all</em> totals once and the range control filters in memory. Range changes are instant and never refetch. If the table someday holds many years, the query can take a <code>since</code> bound for the default range and lazy-load "All", without changing anything the client does.</p>
+
+<pre><code>// src/lib/meals.ts — the only new data access
+export interface MealTotalRow {
+  loggedAt: string;
+  totals: MealTotals;
+}
+
+export async function listMealTotals(): Promise&lt;MealTotalRow[]&gt; {
+  await connection();
+  const { data, error } = await supabase()
+    .from("meals")
+    .select("logged_at, totals:analysis-&gt;totals")   // PostgREST JSON path, no thumbnails
+    .order("logged_at", { ascending: true });
+  if (error) throw new Error(`Couldn't load stats: ${error.message}`);
+  return (data as { logged_at: string; totals: MealTotals }[]).map((r) =&gt; ({
+    loggedAt: r.logged_at,
+    totals: r.totals,
+  }));
+}
+
+// src/lib/stats.ts — pure, client-safe
+export interface DayStat {
+  day: string;            // YYYY-MM-DD from dayKey()
+  meals: number;
+  totals: MealTotals;     // sumTotals() of the day's meals
+}
+
+export function groupByDay(rows: MealTotalRow[]): Map&lt;string, DayStat&gt;
+export function daysInRange(range: "7d" | "30d" | "90d" | "all", days: Map&lt;string, DayStat&gt;): DayStat[]
+export function bucketByWeek(days: DayStat[]): WeekStat[]            // Monday start, per-logged-day averages
+export function rollingAverage(values: (number | null)[], n = 7): (number | null)[]</code></pre>
+
+<div class="callout good"><strong>What gets reused:</strong> <code>dayKey</code>, <code>dayLabel</code> and <code>shortDate</code> from <code>day.ts</code> for every date on the page; <code>sumTotals</code> from <code>scale.ts</code> for day totals; <code>getGoals</code> from <code>settings.ts</code>; the header, error card and skeleton patterns from the Log page. The week-start helper already exists in <code>day.ts</code> as a private function and only needs exporting.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>Rules and edge cases</h2>
+<p class="lede">Decided up front so the implementation has no judgment calls left in it.</p>
+
+<table class="wrap">
+  <tr><th>Situation</th><th>Behavior</th></tr>
+  <tr><td>No meals at all</td><td>Dashed empty state like the log's: "Nothing to chart yet. Log a few days of meals and trends appear here." Range control hidden.</td></tr>
+  <tr><td>Fewer days than the range</td><td>Charts start at the first logged day, not padded with 30 empty slots. The tile caption says "12 logged days".</td></tr>
+  <tr><td>No goals set</td><td>Tiles drop the goal captions, "Days at goal" becomes "Best day" (highest calorie day), charts render without goal lines, and a one-line link to the Log page's goal editor sits under the tiles.</td></tr>
+  <tr><td>Calorie goal set, protein goal not</td><td>Protein tile and chart render without a goal; nothing else changes.</td></tr>
+  <tr><td>Goal changed last week</td><td>Every past day is compared to the <em>current</em> goal, because <code>settings</code> stores one row with no history. Accepted for v1; question 8 offers the alternative.</td></tr>
+  <tr><td>Backdated meals</td><td>They land on their logged day, so the chart is always the log's truth. Editing a meal's date moves the bar on the next visit.</td></tr>
+  <tr><td>Timezone and DST</td><td><code>dayKey()</code> uses the browser's local date, so a 23-hour or 25-hour day still counts as one day, identical to the log's grouping. Travelling across zones regroups history in the new zone, same as the log today.</td></tr>
+  <tr><td>Load failure</td><td>The same red error card as the log, with the message from Supabase.</td></tr>
+  <tr><td>Reduced motion</td><td>No chart animation exists to disable; the page-enter fade already respects the setting.</td></tr>
+  <tr><td>Very wide screens</td><td>Bars are capped at 24px and centered in their slot, so a 30-day chart on a desktop shows air between bars rather than fat blocks.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>Build order</h2>
+<p class="lede">Roughly a day of work, in an order where each step is visible on its own.</p>
+
+<ol class="steps">
+  <li>
+    <strong>Data: <code>listMealTotals()</code> and <code>src/lib/stats.ts</code></strong>
+    <span class="step-note">Query, grouping, week buckets, rolling average. Verify in the console against the log's day headers: the day totals must match to the calorie.</span>
+  </li>
+  <li>
+    <strong>Route shell: page, loading, nav tab</strong>
+    <span class="step-note">Header, error card, skeleton, the fourth tab with the phone padding tweak. Check 375px and 360px before going on.</span>
+  </li>
+  <li>
+    <strong>Tiles and range control</strong>
+    <span class="step-note">Numbers only, no charts yet. This alone is already useful and confirms the math against real data.</span>
+  </li>
+  <li>
+    <strong><code>DailyBars</code>: bars, goal line, axes</strong>
+    <span class="step-note">Measured-width SVG, static render. Mount it twice. Compare the calorie chart to the log by eye for a week.</span>
+  </li>
+  <li>
+    <strong>7-day average, today outline, weekly buckets</strong>
+    <span class="step-note">The second series and the two special cases. Switch ranges and make sure the goal line and axis rescale sensibly.</span>
+  </li>
+  <li>
+    <strong>Tooltip and table twin</strong>
+    <span class="step-note">Pointer and touch behavior, then the details table. Run through with VoiceOver once.</span>
+  </li>
+  <li>
+    <strong>Revalidation and polish</strong>
+    <span class="step-note"><code>revalidatePath("/stats")</code> in the actions, empty and no-goal states, README section for the new page.</span>
+  </li>
+</ol>
+
+<!-- ============================================================ -->
+<h2><span class="num">08</span>Questions for you</h2>
+<p class="lede">Each of these changes something concrete. The recommendation is what gets built if you just say "go".</p>
+
+<table class="wrap">
+  <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th></tr>
+  <tr><td>1</td><td>Is the calorie goal a <strong>floor</strong> (eat at least this, bulking) or a <strong>ceiling</strong> (stay under, cutting)? This defines "days at goal" and the tooltip wording.</td><td>Floor · Ceiling · A band, e.g. within ±10%</td><td class="rec">Floor, because <code>GoalBars</code> already treats both goals as floors (green when met). A ±10% band is the best answer if you switch between phases.</td></tr>
+  <tr><td>2</td><td>Default range when the page opens?</td><td>7d · 30d · 90d · last used</td><td class="rec">30d. Remember the last choice in <code>localStorage</code> only if you find yourself switching every time.</td></tr>
+  <tr><td>3</td><td>Should empty days count as zero calories?</td><td>Skip them · Count as 0</td><td class="rec">Skip, and show how many were skipped in the "Days logged" tile. Zeros would drag averages toward numbers you never ate.</td></tr>
+  <tr><td>4</td><td>Show today at all, given it's incomplete?</td><td>Outlined, excluded from averages · Hidden · Included as-is</td><td class="rec">Outlined and excluded. Seeing today next to the goal line is the "how much room do I have" glance.</td></tr>
+  <tr><td>5</td><td>For 90d and All, weekly bars or a horizontally scrolling daily chart?</td><td>Weekly averages · Scroll · Monthly for All</td><td class="rec">Weekly averages. Scrolling charts on a phone fight with page scroll. Monthly only if "All" grows past a year.</td></tr>
+  <tr><td>6</td><td>Only calories and protein, or carbs and fat too?</td><td>Two charts · Four charts · Macro split as a stacked bar</td><td class="rec">Two charts in v1, exactly as you asked. A macro split is the obvious v2 and fits the same component.</td></tr>
+  <tr><td>7</td><td>Deltas on the tiles versus the previous period ("+120 vs prior 30 days")?</td><td>Yes · No</td><td class="rec">No for v1. With 30 days of data the previous period is often half empty and the delta lies.</td></tr>
+  <tr><td>8</td><td>Record goal history so old days are judged by the goal that applied then?</td><td>Not now · New <code>goal_history</code> table (SQL in §10)</td><td class="rec">Not now. Revisit if you change goals more than once a quarter.</td></tr>
+  <tr><td>9</td><td>Chart library or hand-rolled SVG?</td><td>Hand-rolled · Recharts · Chart.js</td><td class="rec">Hand-rolled. Two chart types, one hue, a dozen bars; a library adds 100 KB+ and fights the palette.</td></tr>
+  <tr><td>10</td><td>Fourth tab with tighter phone padding, or a link from the Log page?</td><td>Tab · Link from Log · Icon wordmark on phones</td><td class="rec">Tab, tightened on phones, checked on device.</td></tr>
+  <tr><td>11</td><td>Should tapping a bar jump to that day in the log?</td><td>Yes (add day anchors to the log) · No</td><td class="rec">Not in v1, but it's cheap: give each log day section an <code>id</code> equal to its day key and link to <code>/log#2026-09-04</code> from the tooltip.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">09</span>Scope</h2>
+
+<div class="pill-row">
+  <span class="pill in">✓ /stats route + nav tab</span>
+  <span class="pill in">✓ four stat tiles</span>
+  <span class="pill in">✓ calories per day chart</span>
+  <span class="pill in">✓ protein per day chart</span>
+  <span class="pill in">✓ goal lines + 7-day average</span>
+  <span class="pill in">✓ 7d/30d/90d/All range</span>
+  <span class="pill in">✓ weekly buckets on long ranges</span>
+  <span class="pill in">✓ tooltip + table twin</span>
+  <span class="pill in">✓ skeleton, empty, error states</span>
+</div>
+<div class="pill-row">
+  <span class="pill out">✗ carbs / fat charts</span>
+  <span class="pill out">✗ weekday pattern (avg by Mon–Sun)</span>
+  <span class="pill out">✗ meal-time distribution</span>
+  <span class="pill out">✗ streaks</span>
+  <span class="pill out">✗ goal history</span>
+  <span class="pill out">✗ custom date range</span>
+  <span class="pill out">✗ CSV export</span>
+  <span class="pill out">✗ body weight tracking</span>
+</div>
+<p>The struck-through items are all natural v2 candidates and none of them change the v1 structure. Weekday pattern and macro split reuse <code>DailyBars</code> directly. Body weight would be the first feature needing a new table.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">10</span>SQL</h2>
+<p class="lede">None is required for v1: the page reads <code>meals</code> and <code>settings</code> through the existing service-role grants, and <code>meals_logged_at_idx</code> already covers the ordered scan.</p>
+
+<h3>Only if you answer "yes" to question 8: goal history</h3>
+<pre><code>-- Optional. One row per goal change; the app reads the row whose
+-- effective_from is the latest one at or before each day.
+create table public.goal_history (
+  effective_from date primary key,
+  calorie_goal integer not null check (calorie_goal &gt; 0),
+  protein_goal integer check (protein_goal &gt; 0)
+);
+
+alter table public.goal_history enable row level security;
+grant select, insert, update, delete on public.goal_history to service_role;
+
+-- Seed it from the current goals so history starts today.
+insert into public.goal_history (effective_from, calorie_goal, protein_goal)
+select current_date, calorie_goal, protein_goal from public.settings;</code></pre>
+
+<h3>Only if the totals payload ever gets heavy: server-side days</h3>
+<pre><code>-- Optional, later. Groups by local day for a given IANA timezone so the
+-- client can request days instead of rows. Not needed at current volume.
+create or replace function public.daily_totals(tz text, since timestamptz default null)
+returns table (day date, meals bigint, calories double precision, protein_g double precision,
+               carbs_g double precision, fat_g double precision)
+language sql stable as $$
+  select (logged_at at time zone tz)::date as day,
+         count(*) as meals,
+         sum((analysis-&gt;'totals'-&gt;&gt;'calories')::double precision) as calories,
+         sum((analysis-&gt;'totals'-&gt;&gt;'protein_g')::double precision) as protein_g,
+         sum((analysis-&gt;'totals'-&gt;&gt;'carbs_g')::double precision) as carbs_g,
+         sum((analysis-&gt;'totals'-&gt;&gt;'fat_g')::double precision) as fat_g
+  from public.meals
+  where since is null or logged_at &gt;= since
+  group by 1 order by 1;
+$$;</code></pre>
+
+<footer class="doc">
+  Calorie Calculator · stats page plan · proposal only, awaiting answers to §08 before any code
+</footer>
+
+</div>
+</body>
+</html>

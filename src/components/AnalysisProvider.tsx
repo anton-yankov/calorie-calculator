@@ -36,7 +36,13 @@ interface AnalysisState {
   logDate: string | null;
   setLogDate: (key: string | null) => void;
   latest: HistoryEntry | undefined;
+  /**
+   * Bumps on every full reset. The Analyze page keys child components that own
+   * their own state (the barcode panel) on it so a reset also closes them.
+   */
+  session: number;
   handleSelect: (selected: File) => Promise<void>;
+  /** Reset everything on the page: photo, description, estimates, barcode panel, log day */
   handleClear: () => void;
   handleLog: () => Promise<void>;
   addScannedFood: (food: FoodItem) => void;
@@ -68,6 +74,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   // Day the next log lands on; null = today. Backdating is the exception, not a
   // sticky mode, so this resets after a successful log and on clear.
   const [logDate, setLogDateState] = useState<string | null>(null);
+  const [session, setSession] = useState(0);
   // The resized JPEG is cached so corrections re-send the same bytes
   const resizedRef = useRef<Blob | null>(null);
 
@@ -106,10 +113,12 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   function handleClear() {
     setSourceBlob(null);
     replacePreviewUrl(null);
+    setDescription("");
     setHistory([]);
     setError(null);
     setLoggedAtLength(null);
     setLogDateState(null);
+    setSession((n) => n + 1);
     resizedRef.current = null;
   }
 
@@ -170,6 +179,18 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   }
 
   function addScannedFood(food: FoodItem) {
+    // Scanning after the plate was logged starts a new meal: the scanned
+    // product replaces the logged one instead of joining it (and being
+    // logged twice). The barcode panel isn't re-keyed here so its "added"
+    // feedback still lands.
+    if (latest && loggedAtLength === history.length) {
+      setSourceBlob(null);
+      replacePreviewUrl(null);
+      setDescription("");
+      setHistory([]);
+      setLogDateState(null);
+      resizedRef.current = null;
+    }
     const note = "Packaged-product nutrition was added from a barcode.";
     const withBarcodeNote = (notes: string) =>
       notes.includes(note) ? notes : notes ? `${notes} ${note}` : note;
@@ -293,6 +314,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         logDate,
         setLogDate,
         latest,
+        session,
         handleSelect,
         handleClear,
         handleLog,
