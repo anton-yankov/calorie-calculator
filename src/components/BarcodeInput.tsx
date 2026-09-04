@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { Spinner } from "@/components/loaders";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import { NutritionLabelInput } from "@/components/NutritionLabelInput";
 import { ProductPhotoInput } from "@/components/ProductPhotoInput";
 import {
@@ -192,23 +193,34 @@ function ProductConfirmation({
   onCancel,
 }: {
   product: BarcodeProduct;
-  onAdd: (food: FoodItem) => void;
+  onAdd: (food: FoodItem, imageUrl: string | null) => void;
   onCancel: () => void;
 }) {
   const [grams, setGrams] = useState(String(Math.round(product.servingGrams ?? 100)));
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const productImage = imageFailed ? null : product.imageUrl;
   const portion = Number(grams);
   const ratio = Number.isFinite(portion) && portion > 0 ? portion / 100 : 0;
 
   return (
     <section className="overflow-hidden rounded-panel border border-line bg-surface">
       <div className="flex gap-3 p-4">
-        {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external crowdsourced product image
-          <img
-            src={product.imageUrl}
-            alt=""
-            className="h-16 w-16 shrink-0 rounded-panel bg-background object-contain"
-          />
+        {productImage ? (
+          <button
+            type="button"
+            aria-label={`View image for ${product.name}`}
+            onClick={() => setPreviewOpen(true)}
+            className="h-16 w-16 shrink-0 overflow-hidden rounded-panel border border-line bg-background transition hover:border-accent focus-visible:border-accent focus-visible:outline-none"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- external crowdsourced product image */}
+            <img
+              src={productImage}
+              alt=""
+              onError={() => setImageFailed(true)}
+              className="h-full w-full object-contain"
+            />
+          </button>
         ) : (
           <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-panel border border-line bg-background font-mono text-xl text-muted">
             |||
@@ -249,7 +261,7 @@ function ProductConfirmation({
         <button
           type="button"
           disabled={!Number.isFinite(portion) || portion <= 0}
-          onClick={() => onAdd(barcodeProductToFood(product, portion))}
+          onClick={() => onAdd(barcodeProductToFood(product, portion), productImage)}
           className="flex-1 rounded-panel bg-accent px-4 py-2.5 text-sm font-semibold text-background disabled:opacity-40"
         >
           Add to meal
@@ -280,6 +292,12 @@ function ProductConfirmation({
           </>
         )}
       </p>
+      <ImageLightbox
+        open={previewOpen}
+        src={productImage}
+        alt={product.name}
+        onClose={() => setPreviewOpen(false)}
+      />
     </section>
   );
 }
@@ -289,7 +307,7 @@ export function BarcodeInput({
   onAdd,
 }: {
   disabled: boolean;
-  onAdd: (food: FoodItem) => void;
+  onAdd: (food: FoodItem, imageUrl: string | null) => void;
 }) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -324,8 +342,8 @@ export function BarcodeInput({
     }
   }
 
-  function add(food: FoodItem) {
-    onAdd(food);
+  function add(food: FoodItem, imageUrl: string | null) {
+    onAdd(food, imageUrl);
     setProduct(null);
     setLookupError(null);
     setBarcode("");
@@ -347,7 +365,7 @@ export function BarcodeInput({
     if (!response.ok || "error" in body) {
       throw new Error("error" in body ? body.error : "Couldn't save this barcode.");
     }
-    add(food);
+    add(food, imageUrl);
   }
 
   function clear() {

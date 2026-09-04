@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/loaders";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import type { NutritionLabelAnalysis } from "@/lib/nutrition-label";
 import { resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
 
 function basisMessage(result: NutritionLabelAnalysis): string {
   if (result.basis === "per_100_ml") return "Filled from values per 100 ml (treated as 100 g).";
-  if (result.basis === "calculated_per_100") return "Filled after converting serving values to 100 g/ml.";
+  if (result.basis === "calculated_per_100")
+    return "Filled after converting serving values to 100 g/ml.";
   if (result.basis === "per_100_g") return "Filled from values per 100 g.";
   return "Filled the values that were readable. Check the label carefully.";
 }
@@ -24,6 +26,7 @@ export function NutritionLabelInput({
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<NutritionLabelAnalysis | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -76,12 +79,15 @@ export function NutritionLabelInput({
       />
       <div className="flex items-center gap-3">
         {previewUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- local object URL
-          <img
-            src={previewUrl}
-            alt="Nutrition label being analyzed"
-            className="h-16 w-16 shrink-0 rounded-panel border border-line bg-background object-cover"
-          />
+          <button
+            type="button"
+            aria-label="View nutrition label photo"
+            onClick={() => setPreviewOpen(true)}
+            className="h-16 w-16 shrink-0 overflow-hidden rounded-panel border border-line bg-background transition hover:border-accent focus-visible:border-accent focus-visible:outline-none"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
+            <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+          </button>
         ) : (
           <span
             aria-hidden
@@ -116,6 +122,12 @@ export function NutritionLabelInput({
         </div>
       )}
       {error && <p className="mt-3 text-xs text-danger">{error}</p>}
+      <ImageLightbox
+        open={previewOpen}
+        src={previewUrl}
+        alt="Nutrition label, full size"
+        onClose={() => setPreviewOpen(false)}
+      />
     </section>
   );
 }

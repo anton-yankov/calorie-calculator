@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Spinner } from "@/components/loaders";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import { makeThumbnail, toDisplayableBlob } from "@/lib/resize";
 
 export function ProductPhotoInput({
@@ -18,6 +19,7 @@ export function ProductPhotoInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   async function select(file: File) {
     setPreparing(true);
@@ -67,8 +69,8 @@ export function ProductPhotoInput({
         <button
           type="button"
           disabled={unavailable}
-          aria-label={imageUrl ? `Change image for ${productName}` : `Add image for ${productName}`}
-          onClick={() => inputRef.current?.click()}
+          aria-label={imageUrl ? `View image for ${productName}` : `Add image for ${productName}`}
+          onClick={() => (imageUrl ? setPreviewOpen(true) : inputRef.current?.click())}
           className="group relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-panel border border-line bg-background transition hover:border-accent disabled:opacity-50"
         >
           {imageUrl ? (
@@ -111,6 +113,12 @@ export function ProductPhotoInput({
           {error && <p className="text-[11px] text-danger">{error}</p>}
         </div>
       </div>
+      <ImageLightbox
+        open={previewOpen}
+        src={imageUrl}
+        alt={productName}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   );
 }

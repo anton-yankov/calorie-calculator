@@ -3,7 +3,7 @@
 import { createContext, useContext, useRef, useState } from "react";
 import { logMealAction } from "@/app/actions";
 import { dayBounds, dayKey } from "@/lib/day";
-import { makeThumbnail, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
+import { makeMealPhoto, makeThumbnail, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
 import { scaleFood, sumTotals } from "@/lib/scale";
 import type { FoodItem, MealAnalysis } from "@/lib/schema";
 
@@ -38,7 +38,7 @@ interface AnalysisState {
   handleSelect: (selected: File) => Promise<void>;
   handleClear: () => void;
   handleLog: () => Promise<void>;
-  addScannedFood: (food: FoodItem) => void;
+  addScannedFood: (food: FoodItem, imageUrl: string | null) => void;
   analyze: (correction?: string) => Promise<void>;
   handleGramsChange: (foodIndex: number, grams: number) => void;
 }
@@ -67,6 +67,9 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   // Day the next log lands on; null = today. Backdating is the exception, not a
   // sticky mode, so this resets after a successful log and on clear.
   const [logDate, setLogDateState] = useState<string | null>(null);
+  // First product image scanned into the current meal, used only when there is
+  // no meal photo. It is UI metadata and deliberately stays out of FoodItem.
+  const [barcodeCoverUrl, setBarcodeCoverUrl] = useState<string | null>(null);
   // The resized JPEG is cached so corrections re-send the same bytes
   const resizedRef = useRef<Blob | null>(null);
 
@@ -83,6 +86,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
 
   async function handleSelect(selected: File) {
     setHistory([]);
+    setBarcodeCoverUrl(null);
     setError(null);
     resizedRef.current = null;
     setPreparing(true);
@@ -109,6 +113,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setLoggedAtLength(null);
     setLogDateState(null);
+    setBarcodeCoverUrl(null);
     resizedRef.current = null;
   }
 
@@ -122,7 +127,9 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setLogging(true);
     setError(null);
     try {
-      const thumbnail = resizedRef.current ? await makeThumbnail(resizedRef.current) : null;
+      const [thumbnail, photo] = resizedRef.current
+        ? await Promise.all([makeThumbnail(resizedRef.current), makeMealPhoto(resizedRef.current)])
+        : [barcodeCoverUrl, barcodeCoverUrl];
       // When backdating, the server assigns the timestamp within the day's
       // bounds; the loggedAt sent here is only a placeholder
       const result = await logMealAction(
@@ -132,6 +139,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
           description: description.trim(),
           analysis: latest.analysis,
           thumbnail,
+          photo,
         },
         logDate ? dayBounds(logDate) : undefined,
       );
@@ -145,7 +153,8 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  function addScannedFood(food: FoodItem) {
+  function addScannedFood(food: FoodItem, imageUrl: string | null) {
+    if (imageUrl) setBarcodeCoverUrl((current) => current ?? imageUrl);
     const note = "Packaged-product nutrition was added from a barcode.";
     const withBarcodeNote = (notes: string) =>
       notes.includes(note) ? notes : notes ? `${notes} ${note}` : note;
@@ -197,6 +206,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       // so clear it now — the skeleton takes its place, not a stale thread
       setHistory([]);
       setLoggedAtLength(null);
+      setBarcodeCoverUrl(null);
     }
     try {
       const form = new FormData();

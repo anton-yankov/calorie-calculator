@@ -6,7 +6,8 @@ create table public.meals (
   logged_at timestamptz not null,
   description text not null default '',
   analysis jsonb not null,
-  thumbnail text
+  thumbnail text,
+  photo text
 );
 
 create index meals_logged_at_idx on public.meals (logged_at desc);

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteProductAction, saveProductAction } from "@/app/actions";
 import { ProductPhotoInput } from "@/components/ProductPhotoInput";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
 
 const fmt = (value: number) => (Number.isInteger(value) ? value.toString() : value.toFixed(1));
@@ -33,15 +34,38 @@ function BarcodeGlyph() {
 }
 
 function ProductImage({ product }: { product: BarcodeProduct }) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const productImage = imageFailed ? null : product.imageUrl;
+
   return (
-    <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-background">
-      {product.imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- small data URL
-        <img src={product.imageUrl} alt="" className="h-full w-full object-contain" />
-      ) : (
-        <BarcodeGlyph />
-      )}
-    </div>
+    <>
+      <button
+        type="button"
+        disabled={!productImage}
+        aria-label={productImage ? `View image for ${product.name}` : undefined}
+        className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-background transition enabled:hover:border-accent enabled:focus-visible:border-accent enabled:focus-visible:outline-none"
+        onClick={() => setPreviewOpen(true)}
+      >
+        {productImage ? (
+          // eslint-disable-next-line @next/next/no-img-element -- small data URL
+          <img
+            src={productImage}
+            alt=""
+            onError={() => setImageFailed(true)}
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          <BarcodeGlyph />
+        )}
+      </button>
+      <ImageLightbox
+        open={previewOpen}
+        src={productImage}
+        alt={product.name}
+        onClose={() => setPreviewOpen(false)}
+      />
+    </>
   );
 }
 

@@ -19,7 +19,9 @@ app.
    the model's baseline), or describe what's wrong ("that's whole milk, and
    there's butter on the toast") to get a revised estimate in a chat-like
    thread.
-3. **Log** — save the meal to the log with a small thumbnail. The log groups
+3. **Log** — save the meal to the log with a small thumbnail and a larger
+   tap-to-view copy. Barcode-only meals use the first available product image
+   as their cover. The log groups
    meals by day in your timezone, shows labeled macro breakdowns per meal and
    per day, and tracks progress bars against your daily goals. Entries can be
    edited (grams and time), re-logged with one tap for repeat meals, or
@@ -28,7 +30,8 @@ app.
    Food Facts can be filled from a photo of the European nutrition label (or
    entered manually), saved with an optional image, and reused on future scans.
    The Products page lists those saved entries and lets you edit their name,
-   nutrition, and image, or delete them with undo.
+   nutrition, and image, or delete them with undo. Product edits affect future
+   scans only; previously logged meals remain unchanged snapshots.
 
 ## Tech stack
 
@@ -64,6 +67,13 @@ goals), and `public.barcode_products` (manually entered barcode nutrition).
 For an existing database created before product images were added, run
 `supabase/add-product-images.sql` once instead; one created before product
 deletion was added also needs `supabase/allow-product-deletes.sql`.
+
+For an existing database, add the larger meal-photo column before deploying
+this version:
+
+```sql
+alter table public.meals add column if not exists photo text;
+```
 
 ## Deploying
 

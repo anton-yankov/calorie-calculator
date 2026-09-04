@@ -1,3 +1,5 @@
+import { MAX_MEAL_PHOTO_LENGTH } from "@/lib/log";
+
 const MAX_LONG_EDGE = 1024; // bump to 1568–2048 if we ever need label text readable
 const JPEG_QUALITY = 0.85;
 
@@ -48,6 +50,10 @@ export async function toDisplayableBlob(file: File): Promise<Blob> {
 
 /** Tiny JPEG data URL (~160px long edge) for meal-log entries. */
 export async function makeThumbnail(source: Blob, longEdge = 160): Promise<string> {
+  return makeJpegDataUrl(source, longEdge, 0.7);
+}
+
+async function makeJpegDataUrl(source: Blob, longEdge: number, quality: number): Promise<string> {
   const url = URL.createObjectURL(source);
   try {
     const img = await loadImage(url);
@@ -58,10 +64,27 @@ export async function makeThumbnail(source: Blob, longEdge = 160): Promise<strin
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D context unavailable");
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.7);
+    return canvas.toDataURL("image/jpeg", quality);
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/**
+ * Display-sized JPEG for a logged meal. Step down until the encoded value is
+ * comfortably inside the 1 MB Server Action request limit.
+ */
+export async function makeMealPhoto(source: Blob): Promise<string> {
+  const attempts = [
+    [1024, 0.82],
+    [900, 0.78],
+    [768, 0.72],
+  ] as const;
+  for (const [longEdge, quality] of attempts) {
+    const dataUrl = await makeJpegDataUrl(source, longEdge, quality);
+    if (dataUrl.length <= MAX_MEAL_PHOTO_LENGTH) return dataUrl;
+  }
+  throw new Error("The prepared photo is still too large to save.");
 }
 
 /**

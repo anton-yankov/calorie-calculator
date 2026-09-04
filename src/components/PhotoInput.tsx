@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import { Spinner } from "@/components/loaders";
 
 interface PhotoInputProps {
@@ -24,7 +25,7 @@ export function PhotoInput({
   onClear,
 }: PhotoInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
     <div className="relative">
@@ -45,7 +46,7 @@ export function PhotoInput({
         type="button"
         disabled={preparing || (!previewUrl && disabled)}
         title={previewUrl ? "View photo" : undefined}
-        onClick={() => (previewUrl ? dialogRef.current?.showModal() : inputRef.current?.click())}
+        onClick={() => (previewUrl ? setPreviewOpen(true) : inputRef.current?.click())}
         className="group w-full overflow-hidden rounded-panel border-2 border-dashed border-line bg-surface transition duration-200 hover:border-accent hover:bg-surface-raised disabled:opacity-50"
       >
         {previewUrl ? (
@@ -109,32 +110,12 @@ export function PhotoInput({
         </div>
       )}
 
-      {/* Full-screen preview — native <dialog>: Esc, focus trap, and backdrop for free.
-          Tap anywhere (or ✕) to close. */}
-      <dialog
-        ref={dialogRef}
-        aria-label="Photo preview"
-        onClick={(e) => e.currentTarget.close()}
-        className="m-auto h-dvh w-screen max-h-none max-w-none cursor-pointer bg-transparent p-0 backdrop:bg-background/95"
-      >
-        {previewUrl && (
-          <div className="flex h-full w-full items-center justify-center p-3">
-            {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
-            <img
-              src={previewUrl}
-              alt="Selected meal, full size"
-              className="max-h-full max-w-full rounded-panel object-contain"
-            />
-            <button
-              type="button"
-              aria-label="Close preview"
-              className="fixed right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface/85 text-lg font-semibold text-foreground backdrop-blur transition hover:border-accent"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-      </dialog>
+      <ImageLightbox
+        open={previewOpen}
+        src={previewUrl}
+        alt="Selected meal, full size"
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   );
 }

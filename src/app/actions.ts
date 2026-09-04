@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE, authTokenFor } from "@/lib/auth";
 import { deleteSavedBarcodeProduct, saveBarcodeProduct } from "@/lib/barcode-products";
-import type { LoggedMeal } from "@/lib/log";
+import { MAX_MEAL_PHOTO_LENGTH, type LoggedMeal } from "@/lib/log";
 import {
   deleteMealById,
   getMealById,
+  getMealPhotoById,
   insertMeals,
   latestLoggedAtBetween,
   sumTotalsBetween,
@@ -56,10 +57,25 @@ function isValidMeal(meal: LoggedMeal): boolean {
     typeof meal.loggedAt === "string" &&
     !Number.isNaN(Date.parse(meal.loggedAt)) &&
     typeof meal.description === "string" &&
-    (meal.thumbnail === null || typeof meal.thumbnail === "string") &&
+    isValidMealImage(meal.thumbnail, 300_000) &&
+    isValidMealImage(meal.photo, MAX_MEAL_PHOTO_LENGTH) &&
     isValidAnalysis(meal.analysis)
   );
 }
+
+function isValidMealImage(value: unknown, maxLength: number): value is string | null {
+  if (value === null) return true;
+  if (typeof value !== "string" || value.length > maxLength) return false;
+  if (/^data:image\/jpeg;base64,[a-z0-9+/=]+$/i.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "images.openfoodfacts.org";
+  } catch {
+    return false;
+  }
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function message(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
@@ -155,16 +171,32 @@ export async function relogMealAction(id: string): Promise<ActionResult & { newI
   }
 }
 
-export async function deleteMealAction(id: string): Promise<ActionResult> {
+export async function deleteMealAction(
+  id: string,
+): Promise<ActionResult & { deletedMeal?: LoggedMeal }> {
   if (!(await isAuthed())) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   try {
-    await deleteMealById(id);
+    const deletedMeal = await deleteMealById(id);
+    if (!deletedMeal) return { error: "That meal no longer exists" };
+    revalidatePath("/log");
+    return { deletedMeal };
   } catch (err) {
     return { error: message(err, "Couldn't delete the meal") };
   }
-  revalidatePath("/log");
-  return {};
+}
+
+/** Full meal photo is fetched only when its lightbox opens. */
+export async function getMealPhotoAction(
+  id: string,
+): Promise<ActionResult & { photo?: string | null }> {
+  if (!(await isAuthed())) return { error: "Authentication required" };
+  if (typeof id !== "string" || !UUID_PATTERN.test(id)) return { error: "Invalid id" };
+  try {
+    return { photo: await getMealPhotoById(id) };
+  } catch (err) {
+    return { error: message(err, "Couldn't load the photo") };
+  }
 }
 
 export async function saveGoalsAction(goals: Goals): Promise<ActionResult> {

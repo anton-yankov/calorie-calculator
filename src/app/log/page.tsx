@@ -1,4 +1,4 @@
-import type { LoggedMeal } from "@/lib/log";
+import type { LoggedMealSummary } from "@/lib/log";
 import { listMeals } from "@/lib/meals";
 import { getGoals, type Goals } from "@/lib/settings";
 import { GoalsEditor } from "./GoalsEditor";
@@ -8,7 +8,7 @@ import { LogList } from "./LogList";
 // cached — see loading.tsx for the streamed skeleton). Grouping/rendering
 // happens in LogList on the client, where the viewer's timezone lives.
 export default async function LogPage() {
-  let meals: LoggedMeal[] = [];
+  let meals: LoggedMealSummary[] = [];
   let goals: Goals | null = null;
   let loadError: string | null = null;
   try {

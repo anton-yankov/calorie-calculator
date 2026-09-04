@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import type { LoggedMeal } from "@/lib/log";
+import type { LoggedMeal, LoggedMealSummary } from "@/lib/log";
 import { sumTotals } from "@/lib/scale";
 import type { MealAnalysis, MealTotals } from "@/lib/schema";
 import { supabase } from "@/lib/supabase";
@@ -12,9 +12,23 @@ interface MealRow {
   description: string;
   analysis: MealAnalysis;
   thumbnail: string | null;
+  photo: string | null;
 }
 
+type MealSummaryRow = Omit<MealRow, "photo">;
+
 function toMeal(row: MealRow): LoggedMeal {
+  return {
+    id: row.id,
+    loggedAt: row.logged_at,
+    description: row.description,
+    analysis: row.analysis,
+    thumbnail: row.thumbnail,
+    photo: row.photo,
+  };
+}
+
+function toMealSummary(row: MealSummaryRow): LoggedMealSummary {
   return {
     id: row.id,
     loggedAt: row.logged_at,
@@ -31,22 +45,27 @@ function toRow(meal: LoggedMeal): MealRow {
     description: meal.description,
     analysis: meal.analysis,
     thumbnail: meal.thumbnail,
+    photo: meal.photo,
   };
 }
 
-export async function listMeals(): Promise<LoggedMeal[]> {
+export async function listMeals(): Promise<LoggedMealSummary[]> {
   // The log must never be prerendered at build time — always fetch per request
   await connection();
   const { data, error } = await supabase()
     .from("meals")
-    .select("*")
+    .select("id, logged_at, description, analysis, thumbnail")
     .order("logged_at", { ascending: false });
   if (error) throw new Error(`Couldn't load the meal log: ${error.message}`);
-  return (data as MealRow[]).map(toMeal);
+  return (data as MealSummaryRow[]).map(toMealSummary);
 }
 
 export async function getMealById(id: string): Promise<LoggedMeal | null> {
-  const { data, error } = await supabase().from("meals").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase()
+    .from("meals")
+    .select("id, logged_at, description, analysis, thumbnail, photo")
+    .eq("id", id)
+    .maybeSingle();
   if (error) throw new Error(`Couldn't load the meal: ${error.message}`);
   return data ? toMeal(data as MealRow) : null;
 }
@@ -67,9 +86,32 @@ export async function updateMealById(
   if (error) throw new Error(`Couldn't update: ${error.message}`);
 }
 
-export async function deleteMealById(id: string): Promise<void> {
-  const { error } = await supabase().from("meals").delete().eq("id", id);
+export async function deleteMealById(id: string): Promise<LoggedMeal | null> {
+  const { data, error } = await supabase()
+    .from("meals")
+    .delete()
+    .eq("id", id)
+    .select("id, logged_at, description, analysis, thumbnail, photo")
+    .maybeSingle();
   if (error) throw new Error(`Couldn't delete: ${error.message}`);
+  return data ? toMeal(data as MealRow) : null;
+}
+
+export async function getMealPhotoById(id: string): Promise<string | null> {
+  const { data, error } = await supabase()
+    .from("meals")
+    .select("photo, thumbnail")
+    .eq("id", id)
+    .maybeSingle();
+  if (error?.message.includes("photo")) {
+    // During the database-first rollout, old deployments can still preview the
+    // existing thumbnail until the nullable photo column has been added.
+    const legacy = await supabase().from("meals").select("thumbnail").eq("id", id).maybeSingle();
+    if (legacy.error) throw new Error(`Couldn't load the photo: ${legacy.error.message}`);
+    return legacy.data ? (legacy.data.thumbnail as string | null) : null;
+  }
+  if (error) throw new Error(`Couldn't load the photo: ${error.message}`);
+  return data ? ((data.photo as string | null) ?? (data.thumbnail as string | null)) : null;
 }
 
 /** Latest logged_at in [startIso, endIso), or null if none — used to order backdated meals. */

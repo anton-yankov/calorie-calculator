@@ -2,11 +2,18 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { deleteMealAction, logMealAction, relogMealAction, updateMealAction } from "@/app/actions";
+import {
+  deleteMealAction,
+  getMealPhotoAction,
+  logMealAction,
+  relogMealAction,
+  updateMealAction,
+} from "@/app/actions";
 import { DatePicker } from "@/components/DatePicker";
 import { GoalBars } from "@/components/GoalBars";
+import { ImageLightbox } from "@/components/ImageLightbox";
 import { dayKey, dayLabel } from "@/lib/day";
-import type { LoggedMeal } from "@/lib/log";
+import type { LoggedMealSummary } from "@/lib/log";
 import { scaleFood, sumTotals } from "@/lib/scale";
 import type { FoodItem, MealTotals } from "@/lib/schema";
 import type { Goals } from "@/lib/settings";
@@ -46,13 +53,19 @@ function GramsInput({
   );
 }
 
-function MealEntry({ meal }: { meal: LoggedMeal }) {
+function MealEntry({ meal }: { meal: LoggedMealSummary }) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   // Edit drafts; grams edits rescale from the saved analysis (the baseline)
   const [draftFoods, setDraftFoods] = useState<FoodItem[] | null>(null);
   const [dateDraft, setDateDraft] = useState("");
   const [timeDraft, setTimeDraft] = useState("");
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [fullPhoto, setFullPhoto] = useState<string | null>(null);
+  const [photoLoaded, setPhotoLoaded] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
 
   const foods = draftFoods ?? meal.analysis.foods;
   const totals: MealTotals = draftFoods ? sumTotals(draftFoods) : meal.analysis.totals;
@@ -128,6 +141,27 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
     });
   }
 
+  async function loadFullPhoto() {
+    if (photoLoading) return;
+    setPhotoLoading(true);
+    setPhotoError(null);
+    const result = await getMealPhotoAction(meal.id);
+    if (result.error) {
+      setPhotoError(result.error);
+    } else {
+      setFullPhoto(result.photo ?? meal.thumbnail);
+      setPhotoLoaded(true);
+    }
+    setPhotoLoading(false);
+  }
+
+  function openPhoto(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setPhotoOpen(true);
+    if (!photoLoaded) void loadFullPhoto();
+  }
+
   function handleDelete() {
     startTransition(async () => {
       const result = await deleteMealAction(meal.id);
@@ -135,194 +169,216 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
         toast.error(result.error);
         return;
       }
-      // Undo re-inserts the exact same row — the client still holds all of it
+      const deletedMeal = result.deletedMeal;
+      // The delete action returns the full row, including the lazily omitted photo.
       toast("Meal deleted", {
-        action: {
-          label: "Undo",
-          onClick: () =>
-            void logMealAction(meal).then((r) => {
-              if (r.error) toast.error(r.error);
-            }),
-        },
+        action: deletedMeal
+          ? {
+              label: "Undo",
+              onClick: () =>
+                void logMealAction(deletedMeal).then((r) => {
+                  if (r.error) toast.error(r.error);
+                }),
+            }
+          : undefined,
       });
     });
   }
 
   return (
-    <details
-      className={`group overflow-hidden rounded-panel border border-line bg-surface transition-colors open:bg-surface-raised ${pending ? "opacity-50" : ""}`}
-    >
-      <summary className="block cursor-pointer select-none [&::-webkit-details-marker]:hidden">
-        <div className="flex items-center gap-3 px-4 py-3">
-          {meal.thumbnail ? (
-            // eslint-disable-next-line @next/next/no-img-element -- small data URL
-            <img
-              src={meal.thumbnail}
-              alt=""
-              className="h-12 w-12 shrink-0 rounded-panel object-cover"
-            />
-          ) : (
-            <span
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-panel border border-line bg-background text-lg"
-              aria-hidden
-            >
-              🍽
-            </span>
-          )}
-          <span className="min-w-0 flex-1">
-            <span className="line-clamp-2 text-sm font-medium">{names || "Meal"}</span>
-            <span className="font-mono text-xs text-muted">{time}</span>
-          </span>
-          <span className="shrink-0 font-mono tabular-nums">
-            <span className="text-[15px] font-bold">{Math.round(totals.calories)}</span>
-            <span className="ml-1 text-xs text-muted">kcal</span>
-          </span>
-        </div>
-        <div className="grid grid-cols-3 divide-x divide-line border-t border-line">
-          {(
-            [
-              ["protein", totals.protein_g],
-              ["carbs", totals.carbs_g],
-              ["fat", totals.fat_g],
-            ] as const
-          ).map(([label, value]) => (
-            <div key={label} className="px-2 py-1.5 text-center">
-              <span className="block font-mono text-[13px] tabular-nums">{fmt(value)} g</span>
-              <span className="block text-[10px] uppercase tracking-[0.08em] text-muted">
-                {label}
+    <>
+      <details
+        className={`group overflow-hidden rounded-panel border border-line bg-surface transition-colors open:bg-surface-raised ${pending ? "opacity-50" : ""}`}
+      >
+        <summary className="block cursor-pointer select-none [&::-webkit-details-marker]:hidden">
+          <div className="flex items-center gap-3 px-4 py-3">
+            {meal.thumbnail && !thumbnailFailed ? (
+              <button
+                type="button"
+                aria-label={`View photo for ${names || "meal"}`}
+                onClick={openPhoto}
+                className="h-12 w-12 shrink-0 overflow-hidden rounded-panel transition hover:ring-1 hover:ring-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- small data URL or catalog URL */}
+                <img
+                  src={meal.thumbnail}
+                  alt=""
+                  onError={() => setThumbnailFailed(true)}
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ) : (
+              <span
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-panel border border-line bg-background text-lg"
+                aria-hidden
+              >
+                🍽
               </span>
-            </div>
-          ))}
-        </div>
-      </summary>
-
-      <div className="overflow-x-auto border-t border-line">
-        <table className="w-full min-w-[420px] border-collapse">
-          <thead>
-            <tr className="text-[10px] uppercase tracking-[0.08em] text-muted">
-              <th className="px-4 py-2 text-left font-semibold">Food</th>
-              <th className="px-2 py-2 text-right font-semibold">Grams</th>
-              <th className="px-2 py-2 text-right font-semibold">kcal</th>
-              <th className="px-2 py-2 text-right font-semibold">P</th>
-              <th className="px-2 py-2 text-right font-semibold">C</th>
-              <th className="py-2 pl-2 pr-4 text-right font-semibold">F</th>
-            </tr>
-          </thead>
-          <tbody className="font-mono text-xs tabular-nums text-muted">
-            {foods.map((food, i) => (
-              <tr key={`${food.name}-${i}`} className="border-t border-line/60">
-                <td className="px-4 py-1.5 font-sans text-[13px] font-medium text-foreground">
-                  {food.name}
-                </td>
-                <td className="px-2 py-1.5 text-right">
-                  {editing ? (
-                    <GramsInput
-                      food={food}
-                      disabled={pending}
-                      onChange={(grams) => handleGramsChange(i, grams)}
-                    />
-                  ) : (
-                    Math.round(food.grams)
-                  )}
-                </td>
-                <td className="px-2 py-1.5 text-right">{Math.round(food.calories)}</td>
-                <td className="px-2 py-1.5 text-right">{fmt(food.protein_g)}</td>
-                <td className="px-2 py-1.5 text-right">{fmt(food.carbs_g)}</td>
-                <td className="py-1.5 pl-2 pr-4 text-right">{fmt(food.fat_g)}</td>
-              </tr>
-            ))}
-            <tr className="border-t border-line font-semibold text-foreground">
-              <td className="px-4 py-2 font-sans text-[13px]">Total</td>
-              <td className="px-2 py-2 text-right">
-                {Math.round(foods.reduce((sum, f) => sum + f.grams, 0))}
-              </td>
-              <td className="px-2 py-2 text-right">{Math.round(totals.calories)}</td>
-              <td className="px-2 py-2 text-right">{fmt(totals.protein_g)}</td>
-              <td className="px-2 py-2 text-right">{fmt(totals.carbs_g)}</td>
-              <td className="py-2 pl-2 pr-4 text-right">{fmt(totals.fat_g)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {meal.description && (
-        <p className="border-t border-line/60 px-4 py-2 text-xs text-muted">
-          Note: {meal.description}
-        </p>
-      )}
-
-      <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs font-semibold">
-        {editing ? (
-          <>
-            <span className="flex items-center gap-1.5 font-normal text-muted">
-              When
-              <DatePicker
-                value={dateDraft}
-                max={dayKey(new Date())}
-                disabled={pending}
-                onChange={setDateDraft}
-                className="rounded-md border-line bg-background px-1.5 py-0.5 text-xs"
-              />
-              <input
-                type="time"
-                value={timeDraft}
-                disabled={pending}
-                aria-label="Time"
-                onChange={(e) => setTimeDraft(e.target.value)}
-                className="rounded-md border border-line bg-background px-1.5 py-0.5 font-mono text-xs text-foreground focus:border-accent focus:outline-none"
-              />
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="line-clamp-2 text-sm font-medium">{names || "Meal"}</span>
+              <span className="font-mono text-xs text-muted">{time}</span>
             </span>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={handleSave}
-              className="ml-auto text-success hover:underline disabled:text-muted"
-            >
-              {pending ? "Saving…" : "Save"}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={cancelEdit}
-              className="text-muted hover:underline"
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={startEdit}
-              className="text-accent hover:underline disabled:text-muted"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={handleRelog}
-              className="text-success hover:underline disabled:text-muted"
-            >
-              {pending ? "Logging…" : "Log again"}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={handleDelete}
-              className="ml-auto text-danger hover:underline disabled:text-muted"
-            >
-              Delete
-            </button>
-          </>
+            <span className="shrink-0 font-mono tabular-nums">
+              <span className="text-[15px] font-bold">{Math.round(totals.calories)}</span>
+              <span className="ml-1 text-xs text-muted">kcal</span>
+            </span>
+          </div>
+          <div className="grid grid-cols-3 divide-x divide-line border-t border-line">
+            {(
+              [
+                ["protein", totals.protein_g],
+                ["carbs", totals.carbs_g],
+                ["fat", totals.fat_g],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className="px-2 py-1.5 text-center">
+                <span className="block font-mono text-[13px] tabular-nums">{fmt(value)} g</span>
+                <span className="block text-[10px] uppercase tracking-[0.08em] text-muted">
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </summary>
+
+        <div className="overflow-x-auto border-t border-line">
+          <table className="w-full min-w-[420px] border-collapse">
+            <thead>
+              <tr className="text-[10px] uppercase tracking-[0.08em] text-muted">
+                <th className="px-4 py-2 text-left font-semibold">Food</th>
+                <th className="px-2 py-2 text-right font-semibold">Grams</th>
+                <th className="px-2 py-2 text-right font-semibold">kcal</th>
+                <th className="px-2 py-2 text-right font-semibold">P</th>
+                <th className="px-2 py-2 text-right font-semibold">C</th>
+                <th className="py-2 pl-2 pr-4 text-right font-semibold">F</th>
+              </tr>
+            </thead>
+            <tbody className="font-mono text-xs tabular-nums text-muted">
+              {foods.map((food, i) => (
+                <tr key={`${food.name}-${i}`} className="border-t border-line/60">
+                  <td className="px-4 py-1.5 font-sans text-[13px] font-medium text-foreground">
+                    {food.name}
+                  </td>
+                  <td className="px-2 py-1.5 text-right">
+                    {editing ? (
+                      <GramsInput
+                        food={food}
+                        disabled={pending}
+                        onChange={(grams) => handleGramsChange(i, grams)}
+                      />
+                    ) : (
+                      Math.round(food.grams)
+                    )}
+                  </td>
+                  <td className="px-2 py-1.5 text-right">{Math.round(food.calories)}</td>
+                  <td className="px-2 py-1.5 text-right">{fmt(food.protein_g)}</td>
+                  <td className="px-2 py-1.5 text-right">{fmt(food.carbs_g)}</td>
+                  <td className="py-1.5 pl-2 pr-4 text-right">{fmt(food.fat_g)}</td>
+                </tr>
+              ))}
+              <tr className="border-t border-line font-semibold text-foreground">
+                <td className="px-4 py-2 font-sans text-[13px]">Total</td>
+                <td className="px-2 py-2 text-right">
+                  {Math.round(foods.reduce((sum, f) => sum + f.grams, 0))}
+                </td>
+                <td className="px-2 py-2 text-right">{Math.round(totals.calories)}</td>
+                <td className="px-2 py-2 text-right">{fmt(totals.protein_g)}</td>
+                <td className="px-2 py-2 text-right">{fmt(totals.carbs_g)}</td>
+                <td className="py-2 pl-2 pr-4 text-right">{fmt(totals.fat_g)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {meal.description && (
+          <p className="border-t border-line/60 px-4 py-2 text-xs text-muted">
+            Note: {meal.description}
+          </p>
         )}
-      </div>
-    </details>
+
+        <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs font-semibold">
+          {editing ? (
+            <>
+              <span className="flex items-center gap-1.5 font-normal text-muted">
+                When
+                <DatePicker
+                  value={dateDraft}
+                  max={dayKey(new Date())}
+                  disabled={pending}
+                  onChange={setDateDraft}
+                  className="rounded-md border-line bg-background px-1.5 py-0.5 text-xs"
+                />
+                <input
+                  type="time"
+                  value={timeDraft}
+                  disabled={pending}
+                  aria-label="Time"
+                  onChange={(e) => setTimeDraft(e.target.value)}
+                  className="rounded-md border border-line bg-background px-1.5 py-0.5 font-mono text-xs text-foreground focus:border-accent focus:outline-none"
+                />
+              </span>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleSave}
+                className="ml-auto text-success hover:underline disabled:text-muted"
+              >
+                {pending ? "Saving…" : "Save"}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={cancelEdit}
+                className="text-muted hover:underline"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={startEdit}
+                className="text-accent hover:underline disabled:text-muted"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleRelog}
+                className="text-success hover:underline disabled:text-muted"
+              >
+                {pending ? "Logging…" : "Log again"}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleDelete}
+                className="ml-auto text-danger hover:underline disabled:text-muted"
+              >
+                Delete
+              </button>
+            </>
+          )}
+        </div>
+      </details>
+      <ImageLightbox
+        open={photoOpen}
+        src={fullPhoto ?? meal.thumbnail}
+        alt={`Photo of ${names || "meal"}`}
+        loading={photoLoading}
+        loadError={photoError}
+        onRetry={() => void loadFullPhoto()}
+        onClose={() => setPhotoOpen(false)}
+      />
+    </>
   );
 }
 
-export function LogList({ meals, goals }: { meals: LoggedMeal[]; goals: Goals | null }) {
+export function LogList({ meals, goals }: { meals: LoggedMealSummary[]; goals: Goals | null }) {
   if (meals.length === 0) {
     return (
       <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted">
@@ -334,7 +390,7 @@ export function LogList({ meals, goals }: { meals: LoggedMeal[]; goals: Goals | 
     );
   }
 
-  const days = new Map<string, LoggedMeal[]>();
+  const days = new Map<string, LoggedMealSummary[]>();
   for (const meal of meals) {
     const key = dayKey(meal.loggedAt);
     days.set(key, [...(days.get(key) ?? []), meal]);
