@@ -4,6 +4,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { Spinner } from "@/components/loaders";
+import { NutritionLabelInput } from "@/components/NutritionLabelInput";
+import { ProductPhotoInput } from "@/components/ProductPhotoInput";
 import {
   barcodeProductToFood,
   manualProductToFood,
@@ -11,6 +13,7 @@ import {
   type ProductNutrition,
 } from "@/lib/products";
 import type { FoodItem } from "@/lib/schema";
+import type { NutritionLabelAnalysis } from "@/lib/nutrition-label";
 
 interface LookupError {
   error: string;
@@ -27,12 +30,18 @@ function ManualNutrition({
 }: {
   barcode: string;
   initialName: string;
-  onAdd: (food: FoodItem, name: string, per100g: ProductNutrition) => Promise<void>;
+  onAdd: (
+    food: FoodItem,
+    name: string,
+    per100g: ProductNutrition,
+    imageUrl: string | null,
+  ) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(initialName);
   const [grams, setGrams] = useState("100");
   const [nutrition, setNutrition] = useState({ calories: "", protein: "", carbs: "", fat: "" });
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -52,13 +61,18 @@ function ManualNutrition({
       Object.values(nutrition).every((value) => value.trim() !== "") &&
       Object.values(per100g).every((value) => Number.isFinite(value) && value >= 0);
     if (!complete) {
-      setError("Enter a name, portion, and all four values per 100 g.");
+      setError("Enter a name, portion, and all four values per 100 g or ml.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      await onAdd(manualProductToFood(name, portion, per100g, barcode), name.trim(), per100g);
+      await onAdd(
+        manualProductToFood(name, portion, per100g, barcode),
+        name.trim(),
+        per100g,
+        imageUrl,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save this barcode.");
     } finally {
@@ -73,13 +87,38 @@ function ManualNutrition({
     ["fat", "Fat", "g"],
   ] as const;
 
+  function applyLabel(result: NutritionLabelAnalysis) {
+    if (!name.trim() && result.productName.trim()) setName(result.productName.trim());
+    setNutrition((current) => ({
+      calories: result.calories === null ? current.calories : String(result.calories),
+      protein: result.protein_g === null ? current.protein : String(result.protein_g),
+      carbs: result.carbs_g === null ? current.carbs : String(result.carbs_g),
+      fat: result.fat_g === null ? current.fat : String(result.fat_g),
+    }));
+    setError(null);
+  }
+
   return (
     <form onSubmit={submit} className="rounded-panel border border-line bg-surface p-4">
       <div className="mb-4">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
           Manual nutrition
         </p>
-        <p className="mt-1 text-xs text-muted">Copy the values per 100 g from the package.</p>
+        <p className="mt-1 text-xs text-muted">
+          Scan the label to fill the fields, then confirm them against the package.
+        </p>
+      </div>
+      <div className="mb-4">
+        <NutritionLabelInput disabled={saving} onExtracted={applyLabel} />
+      </div>
+      <div className="mb-4 border-b border-line pb-4">
+        <p className="mb-2 text-xs font-semibold text-muted">Product photo (optional)</p>
+        <ProductPhotoInput
+          imageUrl={imageUrl}
+          productName={name.trim() || "product"}
+          disabled={saving}
+          onChange={setImageUrl}
+        />
       </div>
       <label className="mb-3 block text-xs font-semibold text-muted">
         Product name
@@ -92,7 +131,7 @@ function ManualNutrition({
       <div className="grid grid-cols-2 gap-2">
         {nutritionFields.map(([key, label, unit]) => (
           <label key={key} className="text-xs font-semibold text-muted">
-            {label} / 100 g
+            {label} / 100 g or ml
             <span className="mt-1 flex items-center rounded-panel border border-line bg-background focus-within:border-accent">
               <input
                 type="number"
@@ -122,7 +161,7 @@ function ManualNutrition({
             onChange={(event) => setGrams(event.target.value)}
             className="min-w-0 flex-1 bg-transparent px-3 py-2 font-mono text-sm text-foreground focus:outline-none"
           />
-          <span className="pr-3 font-normal">g</span>
+          <span className="pr-3 font-normal">g / ml</span>
         </span>
       </label>
       {error && <p className="mt-3 text-xs text-danger">{error}</p>}
@@ -182,7 +221,7 @@ function ProductConfirmation({
           </p>
           <p className="mt-2 font-mono text-xs tabular-nums text-muted">
             {fmt(product.per100g.calories)} kcal · P {fmt(product.per100g.protein_g)} · C{" "}
-            {fmt(product.per100g.carbs_g)} · F {fmt(product.per100g.fat_g)} / 100 g
+            {fmt(product.per100g.carbs_g)} · F {fmt(product.per100g.fat_g)} / 100 g/ml
           </p>
         </div>
       </div>
@@ -293,11 +332,16 @@ export function BarcodeInput({
     toast.success(`${food.name} added`);
   }
 
-  async function saveManual(food: FoodItem, name: string, per100g: ProductNutrition) {
+  async function saveManual(
+    food: FoodItem,
+    name: string,
+    per100g: ProductNutrition,
+    imageUrl: string | null,
+  ) {
     const response = await fetch(`/api/products/${encodeURIComponent(barcode)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, per100g }),
+      body: JSON.stringify({ name, per100g, imageUrl }),
     });
     const body = (await response.json()) as BarcodeProduct | LookupError;
     if (!response.ok || "error" in body) {

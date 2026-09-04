@@ -69,12 +69,12 @@ export async function makeThumbnail(source: Blob, longEdge = 160): Promise<strin
  * Browsers apply EXIF orientation during decode, and re-encoding strips
  * EXIF/GPS metadata.
  */
-export async function resizeToJpeg(source: Blob): Promise<Blob> {
+export async function resizeToJpeg(source: Blob, maxLongEdge = MAX_LONG_EDGE): Promise<Blob> {
   const url = URL.createObjectURL(source);
   try {
     const img = await loadImage(url);
 
-    const scale = Math.min(1, MAX_LONG_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+    const scale = Math.min(1, maxLongEdge / Math.max(img.naturalWidth, img.naturalHeight));
     const width = Math.max(1, Math.round(img.naturalWidth * scale));
     const height = Math.max(1, Math.round(img.naturalHeight * scale));
 
