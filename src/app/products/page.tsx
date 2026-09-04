@@ -2,6 +2,9 @@ import { listSavedBarcodeProducts } from "@/lib/barcode-products";
 import type { BarcodeProduct } from "@/lib/products";
 import { ProductList } from "./ProductList";
 
+// Server component: products are fetched from Supabase per request (see
+// loading.tsx for the streamed skeleton). Edits and deletes go through Server
+// Actions that revalidate this path, so the list never holds its own copy.
 export default async function ProductsPage() {
   let products: BarcodeProduct[] = [];
   let loadError: string | null = null;
@@ -21,7 +24,7 @@ export default async function ProductsPage() {
           Saved products
         </h1>
         <p className="mt-2 text-[15px] text-muted">
-          Products you entered after scanning a barcode.
+          Products you entered by hand after a scan. Fix a value or remove one here.
         </p>
       </header>
 
@@ -30,7 +33,7 @@ export default async function ProductsPage() {
           {loadError} — check your connection and reload.
         </p>
       ) : (
-        <ProductList initialProducts={products} />
+        <ProductList products={products} />
       )}
     </main>
   );

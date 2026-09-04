@@ -53,6 +53,37 @@ export function SkeletonLog() {
   );
 }
 
+/** Ghost version of the product library: a count line + a few product cards. */
+export function SkeletonProducts() {
+  return (
+    <div role="status" aria-label="Products loading" className="flex flex-col gap-3">
+      <div aria-hidden>
+        <GhostBar className="h-3.5 w-20" />
+      </div>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          aria-hidden
+          className="overflow-hidden rounded-panel border border-line bg-surface"
+        >
+          <div className="flex items-start gap-4 p-4">
+            <GhostBar className="h-[72px] w-[72px] rounded-lg" />
+            <div className="min-w-0 flex-1">
+              <GhostBar className={`h-5 ${i === 1 ? "w-48" : "w-36"}`} />
+              <GhostBar className="mt-2 h-3 w-28" />
+            </div>
+            <GhostBar className="h-7 w-14" />
+          </div>
+          <div className="px-4 pb-4">
+            <GhostBar className="h-1.5 w-full" />
+            <GhostBar className="mt-2.5 h-3 w-56" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Ghost version of AnalysisCard, shown wherever an estimate is about to land —
  * first analysis and correction re-analysis alike. Same footprint as the real

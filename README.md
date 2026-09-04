@@ -27,8 +27,8 @@ app.
 4. **Scan** — look up packaged foods by barcode. Products missing from Open
    Food Facts can be filled from a photo of the European nutrition label (or
    entered manually), saved with an optional image, and reused on future scans.
-   The Products page lists those saved entries and lets you add, change, or
-   remove their images.
+   The Products page lists those saved entries and lets you edit their name,
+   nutrition, and image, or delete them with undo.
 
 ## Tech stack
 
@@ -62,7 +62,8 @@ Database: create a Supabase project and run `supabase/schema.sql` in the SQL
 Editor. It creates `public.meals` (the log) and `public.settings` (daily
 goals), and `public.barcode_products` (manually entered barcode nutrition).
 For an existing database created before product images were added, run
-`supabase/add-product-images.sql` once instead.
+`supabase/add-product-images.sql` once instead; one created before product
+deletion was added also needs `supabase/allow-product-deletes.sql`.
 
 ## Deploying
 

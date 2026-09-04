@@ -93,14 +93,14 @@ export async function listSavedBarcodeProducts(): Promise<BarcodeProduct[]> {
     .select(
       "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, image_url, updated_at",
     )
-    .order("updated_at", { ascending: false });
+    .order("name", { ascending: true });
   if (error?.message.includes("image_url")) {
     const legacy = await supabase()
       .from("barcode_products")
       .select(
         "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, updated_at",
       )
-      .order("updated_at", { ascending: false });
+      .order("name", { ascending: true });
     if (legacy.error) throw new Error(`Couldn't load saved products: ${legacy.error.message}`);
     return (legacy.data as BarcodeProductRow[]).map(toProduct);
   }
@@ -108,18 +108,7 @@ export async function listSavedBarcodeProducts(): Promise<BarcodeProduct[]> {
   return (data as BarcodeProductRow[]).map(toProduct);
 }
 
-export async function updateSavedBarcodeProductImage(
-  barcode: string,
-  imageUrl: string | null,
-): Promise<BarcodeProduct | null> {
-  const { data, error } = await supabase()
-    .from("barcode_products")
-    .update({ image_url: imageUrl, updated_at: new Date().toISOString() })
-    .eq("barcode", barcode)
-    .select(
-      "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, image_url, updated_at",
-    )
-    .maybeSingle();
-  if (error) throw new Error(`Couldn't update the product image: ${error.message}`);
-  return data ? toProduct(data as BarcodeProductRow) : null;
+export async function deleteSavedBarcodeProduct(barcode: string): Promise<void> {
+  const { error } = await supabase().from("barcode_products").delete().eq("barcode", barcode);
+  if (error) throw new Error(`Couldn't delete the product: ${error.message}`);
 }

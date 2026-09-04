@@ -1,13 +1,14 @@
+import { getSavedBarcodeProduct, saveBarcodeProduct } from "@/lib/barcode-products";
 import {
-  getSavedBarcodeProduct,
-  saveBarcodeProduct,
-  updateSavedBarcodeProductImage,
-} from "@/lib/barcode-products";
-import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
+  BARCODE_PATTERN,
+  submittedNutrition,
+  submittedProductImage,
+  type BarcodeProduct,
+  type ProductNutrition,
+} from "@/lib/products";
 
 export const runtime = "nodejs";
 
-const BARCODE_PATTERN = /^\d{7,14}$/;
 const PRODUCT_FIELDS = [
   "code",
   "product_name",
@@ -35,26 +36,8 @@ interface OpenFoodFactsResponse {
 
 interface SaveProductBody {
   name?: unknown;
-  per100g?: Partial<Record<keyof ProductNutrition, unknown>>;
+  per100g?: unknown;
   imageUrl?: unknown;
-}
-
-const MAX_IMAGE_URL_LENGTH = 300_000;
-
-function submittedImage(value: unknown): string | null | undefined {
-  if (value === null) return null;
-  if (
-    typeof value === "string" &&
-    value.length <= MAX_IMAGE_URL_LENGTH &&
-    /^data:image\/jpeg;base64,[a-z0-9+/=]+$/i.test(value)
-  ) {
-    return value;
-  }
-  return undefined;
-}
-
-function submittedNutritionValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
 function finite(value: unknown): number | null {
@@ -186,18 +169,9 @@ export async function POST(request: Request, context: { params: Promise<{ barcod
   }
 
   const name = text(body?.name);
-  const imageUrl = body.imageUrl === undefined ? null : submittedImage(body.imageUrl);
-  const per100g: ProductNutrition = {
-    calories: submittedNutritionValue(body?.per100g?.calories) ?? Number.NaN,
-    protein_g: submittedNutritionValue(body?.per100g?.protein_g) ?? Number.NaN,
-    carbs_g: submittedNutritionValue(body?.per100g?.carbs_g) ?? Number.NaN,
-    fat_g: submittedNutritionValue(body?.per100g?.fat_g) ?? Number.NaN,
-  };
-  if (
-    !name ||
-    imageUrl === undefined ||
-    Object.values(per100g).some((value) => !Number.isFinite(value))
-  ) {
+  const imageUrl = body.imageUrl === undefined ? null : submittedProductImage(body.imageUrl);
+  const per100g = submittedNutrition(body?.per100g);
+  if (!name || imageUrl === undefined || !per100g) {
     return Response.json(
       { error: "Enter a product name and all four nutrition values per 100 g or ml." },
       { status: 400 },
@@ -214,36 +188,6 @@ export async function POST(request: Request, context: { params: Promise<{ barcod
     console.error("barcode product save failed:", error);
     return Response.json(
       { error: "Couldn't save this barcode. Try again shortly." },
-      { status: 500 },
-    );
-  }
-}
-
-export async function PATCH(request: Request, context: { params: Promise<{ barcode: string }> }) {
-  const { barcode } = await context.params;
-  if (!BARCODE_PATTERN.test(barcode)) {
-    return Response.json({ error: "Enter a 7–14 digit food barcode." }, { status: 400 });
-  }
-
-  let body: { imageUrl?: unknown };
-  try {
-    body = (await request.json()) as { imageUrl?: unknown };
-  } catch {
-    return Response.json({ error: "Invalid image data." }, { status: 400 });
-  }
-  const imageUrl = submittedImage(body.imageUrl);
-  if (imageUrl === undefined) {
-    return Response.json({ error: "Invalid product image." }, { status: 400 });
-  }
-
-  try {
-    const product = await updateSavedBarcodeProductImage(barcode, imageUrl);
-    if (!product) return Response.json({ error: "Product not found." }, { status: 404 });
-    return Response.json(product, { headers: { "Cache-Control": "private, no-store" } });
-  } catch (error) {
-    console.error("product image update failed:", error);
-    return Response.json(
-      { error: "Couldn't update the product image. Try again shortly." },
       { status: 500 },
     );
   }
