@@ -56,6 +56,7 @@ create table public.barcode_products (
   protein_per_100g double precision not null check (protein_per_100g >= 0),
   carbs_per_100g double precision not null check (carbs_per_100g >= 0),
   fat_per_100g double precision not null check (fat_per_100g >= 0),
+  image_url text,
   updated_at timestamptz not null default now()
 );
 
