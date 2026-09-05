@@ -193,48 +193,55 @@ export default function Home() {
 
         {latest && !pendingCorrection && (
           <>
-            <div className="flex items-center gap-2">
-              {/* Which day the meal lands on — capped at today, no future meals */}
-              <DatePicker
-                value={logDate ?? todayKey}
-                max={todayKey}
-                disabled={logging || loggedAtLength === history.length}
-                onChange={setLogDate}
-                ariaLabel="Day to log this meal to"
-              />
-              <button
-                type="button"
-                disabled={loading || logging || loggedAtLength === history.length}
-                onClick={() => void handleLog()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-panel border border-success px-4 py-2.5 text-sm font-semibold text-success transition-colors hover:bg-success-soft disabled:border-line disabled:text-muted"
-              >
-                {logging && <Spinner className="h-3.5 w-3.5" />}
-                {logging
-                  ? "Logging…"
-                  : loggedAtLength === history.length
-                    ? "Logged ✓"
-                    : logDate
-                      ? `Log to ${dayLabel(logDate)}`
-                      : "Log meal"}
-              </button>
-              {logged && (
-                <>
+            {/* Before logging: pick a day and log. After: the picker and log
+                button are dead controls, so they collapse into a confirmation
+                line and the two follow-up actions get the room instead. */}
+            {logged ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="w-full text-sm font-semibold text-success sm:w-auto sm:flex-1">
+                  Logged to {dayLabel(logDate ?? todayKey)} ✓
+                </p>
+                <div className="flex w-full gap-2 sm:w-auto">
                   <Link
                     href="/log"
-                    className="shrink-0 rounded-panel bg-success px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
+                    className="flex flex-1 items-center justify-center rounded-panel bg-success px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110 sm:flex-none"
                   >
                     View log
                   </Link>
                   <button
                     type="button"
                     onClick={handleClear}
-                    className="shrink-0 rounded-panel border border-line px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-accent"
+                    className="flex flex-1 items-center justify-center rounded-panel border border-line px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-accent sm:flex-none"
                   >
                     New meal
                   </button>
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                {/* Which day the meal lands on — capped at today, no future meals */}
+                <DatePicker
+                  value={logDate ?? todayKey}
+                  max={todayKey}
+                  disabled={logging}
+                  onChange={setLogDate}
+                  ariaLabel="Day to log this meal to"
+                />
+                <button
+                  type="button"
+                  disabled={loading || logging}
+                  onClick={() => void handleLog()}
+                  className="flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-panel border border-success px-4 py-2.5 text-sm font-semibold text-success transition-colors hover:bg-success-soft disabled:border-line disabled:text-muted"
+                >
+                  {logging && <Spinner className="h-3.5 w-3.5" />}
+                  {logging
+                    ? "Logging…"
+                    : logDate
+                      ? `Log to ${dayLabel(logDate)}`
+                      : "Log meal"}
+                </button>
+              </div>
+            )}
             <CorrectionBar
               disabled={loading}
               loading={loading}
