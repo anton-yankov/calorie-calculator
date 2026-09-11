@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useRef, useState } from "react";
+import { toast } from "sonner";
 import { logMealAction } from "@/app/actions";
 import { dayBounds, dayKey } from "@/lib/day";
 import { reattachFoodExtras, stripFoodExtras } from "@/lib/products";
@@ -169,6 +170,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         logDate ? dayBounds(logDate) : undefined,
       );
       if (result.error) throw new Error(result.error);
+      if (result.warning) toast.warning(result.warning);
       setLoggedAtLength(history.length);
       setLogDateState(null);
     } catch (err) {

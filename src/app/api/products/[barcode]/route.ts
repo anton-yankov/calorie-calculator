@@ -205,7 +205,7 @@ export async function GET(_request: Request, context: { params: Promise<{ barcod
   };
 
   return Response.json(product, {
-    headers: { "Cache-Control": "private, max-age=300" },
+    headers: { "Cache-Control": "private, no-store" },
   });
 }
 

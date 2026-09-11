@@ -1,8 +1,9 @@
+import type { FoodItem } from "@/lib/schema";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
 import { connection } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-/** Server-side data layer for products saved after manual barcode entry. */
+/** Server-side data layer for saved barcode products. */
 
 interface BarcodeProductRow {
   barcode: string;
@@ -122,4 +123,29 @@ export async function listSavedBarcodeProducts(): Promise<BarcodeProduct[]> {
 export async function deleteSavedBarcodeProduct(barcode: string): Promise<void> {
   const { error } = await supabase().from("barcode_products").delete().eq("barcode", barcode);
   if (error) throw new Error(`Couldn't delete the product: ${error.message}`);
+}
+
+/** Insert new products only; a later scan must never overwrite saved edits or defaults. */
+export async function saveLoggedBarcodeProducts(foods: readonly FoodItem[]): Promise<void> {
+  const rows = new Map<string, BarcodeProductRow>();
+  for (const food of foods) {
+    if (!food.barcode || !food.productSnapshot || rows.has(food.barcode)) continue;
+    const product = food.productSnapshot;
+    rows.set(food.barcode, {
+      barcode: food.barcode,
+      name: product.name.trim(),
+      calories_per_100g: product.per100g.calories,
+      protein_per_100g: product.per100g.protein_g,
+      carbs_per_100g: product.per100g.carbs_g,
+      fat_per_100g: product.per100g.fat_g,
+      image_url: food.imageUrl ?? null,
+      serving_grams: product.servingGrams,
+      updated_at: new Date().toISOString(),
+    });
+  }
+  if (rows.size === 0) return;
+  const { error } = await supabase()
+    .from("barcode_products")
+    .upsert([...rows.values()], { onConflict: "barcode", ignoreDuplicates: true });
+  if (error) throw new Error(`Couldn't save logged products: ${error.message}`);
 }

@@ -1,3 +1,5 @@
+import type { ProductSnapshot } from "@/lib/products";
+
 export type Confidence = "low" | "medium" | "high";
 
 export interface FoodItem {
@@ -11,6 +13,8 @@ export interface FoodItem {
   assumptions: string;
   /** Barcode this food was scanned from; absent for photo or text foods */
   barcode?: string;
+  /** Original product data, kept separate from editable meal portions and estimates. */
+  productSnapshot?: ProductSnapshot;
   /** Small JPEG data URL copied from the product at add time; absent if none */
   imageUrl?: string;
 }

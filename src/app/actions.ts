@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE, authTokenFor } from "@/lib/auth";
-import { deleteSavedBarcodeProduct, saveBarcodeProduct } from "@/lib/barcode-products";
+import {
+  deleteSavedBarcodeProduct,
+  saveBarcodeProduct,
+  saveLoggedBarcodeProducts,
+} from "@/lib/barcode-products";
 import type { LoggedMeal } from "@/lib/log";
 import {
   deleteMealById,
@@ -40,6 +44,7 @@ async function isAuthed(): Promise<boolean> {
 
 export interface ActionResult {
   error?: string;
+  warning?: string;
 }
 
 /** The optional client-side fields on a food: a barcode and a small JPEG copy of its image. */
@@ -48,6 +53,18 @@ function isValidFood(food: FoodItem): boolean {
   if (food.barcode !== undefined && !BARCODE_PATTERN.test(String(food.barcode))) return false;
   if (food.imageUrl !== undefined && !isJpegDataUrl(food.imageUrl, MAX_FOOD_IMAGE_LENGTH)) {
     return false;
+  }
+  if (food.productSnapshot !== undefined) {
+    const product = food.productSnapshot;
+    if (
+      typeof food.barcode !== "string" ||
+      !product ||
+      typeof product.name !== "string" ||
+      !product.name.trim() ||
+      !submittedNutrition(product.per100g) ||
+      submittedServingGrams(product.servingGrams) === undefined
+    )
+      return false;
   }
   return true;
 }
@@ -130,9 +147,18 @@ export async function logMealAction(
   } catch (err) {
     return { error: message(err, "Couldn't save the meal") };
   }
+  let warning: string | undefined;
+  try {
+    await saveLoggedBarcodeProducts(meal.analysis.foods);
+  } catch (err) {
+    console.error("Saving logged barcode products failed:", err);
+    warning =
+      "Meal logged, but its products couldn't be saved to Products. You can scan them again later; don't log this meal twice.";
+  }
+  revalidatePath("/products");
   revalidatePath("/log");
   revalidatePath("/stats");
-  return {};
+  return warning ? { warning } : {};
 }
 
 export async function updateMealAction(
