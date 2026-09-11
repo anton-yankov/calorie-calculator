@@ -42,13 +42,7 @@ function ManualNutrition({
 }: {
   barcode: string;
   initialName: string;
-  onAdd: (
-    food: FoodItem,
-    name: string,
-    per100g: ProductNutrition,
-    imageUrl: string | null,
-    servingGrams: number,
-  ) => Promise<void>;
+  onAdd: (food: FoodItem) => void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(initialName);
@@ -82,10 +76,6 @@ function ManualNutrition({
     try {
       await onAdd(
         manualProductToFood(name, portion, per100g, barcode, await foodImageFrom(imageUrl)),
-        name.trim(),
-        per100g,
-        imageUrl,
-        portion,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save this barcode.");
@@ -179,7 +169,7 @@ function ManualNutrition({
         </span>
       </label>
       <p className="mt-1 text-[10px] text-muted">
-        Prefilled the next time this barcode is scanned. Change it later under Products.
+        Saved to Products when you log the meal, and prefilled on your next scan.
       </p>
       {error && <p className="mt-3 text-xs text-danger">{error}</p>}
       <div className="mt-4 flex gap-2">
@@ -188,7 +178,7 @@ function ManualNutrition({
           disabled={saving}
           className="flex-1 rounded-panel bg-accent px-4 py-2.5 text-sm font-semibold text-background"
         >
-          {saving ? "Saving…" : "Save and add to meal"}
+          {saving ? "Adding…" : "Add to meal"}
         </button>
         <button
           type="button"
@@ -212,7 +202,7 @@ function ProductConfirmation({
   onAdd: (food: FoodItem) => void;
   onCancel: () => void;
 }) {
-  const [grams, setGrams] = useState(String(Math.round(product.servingGrams ?? 100)));
+  const [grams, setGrams] = useState(String(product.servingGrams ?? 100));
   const [adding, setAdding] = useState(false);
   const portion = Number(grams);
   const ratio = Number.isFinite(portion) && portion > 0 ? portion / 100 : 0;
@@ -292,7 +282,7 @@ function ProductConfirmation({
       </div>
       <p className="border-t border-line px-4 py-2 text-[10px] text-muted">
         {product.source === "saved" ? (
-          "Nutrition saved from an earlier manual entry. Confirm it against the package."
+          "Nutrition from your saved Products. Confirm it against the package."
         ) : (
           <>
             Product data from{" "}
@@ -334,7 +324,9 @@ export function BarcodeInput({
     setLookupError(null);
     setManualName("");
     try {
-      const response = await fetch(`/api/products/${encodeURIComponent(code)}`);
+      const response = await fetch(`/api/products/${encodeURIComponent(code)}`, {
+        cache: "no-store",
+      });
       const body = (await response.json()) as BarcodeProduct | LookupError;
       if (!response.ok || "error" in body) {
         const problem = body as LookupError;
@@ -358,25 +350,6 @@ export function BarcodeInput({
     setLookupError(null);
     setBarcode("");
     toast.success(`${food.name} added`);
-  }
-
-  async function saveManual(
-    food: FoodItem,
-    name: string,
-    per100g: ProductNutrition,
-    imageUrl: string | null,
-    servingGrams: number,
-  ) {
-    const response = await fetch(`/api/products/${encodeURIComponent(barcode)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, per100g, imageUrl, servingGrams }),
-    });
-    const body = (await response.json()) as BarcodeProduct | LookupError;
-    if (!response.ok || "error" in body) {
-      throw new Error("error" in body ? body.error : "Couldn't save this barcode.");
-    }
-    add(food);
   }
 
   function clear() {
@@ -409,7 +382,7 @@ export function BarcodeInput({
             key={barcode}
             barcode={barcode}
             initialName={manualName}
-            onAdd={saveManual}
+            onAdd={add}
             onCancel={clear}
           />
         </div>

@@ -58,6 +58,12 @@ export function submittedNutrition(value: unknown): ProductNutrition | null {
   return { calories, protein_g: protein, carbs_g: carbs, fat_g: fat };
 }
 
+export interface ProductSnapshot {
+  name: string;
+  per100g: ProductNutrition;
+  servingGrams: number | null;
+}
+
 export interface BarcodeProduct {
   barcode: string;
   name: string;
@@ -98,9 +104,14 @@ export function barcodeProductToFood(
     confidence: "high",
     assumptions:
       product.source === "saved"
-        ? `Barcode ${product.barcode}; nutrition from a saved manual entry.`
+        ? `Barcode ${product.barcode}; nutrition from Products.`
         : `Barcode ${product.barcode}; nutrition per 100 g from Open Food Facts.`,
     barcode: product.barcode,
+    productSnapshot: {
+      name: productName(product),
+      per100g: { ...product.per100g },
+      servingGrams: product.servingGrams,
+    },
     ...(imageUrl ? { imageUrl } : {}),
   };
 }
@@ -124,7 +135,12 @@ export function manualProductToFood(
     assumptions: barcode
       ? `Nutrition entered manually for barcode ${barcode}.`
       : "Nutrition entered manually per 100 g.",
-    ...(barcode ? { barcode } : {}),
+    ...(barcode
+      ? {
+          barcode,
+          productSnapshot: { name: name.trim(), per100g: { ...per100g }, servingGrams: grams },
+        }
+      : {}),
     ...(imageUrl ? { imageUrl } : {}),
   };
 }
@@ -137,6 +153,7 @@ export function stripFoodExtras(foods: readonly FoodItem[]): FoodItem[] {
     const copy = { ...food };
     delete copy.barcode;
     delete copy.imageUrl;
+    delete copy.productSnapshot;
     return copy;
   });
 }
@@ -167,6 +184,7 @@ export function reattachFoodExtras(
       ...food,
       ...(match.barcode ? { barcode: match.barcode } : {}),
       ...(match.imageUrl ? { imageUrl: match.imageUrl } : {}),
+      ...(match.productSnapshot ? { productSnapshot: match.productSnapshot } : {}),
     };
   });
 }
