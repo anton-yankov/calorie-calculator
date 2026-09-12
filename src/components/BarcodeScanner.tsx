@@ -60,10 +60,21 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
       }
 
       try {
-        const { BrowserMultiFormatOneDReader } = await import("@zxing/browser");
+        const [{ BarcodeFormat, BrowserMultiFormatOneDReader }, { DecodeHintType }] =
+          await Promise.all([import("@zxing/browser"), import("@zxing/library")]);
         if (cancelled) return;
-        const reader = new BrowserMultiFormatOneDReader(undefined, {
-          delayBetweenScanAttempts: 120,
+        const hints = new Map();
+        hints.set(DecodeHintType.TRY_HARDER, true);
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+          BarcodeFormat.EAN_13,
+          BarcodeFormat.EAN_8,
+          BarcodeFormat.UPC_A,
+          BarcodeFormat.UPC_E,
+          BarcodeFormat.ITF,
+          BarcodeFormat.CODE_128,
+        ]);
+        const reader = new BrowserMultiFormatOneDReader(hints, {
+          delayBetweenScanAttempts: 180,
           delayBetweenScanSuccess: 750,
           tryPlayVideoTimeout: 5_000,
         });
@@ -178,8 +189,16 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           className="h-full w-full object-cover"
         />
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(27,26,22,0.58),transparent_24%,transparent_70%,rgba(27,26,22,0.7))]" />
-        <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-[1.75/1] w-[82%] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-panel border-2 border-foreground/85 shadow-[0_0_0_999px_rgba(27,26,22,0.28)]">
-          <span className="barcode-scan-line absolute left-[4%] top-[12%] h-0.5 w-[92%] bg-accent shadow-[0_0_16px_3px_rgba(224,138,92,0.65)]" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[min(78vw,52vh,22rem)] -translate-x-1/2 -translate-y-1/2 rounded-panel border border-white/45 shadow-[0_0_0_999px_rgba(27,26,22,0.32)]">
+          <span className="absolute left-0 top-0 h-8 w-8 rounded-tl-panel border-l-2 border-t-2 border-white" />
+          <span className="absolute right-0 top-0 h-8 w-8 rounded-tr-panel border-r-2 border-t-2 border-white" />
+          <span className="absolute bottom-0 left-0 h-8 w-8 rounded-bl-panel border-b-2 border-l-2 border-white" />
+          <span className="absolute bottom-0 right-0 h-8 w-8 rounded-br-panel border-b-2 border-r-2 border-white" />
+          <span className="barcode-scan-line-horizontal absolute left-[7%] top-1/2 h-0.5 w-[86%] -translate-y-1/2 bg-accent shadow-[0_0_16px_3px_rgba(224,138,92,0.65)]" />
+          <span className="barcode-scan-line-vertical absolute left-1/2 top-[7%] h-[86%] w-0.5 -translate-x-1/2 bg-accent/55 shadow-[0_0_14px_2px_rgba(224,138,92,0.45)]" />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/20 bg-black/45 px-3 py-1.5 text-xs font-semibold text-white/90 backdrop-blur-sm">
+            Upright or sideways
+          </div>
         </div>
         {torchAvailable && (
           <button
@@ -200,7 +219,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           </p>
         )}
         <p className="absolute bottom-5 left-0 right-0 px-5 text-center text-sm font-medium text-foreground drop-shadow">
-          Hold the code inside the frame
+          Center the barcode and hold steady
         </p>
         {cameraError && (
           <div className="absolute inset-x-5 top-5 rounded-panel border border-danger/50 bg-danger-soft/95 px-4 py-3 text-sm text-danger backdrop-blur">

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Next.js Features to Try — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 680px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; }
+  table.compact td:first-child { white-space: nowrap; }
+  table.wrap td:first-child { white-space: normal; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill {
+    font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line);
+  }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+
+  ol.fun { margin: 12px 0 8px; padding-left: 22px; }
+  ol.fun li { margin: 8px 0; }
+  ol.fun strong { display: inline; }
+
+  pre {
+    background: var(--code-bg);
+    border-radius: var(--radius);
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin: 16px 0;
+    padding: 18px 20px;
+    overflow-x: auto;
+    color: var(--ink);
+  }
+  code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  :not(pre) > code {
+    background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px;
+  }
+  pre code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 0 0 18px 52px;
+  }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+
+  @media print {
+    body { background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    pre { white-space: pre-wrap; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Learning map · Next.js</div>
+  <h1>Next.js features to try</h1>
+  <p class="subtitle">A compiled map of unused Next.js — from this calorie app, older Pages-era APIs, and Next 16.3 — so you can pick experiments that actually teach something.</p>
+  <div class="meta">
+    <span><strong>App:</strong> Next 16.3.5 · React 19.2</span>
+    <span><strong>Scope:</strong> learning, not a build plan</span>
+    <span><strong>Compiled:</strong> 12 Sep 2026</span>
+  </div>
+</header>
+
+<p class="lede">The calorie app already covers App Router, Server Components, server actions + <code>revalidatePath</code>, route-level <code>loading.tsx</code>, Route Handlers, <code>next/font</code>, <code>proxy.ts</code>, cookies, a PWA manifest, and React 19 <code>useTransition</code> / <code>useActionState</code>. Everything below is unused or only half-touched.</p>
+
+<div class="pill-row">
+  <span class="pill in">This repo</span>
+  <span class="pill in">New toys</span>
+  <span class="pill in">Career Next</span>
+  <span class="pill">16.3 experimental</span>
+  <span class="pill out">Skip for now</span>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>Fits this calorie app</h2>
+<p class="lede">Things you could try here without a new repo. Best single lesson: Instant Navigations + <code>'use cache'</code> on <code>/log</code> and <code>/stats</code>.</p>
+
+<table class="wrap">
+  <tr><th>Thing</th><th>Why it fits</th></tr>
+  <tr><td>Instant Navigations + <code>'use cache'</code></td><td>Tab switches would show nav + skeleton instantly. Enable <code>cacheComponents</code> and <code>partialPrefetching</code>. The Next 16.3 headline.</td></tr>
+  <tr><td><code>'use cache'</code> + <code>cacheLife</code> / <code>cacheTag</code></td><td>Goals and today’s totals change rarely. Cache them; invalidate on save.</td></tr>
+  <tr><td><code>updateTag</code> / <code>revalidateTag</code> / <code>refresh()</code></td><td>Finer than blanket <code>revalidatePath</code>. <code>updateTag</code> = read-your-writes; <code>revalidateTag(tag, 'max')</code> = stale-while-revalidate; <code>refresh()</code> = uncached data.</td></tr>
+  <tr><td>View Transitions</td><td>Four-tab <code>TopNav</code>. Fade pages or shared-element the calorie number in <code>TodayStrip</code>.</td></tr>
+  <tr><td><code>useOptimistic</code></td><td><code>LogList</code> / <code>ProductList</code> already wait, then toast undo. Make delete/edit instant.</td></tr>
+  <tr><td>Intercepting routes</td><td>Turn <code>ImageLightbox</code> into <code>/log/photo/[id]</code>: in-app modal, refresh = full page.</td></tr>
+  <tr><td><code>after()</code></td><td>You already persist barcode products after a log. Finish that work after the success response.</td></tr>
+  <tr><td>Explicit <code>&lt;Suspense&gt;</code></td><td>Stream <code>TodayStrip</code> separately from the heavy Analyze UI, not only via <code>loading.tsx</code>.</td></tr>
+  <tr><td><code>error.tsx</code> / <code>global-error.tsx</code></td><td><code>/log</code>, <code>/products</code>, <code>/stats</code> already have inline try/catch banners.</td></tr>
+  <tr><td><code>not-found.tsx</code> + <code>notFound()</code></td><td>Custom 404 if you add deep links.</td></tr>
+  <tr><td><code>generateMetadata</code> per route</td><td>Distinct PWA tab titles for Log / Stats / Products.</td></tr>
+  <tr><td>Form actions + <code>useFormStatus</code></td><td>Only login uses <code>&lt;form action&gt;</code>. CRUD as progressive-enhancement forms.</td></tr>
+  <tr><td><code>robots.ts</code> (disallow all)</td><td>Password gate is not a crawler block.</td></tr>
+  <tr><td>Security headers</td><td>CSP / frame protections in <code>next.config.ts</code> for a deployed PWA.</td></tr>
+</table>
+
+<div class="callout"><strong>Skip on this app:</strong> <code>next/image</code> (photos are blob/data URLs) and parallel routes for tab state (<code>AnalysisProvider</code> already keeps Analyze alive across tabs).</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Weekend toys</h2>
+<p class="lede">New repo, throw it away if ugly. High fun per hour.</p>
+
+<ol class="fun">
+  <li><strong>Intercepting + parallel routes</strong> — Instagram pattern. Click photo → modal + URL change; refresh → full page. The most Next-specific routing trick.</li>
+  <li><strong><code>next/og</code> (<code>ImageResponse</code>)</strong> — Ticket, recap, or share card as JSX → PNG.</li>
+  <li><strong>Tiny MDX blog</strong> — <code>generateStaticParams</code>, MDX in <code>/content</code>, custom <code>h2</code>. Classic for a reason.</li>
+  <li><strong>View Transitions gallery</strong> — Shared-element thumbnail → detail.</li>
+  <li><strong>Streaming UI / AI chat</strong> — Tokens into the page via <code>Suspense</code> / <code>ReadableStream</code>, not “wait for JSON then <code>setState</code>.”</li>
+  <li><strong><code>next/image</code> playground</strong> — <code>remotePatterns</code>, blur placeholder, <code>priority</code>, <code>fill</code> + art direction.</li>
+  <li><strong><code>next/form</code></strong> — Progressive enhancement: the form works before JS hydrates.</li>
+  <li><strong><code>next/script</code></strong> — <code>beforeInteractive</code> / <code>afterInteractive</code> / <code>lazyOnload</code> for a third-party widget.</li>
+</ol>
+
+<div class="callout good"><strong>One-project combo:</strong> a 12-photo gallery — intercepting modal + <code>next/image</code> + blur + <code>next/og</code> per photo + View Transitions. Four Next skills you have barely touched.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Career Next</h2>
+<p class="lede">Features interviewers and old codebases still assume. Half of real Next in the wild is still Pages Router.</p>
+
+<table class="wrap">
+  <tr><th>Thing</th><th>What you learn</th></tr>
+  <tr><td>Pages Router on purpose</td><td><code>getStaticProps</code>, <code>getServerSideProps</code>, <code>getStaticPaths</code>, <code>_app</code>, <code>_document</code>. The contrast teaches why RSC exists.</td></tr>
+  <tr><td>ISR</td><td><code>revalidate: 60</code>, change content, watch regeneration. Mental ancestor of <code>'use cache'</code> + <code>cacheLife</code>.</td></tr>
+  <tr><td>Draft Mode + CMS</td><td>Sanity / Contentful / markdown. Preview unpublished pages via a cookie. Does not work with <code>output: 'export'</code>.</td></tr>
+  <tr><td>i18n</td><td><code>[locale]</code> segment + <code>next-intl</code>. App Router has no <code>i18n</code> config key — that is Pages-only.</td></tr>
+  <tr><td>Proxy rewrites</td><td>Geo greeting, A/B cookie, <code>/blog</code> → <code>/posts</code>. You have a password proxy; this is the other half.</td></tr>
+  <tr><td><code>generateStaticParams</code> + <code>dynamicParams</code></td><td>Prebuild <code>/posts/[slug]</code>; 404 or on-demand for the rest.</td></tr>
+  <tr><td>Catch-all routes</td><td><code>[...slug]</code> and <code>[[...slug]]</code> for docs sites.</td></tr>
+  <tr><td>Route groups + multiple roots</td><td><code>(marketing)</code> vs <code>(app)</code> with different <code>&lt;html&gt;</code> chrome.</td></tr>
+  <tr><td><code>template.tsx</code></td><td>Like a layout, but remounts every navigation (enter animations, reset state).</td></tr>
+  <tr><td><code>forbidden()</code> / <code>unauthorized()</code></td><td>Next 15+ auth interrupts (<code>experimental.authInterrupts</code>). 403 / 401 files, same idea as <code>notFound()</code>.</td></tr>
+  <tr><td>Taint APIs</td><td><code>experimental.taint</code> + <code>taintObjectReference</code> / <code>taintUniqueValue</code>. Stop leaking tokens across the RSC boundary.</td></tr>
+  <tr><td><code>server-only</code> / <code>client-only</code></td><td>Compiler errors if a secret helper is imported on the wrong side.</td></tr>
+</table>
+
+<div class="card"><strong>Career combo:</strong> a tiny MDX blog with ISR and Draft Mode. That is the feature set people still assume you know.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>Caching and data, old → new</h2>
+<p class="lede">The story Next has been telling for four years, in one place. Partial prerender’s old <code>experimental.ppr</code> flag is gone — static shell + dynamic holes is what Cache Components <em>does</em>.</p>
+
+<table class="wrap">
+  <tr><th>Era</th><th>Primitive</th></tr>
+  <tr><td>Pages</td><td><code>getStaticProps</code> / <code>getServerSideProps</code> / <code>getStaticPaths</code></td></tr>
+  <tr><td>App 13–15</td><td><code>fetch</code> cache, <code>export const revalidate</code>, <code>unstable_cache</code>, <code>revalidatePath</code> / <code>revalidateTag</code></td></tr>
+  <tr><td>App 16</td><td><code>cacheComponents: true</code>, <code>'use cache'</code>, <code>'use cache: private'</code>, <code>'use cache: remote'</code></td></tr>
+  <tr><td>Lifetimes</td><td><code>cacheLife('hours')</code> or custom <code>{ stale, revalidate, expire }</code></td></tr>
+  <tr><td>Invalidation</td><td><code>cacheTag</code> + <code>updateTag</code> (immediate) vs <code>revalidateTag(tag, 'max')</code> (SWR) vs <code>refresh()</code> (uncached)</td></tr>
+  <tr><td>Storage</td><td><code>cacheHandlers</code> (plural) for <code>'use cache'</code>; <code>cacheHandler</code> (singular) for ISR + images</td></tr>
+  <tr><td>After the response</td><td><code>after()</code> — finish work once the user already has the reply</td></tr>
+  <tr><td>Force request-time</td><td><code>connection()</code> — “do not prerender this”</td></tr>
+</table>
+
+<pre><code>// The 16.3 opt-in for Instant Navigations
+const nextConfig = {
+  cacheComponents: true,
+  partialPrefetching: true,
+};</code></pre>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>Routing deep cuts</h2>
+<p class="lede">File conventions that change what the URL <em>means</em>, not just what it looks like.</p>
+
+<table class="wrap">
+  <tr><th>Pattern</th><th>Use</th></tr>
+  <tr><td>Parallel routes (<code>@slot</code>)</td><td>Independent panes (dashboard + feed). Needs <code>default.tsx</code> when a slot has no match.</td></tr>
+  <tr><td>Intercepting (<code>(.)</code> <code>(..)</code> <code>(...)</code>)</td><td>Soft-nav modal; hard-nav full page.</td></tr>
+  <tr><td>Private folders (<code>_lib</code>)</td><td>Not a route.</td></tr>
+  <tr><td><code>useSelectedLayoutSegment(s)</code></td><td>Active nav without parsing the URL by hand.</td></tr>
+  <tr><td><code>useLinkStatus</code></td><td>Pending state on a <code>&lt;Link&gt;</code> (often with <code>prefetch={false}</code>).</td></tr>
+  <tr><td><code>useRouter</code> / <code>router.refresh()</code></td><td>Client navigation + refetch RSC payload without a full reload.</td></tr>
+  <tr><td>Multi-zones</td><td>Two Next apps, one domain, <code>rewrites</code> as the glue.</td></tr>
+  <tr><td>Custom server</td><td><code>node server.js</code> in front of Next. Useful once so you know the cost.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>Images, metadata, SEO</h2>
+<p class="lede">You already have icons and <code>manifest.ts</code>. The rest of the file-based metadata API is unused.</p>
+
+<table class="wrap">
+  <tr><th>API</th><th>What it does</th></tr>
+  <tr><td><code>next/image</code></td><td>Optimization, <code>sizes</code>, blur, priority, remote patterns.</td></tr>
+  <tr><td>File metadata</td><td><code>opengraph-image.tsx</code>, <code>twitter-image.tsx</code>, <code>icon.tsx</code>, <code>apple-icon</code>.</td></tr>
+  <tr><td><code>generateMetadata</code> / <code>generateViewport</code></td><td>Dynamic titles, OG, canonical, <code>alternates.languages</code>.</td></tr>
+  <tr><td><code>sitemap.ts</code> / <code>robots.ts</code></td><td>Crawlers. <code>robots</code> disallow matters on a private app.</td></tr>
+  <tr><td><code>next/og</code></td><td>Same JSX model as OG files, as a Route Handler you call on demand.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>React 19 that Next already wires up</h2>
+<p class="lede">You have <code>useTransition</code> and <code>useActionState</code> (login only). The rest is unused.</p>
+
+<table class="wrap">
+  <tr><th>API</th><th>Why try it</th></tr>
+  <tr><td><code>useOptimistic</code></td><td>Instant UI, roll back on failure.</td></tr>
+  <tr><td><code>useFormStatus</code></td><td>Pending/disabled on native form actions.</td></tr>
+  <tr><td><code>use()</code></td><td>Pass an un-awaited Promise from a Server Component into a Client Component.</td></tr>
+  <tr><td><code>&lt;Activity&gt;</code></td><td>Hide a tab without unmounting — keep Analyze state without a context hack.</td></tr>
+  <tr><td><code>useEffectEvent</code></td><td>Event handlers that always see latest props, without re-subscribing effects.</td></tr>
+  <tr><td><code>&lt;ViewTransition&gt;</code></td><td>Route changes are already transitions; wrap pages to animate them.</td></tr>
+  <tr><td>React Compiler</td><td><code>reactCompiler: true</code> — stable, opt-in, auto-memo. Experimental Rust compiler in 16.3 if you want the sharp edge.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">08</span>Runtime, deploy, how Next ships</h2>
+<p class="lede">Learn the walls by walking into them.</p>
+
+<table class="wrap">
+  <tr><th>Setup</th><th>What you hit</th></tr>
+  <tr><td><code>output: 'export'</code></td><td>Pure static, GitHub Pages. No server actions, cookies, ISR, Draft Mode.</td></tr>
+  <tr><td><code>output: 'standalone'</code> + Docker</td><td><code>node server.js</code> in one image.</td></tr>
+  <tr><td>Build Adapters (16.2)</td><td>Cloudflare / Netlify / OpenNext with the full 16 feature set, including <code>proxy.ts</code>.</td></tr>
+  <tr><td>Edge vs Node <code>runtime</code></td><td>You already pin APIs to <code>nodejs</code>. Try Edge and hit the <code>fs</code> wall.</td></tr>
+  <tr><td>Custom <code>cacheHandlers</code></td><td>Redis/remote store so <code>'use cache'</code> survives multiple instances.</td></tr>
+  <tr><td><code>instrumentation.ts</code></td><td>Process boot: OpenTelemetry, crash reporters.</td></tr>
+  <tr><td><code>NEXT_SERVER_ACTIONS_ENCRYPTION_KEY</code></td><td>Stable key so action closures decrypt across instances.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">09</span>Devtools and experimental (16.2–16.3)</h2>
+<p class="lede">New in the line you just bumped to. Most need Cache Components.</p>
+
+<table class="wrap">
+  <tr><th>Tool</th><th>What it does</th></tr>
+  <tr><td>Navigation Inspector</td><td>Pause at the prefetched shell; see what is instant vs streamed.</td></tr>
+  <tr><td>Instant Insights</td><td>Slow navigations flagged in dev.</td></tr>
+  <tr><td><code>instant()</code> Playwright helper</td><td>Regression-test that a route stays instant.</td></tr>
+  <tr><td><code>export const instant = false</code></td><td>Opt a route out of the instant-nav check.</td></tr>
+  <tr><td>DevTools MCP</td><td><code>/_next/mcp</code> + <code>next-devtools-mcp</code> — agents read routes, errors, logs, Server Actions live.</td></tr>
+  <tr><td><code>experimental.useOffline</code></td><td>Soft navs / actions wait and retry when the network drops. <code>useOffline</code> from <code>next/offline</code>. Natural on a phone PWA.</td></tr>
+  <tr><td>Browser log forwarding</td><td>Dev-server ↔ browser loop for agents (16.2 line).</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">10</span>Special files cheat sheet</h2>
+<p class="lede">One table of the file conventions. You already ship <code>page</code>, <code>layout</code>, <code>loading</code>, <code>route</code>, <code>proxy</code>, icons, and <code>manifest</code>.</p>
+
+<table class="compact">
+  <tr><th>File</th><th>What it does</th></tr>
+  <tr><td><code>page.tsx</code></td><td>The URL</td></tr>
+  <tr><td><code>layout.tsx</code></td><td>Shared chrome; state survives navigation</td></tr>
+  <tr><td><code>template.tsx</code></td><td>Like layout, remounts every time</td></tr>
+  <tr><td><code>loading.tsx</code></td><td>Route-level Suspense fallback</td></tr>
+  <tr><td><code>error.tsx</code></td><td>Segment error boundary</td></tr>
+  <tr><td><code>global-error.tsx</code></td><td>Replaces root layout on crash</td></tr>
+  <tr><td><code>not-found.tsx</code></td><td>404</td></tr>
+  <tr><td><code>forbidden.tsx</code></td><td>403 (auth interrupts)</td></tr>
+  <tr><td><code>unauthorized.tsx</code></td><td>401 (auth interrupts)</td></tr>
+  <tr><td><code>default.tsx</code></td><td>Parallel-route fallback</td></tr>
+  <tr><td><code>route.ts</code></td><td>HTTP handler</td></tr>
+  <tr><td><code>proxy.ts</code></td><td>Request gate (was <code>middleware.ts</code>)</td></tr>
+  <tr><td><code>opengraph-image.tsx</code></td><td>File-based OG image</td></tr>
+  <tr><td><code>sitemap.ts</code> / <code>robots.ts</code></td><td>Crawlers</td></tr>
+  <tr><td><code>mdx-components.tsx</code></td><td>MDX element map</td></tr>
+  <tr><td><code>instrumentation.ts</code></td><td>Server boot</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">11</span>Suggested order</h2>
+<p class="lede">If you actually build things, do these five — not the whole list. New repo for 1 and 2; this repo for 3 and 5.</p>
+
+<figure>
+<svg viewBox="0 0 860 168" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="16" y="36" width="148" height="72" rx="10" fill="#EDEAE0"/>
+  <text x="90" y="66" text-anchor="middle" font-size="12" font-weight="700" fill="#1B1A16">1 · Gallery</text>
+  <text x="90" y="86" text-anchor="middle" font-size="11" fill="#55524A">most skills / hour</text>
+  <line x1="164" y1="72" x2="188" y2="72" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="188" y="36" width="148" height="72" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="262" y="66" text-anchor="middle" font-size="12" font-weight="700" fill="#EDEAE0">2 · MDX blog</text>
+  <text x="262" y="86" text-anchor="middle" font-size="11" fill="#A5A195">ISR + Draft Mode</text>
+  <line x1="336" y1="72" x2="360" y2="72" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="360" y="36" width="148" height="72" rx="10" fill="#3A2A20"/>
+  <text x="434" y="66" text-anchor="middle" font-size="12" font-weight="700" fill="#E08A5C">3 · Instant nav</text>
+  <text x="434" y="86" text-anchor="middle" font-size="11" fill="#E08A5C">on /log + /stats</text>
+  <line x1="508" y1="72" x2="532" y2="72" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="532" y="36" width="148" height="72" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="606" y="66" text-anchor="middle" font-size="12" font-weight="700" fill="#EDEAE0">4 · Pages clone</text>
+  <text x="606" y="86" text-anchor="middle" font-size="11" fill="#A5A195">feel the contrast</text>
+  <line x1="680" y1="72" x2="704" y2="72" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+  <rect x="704" y="36" width="140" height="72" rx="10" fill="#22312A"/>
+  <text x="774" y="66" text-anchor="middle" font-size="12" font-weight="700" fill="#7FBF92">5 · Offline</text>
+  <text x="774" y="86" text-anchor="middle" font-size="11" fill="#7FBF92">PWA banner</text>
+  <text x="430" y="148" text-anchor="middle" font-size="12" fill="#A5A195">Skip instrumentation, multi-zones, and a full auth-library rewrite.</text>
+</svg>
+<figcaption>Five experiments, in order. Inverted box is the highest-leverage toy; terracotta is the one to do on this app; green is the small phone-native closer.</figcaption>
+</figure>
+
+<ol class="steps">
+  <li>
+    <strong>Photo gallery</strong>
+    <span class="step-note">Intercept + <code>next/image</code> + <code>next/og</code> + View Transitions. New repo. Most skills per hour.</span>
+  </li>
+  <li>
+    <strong>MDX blog + ISR + Draft Mode</strong>
+    <span class="step-note">The job-interview set. New repo.</span>
+  </li>
+  <li>
+    <strong>Instant Navigations on <code>/log</code> and <code>/stats</code></strong>
+    <span class="step-note">Modern Next, on an app you already use every day.</span>
+  </li>
+  <li>
+    <strong>Pages Router clone of a tiny slice</strong>
+    <span class="step-note">So App Router stops feeling like “just how React is.”</span>
+  </li>
+  <li>
+    <strong><code>useOffline</code> banner on this PWA</strong>
+    <span class="step-note">Small, timely, phone-native. This repo.</span>
+  </li>
+</ol>
+
+<footer class="doc">
+  Calorie Calculator · Next.js learning map · compiled from chat + Next 16.x docs · 12 Sep 2026
+</footer>
+
+</div>
+</body>
+</html>
