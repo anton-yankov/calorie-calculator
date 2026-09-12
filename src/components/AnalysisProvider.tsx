@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useRef, useState } from "react";
 import { toast } from "sonner";
-import { logMealAction } from "@/app/actions";
+import { deleteMealAction, logMealAction } from "@/app/actions";
+import { waterAnalysis, withDrinkType, type DrinkType } from "@/lib/water";
 import { dayBounds, dayKey } from "@/lib/day";
 import { reattachFoodExtras, stripFoodExtras } from "@/lib/products";
 import { makeThumbnail, MEAL_PHOTO_EDGE, resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
@@ -22,6 +23,10 @@ export interface HistoryEntry {
 }
 
 interface AnalysisState {
+  quickWaterPending: boolean;
+  progressVersion: number;
+  quickAddWater: (ml: number) => Promise<void>;
+  handleDrinkTypeChange: (index: number, type: DrinkType | null) => void;
   sourceBlob: Blob | null;
   preparing: boolean;
   previewUrl: string | null;
@@ -61,6 +66,9 @@ const AnalysisContext = createContext<AnalysisState | null>(null);
  */
 export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   // The selected photo, converted to a browser-displayable format if needed (HEIC → JPEG)
+  const [progressVersion, setProgressVersion] = useState(0);
+  const quickAdding = useRef(false);
+  const [quickWaterPending, setQuickWaterPending] = useState(false);
   const [sourceBlob, setSourceBlob] = useState<Blob | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -109,6 +117,65 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setPreparing(false);
     }
+  }
+
+  async function quickAddWater(ml: number) {
+    if (quickAdding.current) return;
+    quickAdding.current = true;
+    setQuickWaterPending(true);
+    const id = crypto.randomUUID();
+    try {
+      const result = await logMealAction(
+        {
+          id,
+          loggedAt: new Date().toISOString(),
+          description: "",
+          analysis: waterAnalysis(ml),
+          thumbnail: null,
+        },
+        logDate ? dayBounds(logDate) : undefined,
+      );
+      if (result.error) throw new Error(result.error);
+      setProgressVersion((n) => n + 1);
+      toast.success(`${ml === 1000 ? "1 L" : `${ml} ml`} water logged`, {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            void deleteMealAction(id)
+              .then((result) => {
+                if (result.error) toast.error(result.error);
+                else setProgressVersion((n) => n + 1);
+              })
+              .catch(() => toast.error("Couldn't undo. Try deleting the entry from Log."));
+          },
+        },
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't log water");
+    } finally {
+      quickAdding.current = false;
+      setQuickWaterPending(false);
+    }
+  }
+
+  function handleDrinkTypeChange(index: number, type: DrinkType | null) {
+    setHistory((prev) =>
+      prev.map((entry, i) => {
+        if (i !== prev.length - 1) return entry;
+        const foods = entry.analysis.foods.map((food, j) =>
+          j === index ? withDrinkType(food, type) : food,
+        );
+        const baselineFoods = entry.baseline.foods.map((food, j) =>
+          j === index ? withDrinkType(food, type) : food,
+        );
+        return {
+          ...entry,
+          analysis: { ...entry.analysis, foods, totals: sumTotals(foods) },
+          baseline: { ...entry.baseline, foods: baselineFoods, totals: sumTotals(baselineFoods) },
+        };
+      }),
+    );
+    setLoggedAtLength(null);
   }
 
   function handleClear() {
@@ -172,6 +239,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       if (result.error) throw new Error(result.error);
       if (result.warning) toast.warning(result.warning);
       setLoggedAtLength(history.length);
+      setProgressVersion((n) => n + 1);
       setLogDateState(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save the meal");
@@ -302,6 +370,10 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   return (
     <AnalysisContext.Provider
       value={{
+        quickWaterPending,
+        progressVersion,
+        quickAddWater,
+        handleDrinkTypeChange,
         sourceBlob,
         preparing,
         previewUrl,

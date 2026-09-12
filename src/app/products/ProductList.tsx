@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteProductAction, saveProductAction } from "@/app/actions";
+import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
+import { detectDrinkType, type DrinkType } from "@/lib/water";
 import { ZoomableImage } from "@/components/ImageLightbox";
 import { ProductPhotoInput } from "@/components/ProductPhotoInput";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
@@ -95,6 +97,8 @@ const inputClass =
   "w-full rounded-panel border border-line bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none";
 
 interface Draft {
+  portionUnit: "g" | "ml";
+  drinkType: DrinkType | null;
   name: string;
   calories: string;
   protein: string;
@@ -107,6 +111,8 @@ interface Draft {
 
 function draftFrom(product: BarcodeProduct): Draft {
   return {
+    portionUnit: product.portionUnit ?? (detectDrinkType(product.name) ? "ml" : "g"),
+    drinkType: product.drinkType !== undefined ? product.drinkType : detectDrinkType(product.name),
     name: product.name,
     calories: fmt(product.per100g.calories),
     protein: fmt(product.per100g.protein_g),
@@ -184,8 +190,30 @@ function ProductEditor({
             className={`mt-1 ${inputClass}`}
           />
         </label>
+        <DrinkTypeSelect
+          value={draft.drinkType}
+          name={draft.name}
+          disabled={pending}
+          onChange={(drinkType) => setDraft((current) => ({ ...current, drinkType }))}
+        />
+        <label className="flex items-center gap-2 text-xs text-muted">
+          Nutrition basis
+          <select
+            disabled={pending}
+            value={draft.portionUnit}
+            onChange={(e) =>
+              setDraft((current) => ({ ...current, portionUnit: e.target.value as "g" | "ml" }))
+            }
+            className="rounded-md border border-line bg-background px-2 py-1.5 text-foreground"
+          >
+            <option value="g">Per 100 g</option>
+            <option value="ml">Per 100 ml</option>
+          </select>
+        </label>
         <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <legend className="mb-2 text-xs font-semibold text-muted">Per 100 g or ml</legend>
+          <legend className="mb-2 text-xs font-semibold text-muted">
+            Per 100 {draft.portionUnit}
+          </legend>
           {fields.map(([key, label, unit]) => (
             <label key={key} className="text-xs font-semibold text-muted">
               {label}
@@ -223,10 +251,11 @@ function ProductEditor({
               }
               className="min-w-0 flex-1 bg-transparent px-3 py-2 font-mono text-sm tabular-nums text-foreground focus:outline-none"
             />
-            <span className="pr-3 font-normal">g / ml</span>
+            <span className="pr-3 font-normal">{draft.portionUnit}</span>
           </span>
           <span className="mt-1 block font-normal">
-            Leave empty to start from 100 g. A whole package or one serving is usually handiest.
+            Leave empty to start from 100 {draft.portionUnit}. A whole package or one serving is
+            usually handiest.
           </span>
         </label>
         {error && <p className="text-xs text-danger">{error}</p>}
@@ -260,6 +289,8 @@ function ProductCard({ product }: { product: BarcodeProduct }) {
     startTransition(async () => {
       const result = await saveProductAction(product.barcode, {
         name: draft.name.trim(),
+        portionUnit: draft.portionUnit,
+        drinkType: draft.drinkType,
         per100g: {
           calories: Number(draft.calories),
           protein_g: Number(draft.protein),
@@ -291,6 +322,9 @@ function ProductCard({ product }: { product: BarcodeProduct }) {
           label: "Undo",
           onClick: () =>
             void saveProductAction(product.barcode, {
+              portionUnit: product.portionUnit ?? (detectDrinkType(product.name) ? "ml" : "g"),
+              drinkType:
+                product.drinkType !== undefined ? product.drinkType : detectDrinkType(product.name),
               name: product.name,
               per100g: product.per100g,
               imageUrl: product.imageUrl,
@@ -317,14 +351,17 @@ function ProductCard({ product }: { product: BarcodeProduct }) {
           </h2>
           <p className="mt-1 font-mono text-xs tabular-nums text-muted">
             {product.barcode}
-            {product.servingGrams !== null && ` · ${fmt(product.servingGrams)} g per scan`}
+            {product.servingGrams !== null &&
+              ` · ${fmt(product.servingGrams)} ${product.portionUnit ?? "g"} per scan`}
           </p>
         </div>
         <p className="shrink-0 text-right font-mono tabular-nums">
           <span className="block text-xl font-bold leading-none">
             {Math.round(product.per100g.calories)}
           </span>
-          <span className="mt-1 block text-[10px] text-muted">kcal / 100 g</span>
+          <span className="mt-1 block text-[10px] text-muted">
+            kcal / 100 {product.portionUnit ?? "g"}
+          </span>
         </p>
       </div>
 

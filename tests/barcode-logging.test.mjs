@@ -1,25 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import test from "node:test";
-import ts from "typescript";
-
-// Exercise the real TypeScript modules with isolated database/Next.js boundaries.
-function loadModule(path, mocks = {}, globals = {}) {
-  const filename = new URL(`../${path}`, import.meta.url);
-  const compiled = ts.transpileModule(readFileSync(filename, "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText;
-  const loaded = { exports: {} };
-  const require = createRequire(filename);
-  new Function("require", "module", "exports", ...Object.keys(globals), compiled)(
-    (name) => (name in mocks ? mocks[name] : require(name)),
-    loaded,
-    loaded.exports,
-    ...Object.values(globals),
-  );
-  return loaded.exports;
-}
+import { loadModule } from "./helpers/load-module.mjs";
 
 const products = loadModule("src/lib/products.ts");
 const { scaleFood } = loadModule("src/lib/scale.ts");

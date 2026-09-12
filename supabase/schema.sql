@@ -46,7 +46,8 @@ grant select, insert, update, delete on public.meals to service_role;
 create table public.settings (
   id boolean primary key default true check (id),
   calorie_goal integer not null check (calorie_goal > 0),
-  protein_goal integer check (protein_goal > 0)
+  protein_goal integer check (protein_goal > 0),
+  water_goal integer check (water_goal > 0)
 );
 
 alter table public.settings enable row level security;
@@ -63,6 +64,8 @@ create table public.barcode_products (
   carbs_per_100g double precision not null check (carbs_per_100g >= 0),
   fat_per_100g double precision not null check (fat_per_100g >= 0),
   image_url text,
+  portion_unit text check (portion_unit in ('g', 'ml')),
+  drink_type text check (drink_type in ('water', 'coffee', 'tea', 'milk', 'juice', 'soft_drink', 'smoothie', 'shake', 'alcohol', 'other')),
   -- Amount (g or ml) prefilled when the barcode is scanned; null starts at 100.
   serving_grams double precision check (serving_grams > 0),
   updated_at timestamptz not null default now()

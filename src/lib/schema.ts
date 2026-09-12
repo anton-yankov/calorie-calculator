@@ -1,3 +1,4 @@
+import { DRINK_TYPES, type DrinkType, type DrinkVolume } from "@/lib/water";
 import type { ProductSnapshot } from "@/lib/products";
 
 export type Confidence = "low" | "medium" | "high";
@@ -5,6 +6,9 @@ export type Confidence = "low" | "medium" | "high";
 export interface FoodItem {
   name: string;
   grams: number;
+  /** Absent on legacy entries; null for food, ml for drinks. */
+  volume_ml?: number | null;
+  drink_type?: DrinkType | null;
   calories: number;
   protein_g: number;
   carbs_g: number;
@@ -20,6 +24,10 @@ export interface FoodItem {
 }
 
 export interface MealTotals {
+  nutrition_logged?: boolean;
+  /** Absent means water was not tracked, not zero. */
+  water_ml?: number;
+  water_by_drink?: DrinkVolume[];
   calories: number;
   protein_g: number;
   carbs_g: number;
@@ -52,6 +60,16 @@ export const MEAL_ANALYSIS_SCHEMA = {
         properties: {
           name: { type: "string", description: "Short human-readable food name" },
           grams: { type: "number", description: "Estimated portion weight in grams" },
+          volume_ml: {
+            type: ["number", "null"],
+            description:
+              "Full consumed drink volume in ml; null for solid food, soups, sauces and ingredients used in food",
+          },
+          drink_type: {
+            type: ["string", "null"],
+            enum: [...DRINK_TYPES, null],
+            description: "Drink category; null for food",
+          },
           ...macroProps,
           confidence: {
             type: "string",
@@ -66,6 +84,8 @@ export const MEAL_ANALYSIS_SCHEMA = {
         required: [
           "name",
           "grams",
+          "volume_ml",
+          "drink_type",
           "calories",
           "protein_g",
           "carbs_g",

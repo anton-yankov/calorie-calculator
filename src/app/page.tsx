@@ -45,6 +45,9 @@ export default function Home() {
     addScannedFood,
     analyze,
     handleGramsChange,
+    handleDrinkTypeChange,
+    quickAddWater,
+    quickWaterPending,
   } = useAnalysis();
 
   const todayKey = dayKey(new Date());
@@ -73,6 +76,22 @@ export default function Home() {
       </header>
 
       <TodayStrip />
+      <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
+        <span className="mr-1 text-xs font-semibold text-muted">
+          Quick water{logDate ? ` · ${dayLabel(logDate)}` : " · today"}
+        </span>
+        {[250, 500, 1000].map((ml) => (
+          <button
+            key={ml}
+            type="button"
+            disabled={quickWaterPending}
+            onClick={() => void quickAddWater(ml)}
+            className="rounded-panel border border-line bg-surface px-3 py-2 text-sm font-semibold text-accent transition hover:border-accent disabled:opacity-40"
+          >
+            +{ml === 1000 ? "1 L" : `${ml} ml`}
+          </button>
+        ))}
+      </div>
 
       {/* Controls column — on lg it sticks below the nav while the thread scrolls */}
       <div className="flex flex-col gap-4 lg:sticky lg:top-24">
@@ -97,7 +116,11 @@ export default function Home() {
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Details, or a full meal to analyze without a photo — e.g. 2 eggs, rye toast"
+            placeholder="e.g. 2 eggs, coffee 250ml, or water 500"
+            aria-label="Food or drink description"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !loading && !preparing && !logging) void analyze();
+            }}
             className="min-w-0 flex-1 rounded-panel border border-line bg-surface py-3 pl-4 pr-11 text-sm text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none"
           />
           {description && (
@@ -112,6 +135,10 @@ export default function Home() {
             </button>
           )}
         </div>
+
+        <p className="-mt-2 text-xs text-muted">
+          Water 500 = 500 ml · water 1 = 1 L. All drinks count toward Water.
+        </p>
 
         {(!latest || sourceBlob || description.trim()) && (
           <button
@@ -174,6 +201,7 @@ export default function Home() {
                   label={label}
                   disabled={loading}
                   onGramsChange={handleGramsChange}
+                  onDrinkTypeChange={handleDrinkTypeChange}
                 />
               ) : (
                 <CompactAnalysis analysis={entry.analysis} label={label} />
@@ -234,11 +262,7 @@ export default function Home() {
                   className="flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-panel border border-success px-4 py-2.5 text-sm font-semibold text-success transition-colors hover:bg-success-soft disabled:border-line disabled:text-muted"
                 >
                   {logging && <Spinner className="h-3.5 w-3.5" />}
-                  {logging
-                    ? "Logging…"
-                    : logDate
-                      ? `Log to ${dayLabel(logDate)}`
-                      : "Log meal"}
+                  {logging ? "Logging…" : logDate ? `Log to ${dayLabel(logDate)}` : "Log meal"}
                 </button>
               </div>
             )}
@@ -248,7 +272,7 @@ export default function Home() {
               onSubmit={(correction) => analyze(correction)}
             />
             <p className="text-center text-xs text-muted">
-              Edit grams for instant recalculation, or describe what’s wrong to re-analyze.
+              Edit amounts for instant recalculation, or describe what’s wrong to re-analyze.
             </p>
           </>
         )}

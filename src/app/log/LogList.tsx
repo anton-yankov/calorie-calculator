@@ -9,6 +9,8 @@ import {
   relogMealAction,
   updateMealAction,
 } from "@/app/actions";
+import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
+import { foodAmount, foodUnit, formatWater, withDrinkType, type DrinkType } from "@/lib/water";
 import { DatePicker } from "@/components/DatePicker";
 import { GoalBars } from "@/components/GoalBars";
 import { ZoomableImage } from "@/components/ImageLightbox";
@@ -33,23 +35,26 @@ function GramsInput({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   return (
-    <input
-      type="number"
-      inputMode="numeric"
-      min={0}
-      value={draft ?? Math.round(food.grams).toString()}
-      disabled={disabled}
-      aria-label={`Grams of ${food.name}`}
-      onChange={(e) => {
-        setDraft(e.target.value);
-        const grams = Number(e.target.value);
-        if (e.target.value.trim() !== "" && Number.isFinite(grams) && grams >= 0) {
-          onChange(grams);
-        }
-      }}
-      onBlur={() => setDraft(null)}
-      className="w-14 rounded-md border border-line bg-background px-1 py-0.5 text-right font-mono text-xs tabular-nums text-foreground focus:border-accent focus:outline-none"
-    />
+    <label className="inline-flex items-center gap-1">
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        value={draft ?? Math.round(foodAmount(food)).toString()}
+        disabled={disabled}
+        aria-label={`${foodUnit(food)} of ${food.name}`}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          const grams = Number(e.target.value);
+          if (e.target.value.trim() !== "" && Number.isFinite(grams) && grams >= 0) {
+            onChange(grams);
+          }
+        }}
+        onBlur={() => setDraft(null)}
+        className="w-14 rounded-md border border-line bg-background px-1 py-0.5 text-right font-mono text-xs tabular-nums text-foreground focus:border-accent focus:outline-none"
+      />
+      {foodUnit(food)}
+    </label>
   );
 }
 
@@ -82,11 +87,22 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
   function handleGramsChange(index: number, grams: number) {
     setDraftFoods((prev) => {
       if (!prev) return prev;
-      const base = meal.analysis.foods[index];
+      const original = meal.analysis.foods[index];
+      const current = prev[index];
+      const base =
+        original && current && original.drink_type !== current.drink_type
+          ? withDrinkType(original, current.drink_type ?? null)
+          : original;
       return prev.map((f, i) =>
         i === index ? (base ? scaleFood(base, grams) : { ...f, grams }) : f,
       );
     });
+  }
+
+  function handleDrinkTypeChange(index: number, type: DrinkType | null) {
+    setDraftFoods(
+      (prev) => prev?.map((food, i) => (i === index ? withDrinkType(food, type) : food)) ?? null,
+    );
   }
 
   function handleSave() {
@@ -178,7 +194,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-panel border border-line bg-background text-lg"
               aria-hidden
             >
-              🍽
+              {foods.every((food) => food.drink_type) ? "💧" : "🍽"}
             </span>
           )}
           <span className="min-w-0 flex-1">
@@ -213,7 +229,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
           <thead>
             <tr className="text-[10px] uppercase tracking-[0.08em] text-muted">
               <th className="px-4 py-2 text-left font-semibold">Food</th>
-              <th className="px-2 py-2 text-right font-semibold">Grams</th>
+              <th className="px-2 py-2 text-right font-semibold">Amount</th>
               <th className="px-2 py-2 text-right font-semibold">kcal</th>
               <th className="px-2 py-2 text-right font-semibold">P</th>
               <th className="px-2 py-2 text-right font-semibold">C</th>
@@ -236,6 +252,16 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
                     )}
                     {food.name}
                   </span>
+                  {editing && (
+                    <div className="mt-2">
+                      <DrinkTypeSelect
+                        name={food.name}
+                        value={food.drink_type ?? null}
+                        disabled={pending}
+                        onChange={(type) => handleDrinkTypeChange(i, type)}
+                      />
+                    </div>
+                  )}
                 </td>
                 <td className="px-2 py-1.5 text-right">
                   {editing ? (
@@ -245,7 +271,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
                       onChange={(grams) => handleGramsChange(i, grams)}
                     />
                   ) : (
-                    Math.round(food.grams)
+                    `${Math.round(foodAmount(food))} ${foodUnit(food)}`
                   )}
                 </td>
                 <td className="px-2 py-1.5 text-right">{Math.round(food.calories)}</td>
@@ -257,7 +283,9 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
             <tr className="border-t border-line font-semibold text-foreground">
               <td className="px-4 py-2 font-sans text-[13px]">Total</td>
               <td className="px-2 py-2 text-right">
-                {Math.round(foods.reduce((sum, f) => sum + f.grams, 0))}
+                {foods.every((food) => food.volume_ml == null)
+                  ? `${Math.round(foods.reduce((sum, food) => sum + food.grams, 0))} g`
+                  : "—"}
               </td>
               <td className="px-2 py-2 text-right">{Math.round(totals.calories)}</td>
               <td className="px-2 py-2 text-right">{fmt(totals.protein_g)}</td>
@@ -267,6 +295,12 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
           </tbody>
         </table>
       </div>
+
+      {totals.water_ml !== undefined && (
+        <p className="border-t border-line px-4 py-2 text-xs font-semibold text-muted">
+          Water · {formatWater(totals.water_ml)}
+        </p>
+      )}
 
       {meal.description && (
         <p className="border-t border-line/60 px-4 py-2 text-xs text-muted">
@@ -380,6 +414,7 @@ export function LogList({ meals, goals }: { meals: LoggedMeal[]; goals: Goals | 
                     {" "}
                     kcal · P {fmt(totals.protein_g)} · C {fmt(totals.carbs_g)} · F{" "}
                     {fmt(totals.fat_g)}
+                    {totals.water_ml !== undefined && ` · Water ${formatWater(totals.water_ml)}`}
                   </span>
                 </span>
               </div>

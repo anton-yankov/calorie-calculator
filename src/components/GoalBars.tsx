@@ -1,5 +1,6 @@
 "use client";
 
+import { formatWater } from "@/lib/water";
 import type { MealTotals } from "@/lib/schema";
 import type { Goals } from "@/lib/settings";
 
@@ -11,13 +12,14 @@ function GoalCell({
   unit,
 }: {
   label: string;
-  value: number;
+  value: number | null;
   target: number;
   unit?: string;
 }) {
-  const pct = Math.min(100, (value / target) * 100);
+  const current = value ?? 0;
+  const pct = Math.min(100, (current / target) * 100);
   // The goal is a floor: hitting it is the win state, under it is just progress
-  const met = value >= target;
+  const met = value !== null && value >= target;
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex items-baseline justify-between gap-2">
@@ -25,14 +27,24 @@ function GoalCell({
           {label}
         </span>
         <span className="font-mono text-xs tabular-nums text-muted">
-          <span className="font-bold text-foreground">{Math.round(value)}</span> / {target}
-          {unit ? ` ${unit}` : ""}
+          <span className="font-bold text-foreground">
+            {value === null
+              ? "Not tracked"
+              : unit === "ml"
+                ? formatWater(value)
+                : Math.round(value)}
+          </span>{" "}
+          / {unit === "ml" ? formatWater(target) : target}
+          {unit && unit !== "ml" ? ` ${unit}` : ""}
         </span>
       </div>
       <div
         role="progressbar"
         aria-label={`${label} vs goal`}
-        aria-valuenow={Math.round(value)}
+        aria-valuenow={value === null ? undefined : Math.min(target, Math.round(value))}
+        aria-valuetext={
+          value === null ? "Not tracked" : `${value} of ${target} ${unit ?? "calories"}`
+        }
         aria-valuemin={0}
         aria-valuemax={target}
         className="h-1.5 overflow-hidden rounded-full bg-line/50"
@@ -53,8 +65,18 @@ function GoalCell({
  */
 export function GoalBars({ totals, goals }: { totals: MealTotals; goals: Goals }) {
   return (
-    <div className={`grid gap-x-5 ${goals.proteinGoal !== null ? "grid-cols-2" : "grid-cols-1"}`}>
+    <div
+      className={`grid gap-x-5 ${goals.waterGoal != null ? (goals.proteinGoal !== null ? "grid-cols-1 gap-y-3 sm:grid-cols-3" : "grid-cols-1 gap-y-3 sm:grid-cols-2") : goals.proteinGoal !== null ? "grid-cols-2" : "grid-cols-1"}`}
+    >
       <GoalCell label="Calories" value={totals.calories} target={goals.calorieGoal} />
+      {goals.waterGoal != null && (
+        <GoalCell
+          label="Water"
+          value={totals.water_ml ?? null}
+          target={goals.waterGoal}
+          unit="ml"
+        />
+      )}
       {goals.proteinGoal !== null && (
         <GoalCell label="Protein" value={totals.protein_g} target={goals.proteinGoal} unit="g" />
       )}

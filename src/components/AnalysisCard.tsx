@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
+import { foodAmount, foodUnit, formatWater, type DrinkType } from "@/lib/water";
 import { ZoomableImage } from "@/components/ImageLightbox";
 import type { Confidence, FoodItem, MealAnalysis } from "@/lib/schema";
 
@@ -36,12 +38,14 @@ function FoodRow({
   isNew,
   disabled,
   onGramsChange,
+  onDrinkTypeChange,
 }: {
   food: FoodItem;
   prevKcal: number | null;
   isNew: boolean;
   disabled: boolean;
   onGramsChange: (grams: number) => void;
+  onDrinkTypeChange: (type: DrinkType | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   // Local draft so the field can be empty mid-edit; null = not editing, show real grams
@@ -70,9 +74,9 @@ function FoodRow({
             type="number"
             inputMode="numeric"
             min={0}
-            value={draft ?? Math.round(food.grams).toString()}
+            value={draft ?? Math.round(foodAmount(food)).toString()}
             disabled={disabled}
-            aria-label={`Grams of ${food.name}`}
+            aria-label={`${foodUnit(food)} of ${food.name}`}
             onChange={(e) => {
               setDraft(e.target.value);
               const grams = Number(e.target.value);
@@ -83,7 +87,7 @@ function FoodRow({
             onBlur={() => setDraft(null)}
             className="w-14 rounded-md border border-line bg-background px-1 py-1 text-right font-mono text-sm tabular-nums text-foreground focus:border-accent focus:outline-none"
           />
-          g
+          {foodUnit(food)}
         </label>
       </div>
 
@@ -102,6 +106,19 @@ function FoodRow({
         </span>
       </button>
 
+      {expanded && (
+        <div className="mt-2">
+          <DrinkTypeSelect
+            value={food.drink_type ?? null}
+            name={food.name}
+            disabled={disabled}
+            onChange={onDrinkTypeChange}
+          />
+        </div>
+      )}
+      {food.volume_ml != null && (
+        <p className="mt-1 text-xs text-muted">{formatWater(food.volume_ml)} toward Water</p>
+      )}
       <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <span className="flex items-baseline gap-1.5 font-mono text-sm tabular-nums">
           <span className="font-semibold">{Math.round(food.calories)}</span>
@@ -123,6 +140,7 @@ interface AnalysisCardProps {
   label: string;
   disabled: boolean;
   onGramsChange: (foodIndex: number, grams: number) => void;
+  onDrinkTypeChange: (foodIndex: number, type: DrinkType | null) => void;
 }
 
 export function AnalysisCard({
@@ -131,6 +149,7 @@ export function AnalysisCard({
   label,
   disabled,
   onGramsChange,
+  onDrinkTypeChange,
 }: AnalysisCardProps) {
   const prevByName = new Map(previous?.foods.map((f) => [norm(f.name), f]) ?? []);
   const currentNames = new Set(analysis.foods.map((f) => norm(f.name)));
@@ -154,6 +173,7 @@ export function AnalysisCard({
             isNew={previous !== null && !prevByName.has(norm(food.name))}
             disabled={disabled}
             onGramsChange={(grams) => onGramsChange(i, grams)}
+            onDrinkTypeChange={(type) => onDrinkTypeChange(i, type)}
           />
         ))}
       </ul>
@@ -175,6 +195,12 @@ export function AnalysisCard({
           {fmt(analysis.totals.fat_g)}
         </span>
       </footer>
+
+      {analysis.totals.water_ml !== undefined && (
+        <p className="border-t border-line px-4 py-2 text-sm font-semibold">
+          Water · {formatWater(analysis.totals.water_ml)}
+        </p>
+      )}
 
       {analysis.notes && (
         <p className="border-t border-line px-4 py-2.5 text-xs text-muted">{analysis.notes}</p>
@@ -204,7 +230,7 @@ export function CompactAnalysis({ analysis, label }: { analysis: MealAnalysis; l
           >
             <span className="min-w-0 truncate">{food.name}</span>
             <span className="shrink-0 font-mono text-xs tabular-nums">
-              {Math.round(food.grams)} g · {Math.round(food.calories)} kcal
+              {Math.round(foodAmount(food))} {foodUnit(food)} · {Math.round(food.calories)} kcal
             </span>
           </li>
         ))}

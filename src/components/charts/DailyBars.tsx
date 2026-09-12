@@ -69,6 +69,7 @@ export function DailyBars({
   goal,
   mode,
   summary,
+  emptyLabel = "No meals in this range",
 }: {
   title: string;
   unit: string;
@@ -77,6 +78,7 @@ export function DailyBars({
   mode: "day" | "week";
   /** Spoken description of the chart for assistive tech */
   summary: string;
+  emptyLabel?: string;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
@@ -288,7 +290,7 @@ export function DailyBars({
                   className="font-mono tabular-nums"
                 >
                   goal {goal}
-                  {unit === "g" ? " g" : ""}
+                  {unit !== "kcal" ? ` ${unit}` : ""}
                 </text>
               </g>
             )}
@@ -345,7 +347,7 @@ export function DailyBars({
                 fontSize={13}
                 fill="var(--muted)"
               >
-                No meals in this range
+                {emptyLabel}
               </text>
             )}
 
@@ -381,7 +383,7 @@ export function DailyBars({
             <div className="text-muted">{current.label}</div>
             <div className="font-mono tabular-nums">
               {current.value === null ? (
-                <span className="text-muted">no meals</span>
+                <span className="text-muted">{unit === "ml" ? "not tracked" : "no meals"}</span>
               ) : (
                 <>
                   <span className="text-sm font-bold text-foreground">

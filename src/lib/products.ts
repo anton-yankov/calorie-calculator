@@ -1,3 +1,4 @@
+import { detectDrinkType, type DrinkType } from "@/lib/water";
 import type { FoodItem } from "@/lib/schema";
 
 export interface ProductNutrition {
@@ -59,12 +60,17 @@ export function submittedNutrition(value: unknown): ProductNutrition | null {
 }
 
 export interface ProductSnapshot {
+  /** Historical per100g/servingGrams names; their basis is portionUnit. */
+  portionUnit?: "g" | "ml";
+  drinkType?: DrinkType | null;
   name: string;
   per100g: ProductNutrition;
   servingGrams: number | null;
 }
 
 export interface BarcodeProduct {
+  portionUnit?: "g" | "ml";
+  drinkType?: DrinkType | null;
   barcode: string;
   name: string;
   brand: string;
@@ -94,23 +100,30 @@ export function barcodeProductToFood(
   imageUrl: string | null = null,
 ): FoodItem {
   const ratio = grams / 100;
+  const drinkType =
+    product.drinkType !== undefined ? product.drinkType : detectDrinkType(product.name);
+  const unit = product.portionUnit ?? (drinkType ? "ml" : "g");
   return {
     name: productName(product),
-    grams,
+    grams: unit === "ml" && drinkType ? 0 : grams,
+    volume_ml: drinkType ? grams : null,
+    drink_type: drinkType,
     calories: product.per100g.calories * ratio,
     protein_g: product.per100g.protein_g * ratio,
     carbs_g: product.per100g.carbs_g * ratio,
     fat_g: product.per100g.fat_g * ratio,
-    confidence: "high",
+    confidence: drinkType && unit === "g" ? "medium" : "high",
     assumptions:
-      product.source === "saved"
+      (drinkType && unit === "g" ? "Volume estimated at 1 ml per gram; adjust if needed. " : "") +
+      (product.source === "saved"
         ? `Barcode ${product.barcode}; nutrition from Products.`
-        : `Barcode ${product.barcode}; nutrition per 100 g from Open Food Facts.`,
+        : `Barcode ${product.barcode}; nutrition per 100 ${unit} from Open Food Facts.`),
     barcode: product.barcode,
     productSnapshot: {
       name: productName(product),
       per100g: { ...product.per100g },
       servingGrams: product.servingGrams,
+      ...(product.portionUnit ? { portionUnit: unit, drinkType } : {}),
     },
     ...(imageUrl ? { imageUrl } : {}),
   };
@@ -122,23 +135,35 @@ export function manualProductToFood(
   per100g: ProductNutrition,
   barcode?: string,
   imageUrl: string | null = null,
+  portionUnit?: "g" | "ml",
+  drinkType: DrinkType | null = detectDrinkType(name),
 ): FoodItem {
   const ratio = grams / 100;
+  const unit = portionUnit ?? (drinkType ? "ml" : "g");
   return {
     name: name.trim(),
-    grams,
+    grams: unit === "ml" && drinkType ? 0 : grams,
+    volume_ml: drinkType ? grams : null,
+    drink_type: drinkType,
     calories: per100g.calories * ratio,
     protein_g: per100g.protein_g * ratio,
     carbs_g: per100g.carbs_g * ratio,
     fat_g: per100g.fat_g * ratio,
-    confidence: "high",
-    assumptions: barcode
-      ? `Nutrition entered manually for barcode ${barcode}.`
-      : "Nutrition entered manually per 100 g.",
+    confidence: drinkType && unit === "g" ? "medium" : "high",
+    assumptions:
+      (drinkType && unit === "g" ? "Volume estimated at 1 ml per gram; adjust if needed. " : "") +
+      (barcode
+        ? `Nutrition entered manually per 100 ${unit} for barcode ${barcode}.`
+        : `Nutrition entered manually per 100 ${unit}.`),
     ...(barcode
       ? {
           barcode,
-          productSnapshot: { name: name.trim(), per100g: { ...per100g }, servingGrams: grams },
+          productSnapshot: {
+            name: name.trim(),
+            per100g: { ...per100g },
+            servingGrams: grams,
+            ...(portionUnit ? { portionUnit: unit, drinkType } : {}),
+          },
         }
       : {}),
     ...(imageUrl ? { imageUrl } : {}),

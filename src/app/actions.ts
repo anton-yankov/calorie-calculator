@@ -29,6 +29,8 @@ import {
   type ProductNutrition,
 } from "@/lib/products";
 import type { FoodItem, MealAnalysis, MealTotals } from "@/lib/schema";
+import { sumTotals } from "@/lib/scale";
+import { isDrinkType, type DrinkType } from "@/lib/water";
 import { getGoals, saveGoals, type Goals } from "@/lib/settings";
 
 /**
@@ -50,6 +52,25 @@ export interface ActionResult {
 /** The optional client-side fields on a food: a barcode and a small JPEG copy of its image. */
 function isValidFood(food: FoodItem): boolean {
   if (typeof food !== "object" || food === null) return false;
+  if (
+    typeof food.name !== "string" ||
+    !food.name.trim() ||
+    !Number.isFinite(food.grams) ||
+    food.grams < 0 ||
+    !submittedNutrition(food)
+  )
+    return false;
+  if (food.volume_ml !== undefined || food.drink_type !== undefined) {
+    if (food.volume_ml === null) {
+      if (food.drink_type !== null) return false;
+    } else if (
+      typeof food.volume_ml !== "number" ||
+      !Number.isFinite(food.volume_ml) ||
+      food.volume_ml < 0 ||
+      !isDrinkType(food.drink_type)
+    )
+      return false;
+  }
   if (food.barcode !== undefined && !BARCODE_PATTERN.test(String(food.barcode))) return false;
   if (food.imageUrl !== undefined && !isJpegDataUrl(food.imageUrl, MAX_FOOD_IMAGE_LENGTH)) {
     return false;
@@ -62,6 +83,10 @@ function isValidFood(food: FoodItem): boolean {
       typeof product.name !== "string" ||
       !product.name.trim() ||
       !submittedNutrition(product.per100g) ||
+      (product.portionUnit !== undefined &&
+        product.portionUnit !== "g" &&
+        product.portionUnit !== "ml") ||
+      (product.drinkType != null && !isDrinkType(product.drinkType)) ||
       submittedServingGrams(product.servingGrams) === undefined
     )
       return false;
@@ -142,6 +167,7 @@ export async function logMealAction(
       return { error: message(err, "Couldn't save the meal") };
     }
   }
+  meal = { ...meal, analysis: { ...meal.analysis, totals: sumTotals(meal.analysis.foods) } };
   try {
     await insertMeals([meal]);
   } catch (err) {
@@ -177,7 +203,10 @@ export async function updateMealAction(
     return { error: "Invalid meal data" };
   }
   try {
-    await updateMealById(id, patch);
+    await updateMealById(id, {
+      ...patch,
+      analysis: { ...patch.analysis, totals: sumTotals(patch.analysis.foods) },
+    });
   } catch (err) {
     return { error: message(err, "Couldn't update the meal") };
   }
@@ -243,10 +272,13 @@ export async function saveGoalsAction(goals: Goals): Promise<ActionResult> {
     goals.calorieGoal > 0;
   const proteinOk =
     goals?.proteinGoal === null || (Number.isFinite(goals?.proteinGoal) && goals.proteinGoal! > 0);
-  if (!calorieOk || !proteinOk) return { error: "Invalid goals" };
+  const waterOk =
+    goals?.waterGoal === null || (Number.isFinite(goals?.waterGoal) && goals.waterGoal! >= 1);
+  if (!calorieOk || !proteinOk || !waterOk) return { error: "Invalid goals" };
   try {
     await saveGoals({
       calorieGoal: Math.round(goals.calorieGoal),
+      waterGoal: goals.waterGoal === null ? null : Math.round(goals.waterGoal),
       proteinGoal: goals.proteinGoal === null ? null : Math.round(goals.proteinGoal),
     });
   } catch (err) {
@@ -288,6 +320,8 @@ export async function todayProgressAction(
 }
 
 export interface ProductFields {
+  portionUnit?: "g" | "ml";
+  drinkType?: DrinkType | null;
   name: string;
   per100g: ProductNutrition;
   imageUrl: string | null;
@@ -312,11 +346,28 @@ export async function saveProductAction(
   const per100g = submittedNutrition(fields?.per100g);
   const imageUrl = submittedProductImage(fields?.imageUrl);
   const servingGrams = submittedServingGrams(fields?.servingGrams);
-  if (!name || !per100g || imageUrl === undefined || servingGrams === undefined) {
+  if (
+    !name ||
+    !per100g ||
+    imageUrl === undefined ||
+    servingGrams === undefined ||
+    (fields.portionUnit !== undefined &&
+      fields.portionUnit !== "g" &&
+      fields.portionUnit !== "ml") ||
+    (fields.drinkType != null && !isDrinkType(fields.drinkType))
+  ) {
     return { error: "Enter a product name and all four nutrition values per 100 g or ml" };
   }
   try {
-    await saveBarcodeProduct(barcode, name, per100g, imageUrl, servingGrams);
+    await saveBarcodeProduct(
+      barcode,
+      name,
+      per100g,
+      imageUrl,
+      servingGrams,
+      fields.portionUnit,
+      fields.drinkType,
+    );
   } catch (err) {
     return { error: message(err, "Couldn't save the product") };
   }

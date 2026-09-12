@@ -4,12 +4,14 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { saveGoalsAction } from "@/app/actions";
 import { Spinner } from "@/components/loaders";
+import { formatWater } from "@/lib/water";
 import type { Goals } from "@/lib/settings";
 
 /** Inline daily-goal editor in the log header — no settings page needed. */
 export function GoalsEditor({ goals }: { goals: Goals | null }) {
   const [open, setOpen] = useState(false);
   const [calories, setCalories] = useState(goals?.calorieGoal.toString() ?? "");
+  const [water, setWater] = useState(goals?.waterGoal?.toString() ?? "");
   const [protein, setProtein] = useState(goals?.proteinGoal?.toString() ?? "");
   const [pending, startTransition] = useTransition();
 
@@ -24,9 +26,15 @@ export function GoalsEditor({ goals }: { goals: Goals | null }) {
       toast.error("The protein goal must be a positive number");
       return;
     }
+    const waterMl = water.trim() === "" ? null : Number(water);
+    if (waterMl !== null && (!Number.isFinite(waterMl) || waterMl < 1)) {
+      toast.error("Enter a positive water goal in ml");
+      return;
+    }
     startTransition(async () => {
       const result = await saveGoalsAction({
         calorieGoal: Math.round(cal),
+        waterGoal: waterMl === null ? null : Math.round(waterMl),
         proteinGoal: prot === null ? null : Math.round(prot),
       });
       if (result.error) {
@@ -48,7 +56,7 @@ export function GoalsEditor({ goals }: { goals: Goals | null }) {
         {goals
           ? `Goals: ${goals.calorieGoal} kcal${
               goals.proteinGoal !== null ? ` · ${goals.proteinGoal} g protein` : ""
-            } — edit`
+            }${goals.waterGoal != null ? ` · ${formatWater(goals.waterGoal)} water` : ""} — edit`
           : "Set daily goals"}
       </button>
     );
@@ -80,6 +88,20 @@ export function GoalsEditor({ goals }: { goals: Goals | null }) {
           value={protein}
           disabled={pending}
           onChange={(e) => setProtein(e.target.value)}
+          className={inputClass}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-muted">
+        Water ml (optional)
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          step={100}
+          placeholder="e.g. 2000"
+          value={water}
+          disabled={pending}
+          onChange={(e) => setWater(e.target.value)}
           className={inputClass}
         />
       </label>

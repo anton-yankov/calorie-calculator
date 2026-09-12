@@ -1,3 +1,4 @@
+import { detectDrinkType, type DrinkType } from "@/lib/water";
 import type { FoodItem } from "@/lib/schema";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
 import { connection } from "next/server";
@@ -6,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 /** Server-side data layer for saved barcode products. */
 
 interface BarcodeProductRow {
+  portion_unit?: "g" | "ml" | null;
+  drink_type?: DrinkType | null;
   barcode: string;
   name: string;
   calories_per_100g: number;
@@ -27,12 +30,13 @@ const BASE_COLUMNS =
  * the SQL.
  */
 const COLUMN_SETS = [
+  `${BASE_COLUMNS}, image_url, serving_grams, portion_unit, drink_type`,
   `${BASE_COLUMNS}, image_url, serving_grams`,
   `${BASE_COLUMNS}, image_url`,
   BASE_COLUMNS,
 ];
 
-const OPTIONAL_COLUMNS = ["image_url", "serving_grams"];
+const OPTIONAL_COLUMNS = ["image_url", "serving_grams", "portion_unit", "drink_type"];
 
 interface QueryResult {
   data: unknown;
@@ -59,6 +63,8 @@ async function withColumnFallback<T>(
 
 function toProduct(row: BarcodeProductRow): BarcodeProduct {
   return {
+    portionUnit: row.portion_unit ?? (detectDrinkType(row.name) ? "ml" : "g"),
+    drinkType: row.portion_unit ? (row.drink_type ?? null) : detectDrinkType(row.name),
     barcode: row.barcode,
     name: row.name,
     brand: "",
@@ -89,10 +95,14 @@ export async function saveBarcodeProduct(
   per100g: ProductNutrition,
   imageUrl: string | null,
   servingGrams: number | null,
+  portionUnit: "g" | "ml" = "g",
+  drinkType: DrinkType | null = null,
 ): Promise<BarcodeProduct> {
   const row: BarcodeProductRow = {
     barcode,
     name,
+    portion_unit: portionUnit,
+    drink_type: drinkType,
     calories_per_100g: per100g.calories,
     protein_per_100g: per100g.protein_g,
     carbs_per_100g: per100g.carbs_g,
@@ -133,6 +143,8 @@ export async function saveLoggedBarcodeProducts(foods: readonly FoodItem[]): Pro
     const product = food.productSnapshot;
     rows.set(food.barcode, {
       barcode: food.barcode,
+      portion_unit: product.portionUnit ?? (food.drink_type ? "ml" : "g"),
+      drink_type: product.drinkType !== undefined ? product.drinkType : (food.drink_type ?? null),
       name: product.name.trim(),
       calories_per_100g: product.per100g.calories,
       protein_per_100g: product.per100g.protein_g,

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
+import { detectDrinkType, formatWater, type DrinkType } from "@/lib/water";
 import { BarcodeScanner } from "@/components/BarcodeScanner";
 import { ZoomableImage } from "@/components/ImageLightbox";
 import { Spinner } from "@/components/loaders";
@@ -46,6 +48,10 @@ function ManualNutrition({
   onCancel: () => void;
 }) {
   const [name, setName] = useState(initialName);
+  const [drinkOverride, setDrinkOverride] = useState<DrinkType | null | undefined>(undefined);
+  const drinkType = drinkOverride === undefined ? detectDrinkType(name) : drinkOverride;
+  const [unitOverride, setUnitOverride] = useState<"g" | "ml" | null>(null);
+  const unit = unitOverride ?? (drinkType ? "ml" : "g");
   const [grams, setGrams] = useState("100");
   const [nutrition, setNutrition] = useState({ calories: "", protein: "", carbs: "", fat: "" });
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -75,7 +81,15 @@ function ManualNutrition({
     setError(null);
     try {
       await onAdd(
-        manualProductToFood(name, portion, per100g, barcode, await foodImageFrom(imageUrl)),
+        manualProductToFood(
+          name,
+          portion,
+          per100g,
+          barcode,
+          await foodImageFrom(imageUrl),
+          unit,
+          drinkType,
+        ),
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save this barcode.");
@@ -92,6 +106,8 @@ function ManualNutrition({
   ] as const;
 
   function applyLabel(result: NutritionLabelAnalysis) {
+    if (result.basis === "per_100_ml") setUnitOverride("ml");
+    if (result.basis === "per_100_g") setUnitOverride("g");
     if (!name.trim() && result.productName.trim()) setName(result.productName.trim());
     setNutrition((current) => ({
       calories: result.calories === null ? current.calories : String(result.calories),
@@ -132,10 +148,29 @@ function ManualNutrition({
           className="mt-1 w-full rounded-panel border border-line bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
         />
       </label>
+      <div className="mb-3 space-y-2">
+        <DrinkTypeSelect
+          value={drinkType}
+          name={name || "product"}
+          onChange={setDrinkOverride}
+          disabled={saving}
+        />
+        <label className="flex items-center gap-2 text-xs text-muted">
+          Nutrition basis
+          <select
+            value={unit}
+            onChange={(e) => setUnitOverride(e.target.value as "g" | "ml")}
+            className="rounded-md border border-line bg-background px-2 py-1.5 text-foreground"
+          >
+            <option value="g">Per 100 g</option>
+            <option value="ml">Per 100 ml</option>
+          </select>
+        </label>
+      </div>
       <div className="grid grid-cols-2 gap-2">
-        {nutritionFields.map(([key, label, unit]) => (
+        {nutritionFields.map(([key, label, macroUnit]) => (
           <label key={key} className="text-xs font-semibold text-muted">
-            {label} / 100 g or ml
+            {label} / 100 {unit}
             <span className="mt-1 flex items-center rounded-panel border border-line bg-background focus-within:border-accent">
               <input
                 type="number"
@@ -148,13 +183,13 @@ function ManualNutrition({
                 }
                 className="min-w-0 flex-1 bg-transparent px-3 py-2 font-mono text-sm text-foreground focus:outline-none"
               />
-              <span className="pr-3 font-normal">{unit}</span>
+              <span className="pr-3 font-normal">{macroUnit}</span>
             </span>
           </label>
         ))}
       </div>
       <label className="mt-3 block text-xs font-semibold text-muted">
-        Amount eaten
+        Amount consumed
         <span className="mt-1 flex items-center rounded-panel border border-line bg-background focus-within:border-accent">
           <input
             type="number"
@@ -165,7 +200,7 @@ function ManualNutrition({
             onChange={(event) => setGrams(event.target.value)}
             className="min-w-0 flex-1 bg-transparent px-3 py-2 font-mono text-sm text-foreground focus:outline-none"
           />
-          <span className="pr-3 font-normal">g / ml</span>
+          <span className="pr-3 font-normal">{unit}</span>
         </span>
       </label>
       <p className="mt-1 text-[10px] text-muted">
@@ -203,6 +238,10 @@ function ProductConfirmation({
   onCancel: () => void;
 }) {
   const [grams, setGrams] = useState(String(product.servingGrams ?? 100));
+  const [drinkType, setDrinkType] = useState<DrinkType | null>(
+    product.drinkType !== undefined ? product.drinkType : detectDrinkType(product.name),
+  );
+  const unit = product.portionUnit ?? (drinkType ? "ml" : "g");
   const [adding, setAdding] = useState(false);
   const portion = Number(grams);
   const ratio = Number.isFinite(portion) && portion > 0 ? portion / 100 : 0;
@@ -210,7 +249,13 @@ function ProductConfirmation({
   async function add() {
     setAdding(true);
     try {
-      onAdd(barcodeProductToFood(product, portion, await foodImageFrom(product.imageUrl)));
+      onAdd(
+        barcodeProductToFood(
+          { ...product, drinkType, portionUnit: unit },
+          portion,
+          await foodImageFrom(product.imageUrl),
+        ),
+      );
     } finally {
       setAdding(false);
     }
@@ -239,13 +284,21 @@ function ProductConfirmation({
           </p>
           <p className="mt-2 font-mono text-xs tabular-nums text-muted">
             {fmt(product.per100g.calories)} kcal · P {fmt(product.per100g.protein_g)} · C{" "}
-            {fmt(product.per100g.carbs_g)} · F {fmt(product.per100g.fat_g)} / 100 g/ml
+            {fmt(product.per100g.carbs_g)} · F {fmt(product.per100g.fat_g)} / 100 {unit}
           </p>
         </div>
       </div>
       <div className="border-t border-line px-4 py-3">
+        <div className="mb-3">
+          <DrinkTypeSelect
+            value={drinkType}
+            name={product.name}
+            onChange={setDrinkType}
+            disabled={adding}
+          />
+        </div>
         <label className="flex items-center justify-between gap-3 text-sm font-semibold">
-          Amount eaten
+          Amount consumed
           <span className="flex items-center rounded-md border border-line bg-background focus-within:border-accent">
             <input
               type="number"
@@ -256,11 +309,14 @@ function ProductConfirmation({
               onChange={(event) => setGrams(event.target.value)}
               className="w-20 bg-transparent px-2 py-1.5 text-right font-mono tabular-nums focus:outline-none"
             />
-            <span className="pr-2 text-xs text-muted">g</span>
+            <span className="pr-2 text-xs text-muted">{unit}</span>
           </span>
         </label>
         <p className="mt-2 text-right font-mono text-xs text-muted">
           {Math.round(product.per100g.calories * ratio)} kcal for this amount
+          {drinkType &&
+            ratio > 0 &&
+            ` · ${formatWater(portion)} toward Water${unit === "g" ? " (estimated)" : ""}`}
         </p>
       </div>
       <div className="flex gap-2 border-t border-line p-3">

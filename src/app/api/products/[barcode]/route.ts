@@ -1,3 +1,4 @@
+import { detectDrinkType, isDrinkType } from "@/lib/water";
 import { getSavedBarcodeProduct, saveBarcodeProduct } from "@/lib/barcode-products";
 import {
   BARCODE_PATTERN,
@@ -11,6 +12,7 @@ import {
 export const runtime = "nodejs";
 
 const PRODUCT_FIELDS = [
+  "categories_tags",
   "code",
   "product_name",
   "product_name_en",
@@ -28,6 +30,7 @@ const PRODUCT_FIELDS = [
 const MAX_CATALOG_IMAGE_BYTES = 200_000;
 
 interface OpenFoodFactsProduct {
+  categories_tags?: string[];
   code?: unknown;
   product_name?: unknown;
   product_name_en?: unknown;
@@ -70,6 +73,8 @@ interface OpenFoodFactsResponse {
 }
 
 interface SaveProductBody {
+  portionUnit?: unknown;
+  drinkType?: unknown;
   name?: unknown;
   per100g?: unknown;
   imageUrl?: unknown;
@@ -106,6 +111,8 @@ function amount(quantity: unknown, unit: unknown): number | null {
   const value = finite(quantity);
   if (value === null || value <= 0) return null;
   const normalized = text(unit).toLowerCase();
+  if (normalized === "l" || normalized === "kg") return value * 1000;
+  if (normalized === "cl") return value * 10;
   return normalized === "" || normalized === "g" || normalized === "ml" ? value : null;
 }
 
@@ -194,7 +201,13 @@ export async function GET(_request: Request, context: { params: Promise<{ barcod
     );
   }
 
+  const categories = source.categories_tags ?? [];
+  const drinkType = detectDrinkType(name) ?? (categories.includes("en:beverages") ? "other" : null);
+  const catalogUnit = text(source.serving_quantity_unit) || text(source.product_quantity_unit);
+  const portionUnit = /^(ml|cl|l)$/i.test(catalogUnit) || (!catalogUnit && drinkType) ? "ml" : "g";
   const product: BarcodeProduct = {
+    portionUnit,
+    drinkType,
     barcode: text(source.code) || barcode,
     name,
     brand: text(source.brands),
@@ -226,7 +239,14 @@ export async function POST(request: Request, context: { params: Promise<{ barcod
   const imageUrl = body.imageUrl === undefined ? null : submittedProductImage(body.imageUrl);
   const per100g = submittedNutrition(body?.per100g);
   const servingGrams = submittedServingGrams(body.servingGrams);
-  if (!name || imageUrl === undefined || !per100g || servingGrams === undefined) {
+  if (
+    !name ||
+    imageUrl === undefined ||
+    !per100g ||
+    servingGrams === undefined ||
+    (body.portionUnit !== undefined && body.portionUnit !== "g" && body.portionUnit !== "ml") ||
+    (body.drinkType != null && !isDrinkType(body.drinkType))
+  ) {
     return Response.json(
       { error: "Enter a product name and all four nutrition values per 100 g or ml." },
       { status: 400 },
@@ -234,7 +254,15 @@ export async function POST(request: Request, context: { params: Promise<{ barcod
   }
 
   try {
-    const product = await saveBarcodeProduct(barcode, name, per100g, imageUrl, servingGrams);
+    const product = await saveBarcodeProduct(
+      barcode,
+      name,
+      per100g,
+      imageUrl,
+      servingGrams,
+      body.portionUnit as "g" | "ml" | undefined,
+      body.drinkType as import("@/lib/water").DrinkType | null | undefined,
+    );
     return Response.json(product, {
       status: 201,
       headers: { "Cache-Control": "private, no-store" },

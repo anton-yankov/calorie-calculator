@@ -25,6 +25,7 @@ const MAX_DAILY_BARS = 31;
 export interface DayStat {
   day: string;
   meals: number;
+  nutritionMeals: number;
   totals: MealTotals;
 }
 
@@ -52,6 +53,9 @@ export interface Summary {
   completeDays: number;
   avgCalories: number | null;
   avgProtein: number | null;
+  avgWater: number | null;
+  waterGoalDays: number | null;
+  waterCompleteDays: number;
   /** Complete days whose calories reached the goal; null without a goal */
   calorieGoalDays: number | null;
   proteinGoalDays: number | null;
@@ -65,6 +69,7 @@ export interface RangeStats {
   mode: "day" | "week";
   buckets: Bucket[];
   summary: Summary;
+  waterByDrink: NonNullable<MealTotals["water_by_drink"]>;
 }
 
 export function groupByDay(rows: MealTotalRow[]): Map<string, DayStat> {
@@ -75,8 +80,18 @@ export function groupByDay(rows: MealTotalRow[]): Map<string, DayStat> {
     days.set(
       key,
       prev
-        ? { day: key, meals: prev.meals + 1, totals: sumTotals([prev.totals, row.totals]) }
-        : { day: key, meals: 1, totals: row.totals },
+        ? {
+            day: key,
+            meals: prev.meals + 1,
+            nutritionMeals: prev.nutritionMeals + (row.nutritionLogged === false ? 0 : 1),
+            totals: sumTotals([prev.totals, row.totals]),
+          }
+        : {
+            day: key,
+            meals: 1,
+            nutritionMeals: row.nutritionLogged === false ? 0 : 1,
+            totals: row.totals,
+          },
     );
   }
   return days;
@@ -114,20 +129,34 @@ function weekBuckets(keys: string[], days: Map<string, DayStat>, today: string):
   return [...weeks.entries()].map(([week, weekKeys]) => {
     // Today is excluded from the week's average — it's still being eaten
     const complete = weekKeys.filter((k) => k !== today).flatMap((k) => days.get(k) ?? []);
-    const n = complete.length;
-    const sum = sumTotals(complete.map((d) => d.totals));
+    const nutrition = complete.filter((d) => d.nutritionMeals > 0);
+    const n = nutrition.length;
+    const sum = sumTotals(nutrition.map((d) => d.totals));
+    const waterDays = complete.filter((d) => d.totals.water_ml !== undefined);
+    const waterSum = sumTotals(waterDays.map((d) => d.totals));
     return {
       key: week,
       label: `Week of ${shortDate(week)} · ${plural(n, "logged day")}`,
       short: `Wk ${shortDate(week)}`,
-      value: n
-        ? {
-            calories: sum.calories / n,
-            protein_g: sum.protein_g / n,
-            carbs_g: sum.carbs_g / n,
-            fat_g: sum.fat_g / n,
-          }
-        : null,
+      value:
+        n || waterDays.length
+          ? {
+              nutrition_logged: n > 0,
+              ...(waterDays.length
+                ? {
+                    water_ml: (waterSum.water_ml ?? 0) / waterDays.length,
+                    water_by_drink: waterSum.water_by_drink?.map((drink) => ({
+                      ...drink,
+                      ml: drink.ml / waterDays.length,
+                    })),
+                  }
+                : {}),
+              calories: n ? sum.calories / n : 0,
+              protein_g: n ? sum.protein_g / n : 0,
+              carbs_g: n ? sum.carbs_g / n : 0,
+              fat_g: n ? sum.fat_g / n : 0,
+            }
+          : null,
       meals: weekKeys.reduce((total, k) => total + (days.get(k)?.meals ?? 0), 0),
       loggedDays: n,
       partial: weekKeys.includes(today),
@@ -159,7 +188,8 @@ export function computeRange(
     mode === "day" ? keys.map((k) => dayBucket(k, days, today)) : weekBuckets(keys, days, today);
 
   const logged = keys.flatMap((k) => days.get(k) ?? []);
-  const complete = logged.filter((d) => d.day !== today);
+  const complete = logged.filter((d) => d.day !== today && d.nutritionMeals > 0);
+  const waterComplete = logged.filter((d) => d.day !== today && d.totals.water_ml !== undefined);
   const calories = complete.map((d) => d.totals.calories);
   const best = complete.reduce<Summary["best"]>(
     (acc, d) =>
@@ -172,12 +202,19 @@ export function computeRange(
     end: today,
     mode,
     buckets,
+    waterByDrink: sumTotals(logged.map((d) => d.totals)).water_by_drink ?? [],
     summary: {
       calendarDays: keys.length,
       loggedDays: logged.length,
       completeDays: complete.length,
       avgCalories: mean(calories),
       avgProtein: mean(complete.map((d) => d.totals.protein_g)),
+      avgWater: mean(waterComplete.map((d) => d.totals.water_ml!)),
+      waterCompleteDays: waterComplete.length,
+      waterGoalDays:
+        goals?.waterGoal != null
+          ? waterComplete.filter((d) => d.totals.water_ml! >= goals.waterGoal!).length
+          : null,
       // Goals are floors here, matching GoalBars: reaching the number is the win
       calorieGoalDays: goals
         ? complete.filter((d) => d.totals.calories >= goals.calorieGoal).length

@@ -1,3 +1,5 @@
+import { normalizeDrinkDescription, parseWater } from "@/lib/water";
+import { sumTotals } from "@/lib/scale";
 import OpenAI from "openai";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
 import { MEAL_ANALYSIS_SCHEMA, type MealAnalysis } from "@/lib/schema";
@@ -25,21 +27,28 @@ Rules:
   omitting them.
 - State your key assumptions per item; mark confidence "low" when the
   photo is ambiguous.
+- Identify drinks automatically. Every consumed drink (including coffee, tea,
+  milk, juice, soft drinks, alcohol, smoothies and shakes) counts at its FULL
+  volume toward the water goal. Set volume_ml and drink_type for drinks.
+- For foods, soups, sauces, oils, and liquid ingredients used in food, set
+  volume_ml and drink_type to null. Do not count milk in porridge as a drink.
+- Keep drink calories and macros, including additions such as sugar or milk.
+  Represent a finished drink as ONE item with its final volume and nutrition;
+  never double-count additions as separate drink volumes.
+- Explicit ml/L units always win. Bare drink amounts > 0 and <= 5 mean litres;
+  amounts >= 50 mean ml. Never silently guess units for values between 5 and 50.
+  When no amount is given, estimate a typical serving and state it clearly.
+- For photos, estimate consumed drink volume from the glass/package, mark
+  uncertainty and state the assumed serving. Weight and volume are separate.
+- Keep specific drink names (e.g. oat milk latte) and choose the matching category.
 - totals must be the sums of the per-food values.`;
 
 export async function POST(req: Request): Promise<Response> {
-  if (!process.env.OPENAI_API_KEY) {
-    return Response.json(
-      { error: "OPENAI_API_KEY is not set. Add it to .env.local and restart the dev server." },
-      { status: 500 },
-    );
-  }
-
   const form = await req.formData();
   const image = form.get("image");
-  const description = form.get("description");
+  let description = form.get("description");
   const previousResult = form.get("previousResult");
-  const correction = form.get("correction");
+  let correction = form.get("correction");
 
   const hasDescription = typeof description === "string" && description.trim().length > 0;
   const hasCorrection =
@@ -49,6 +58,27 @@ export async function POST(req: Request): Promise<Response> {
   // Text-only and correction-only analysis are allowed — but there must be something to analyze
   if (!(image instanceof File) && !hasDescription && !hasCorrection) {
     return Response.json({ error: "Provide a photo or a description." }, { status: 400 });
+  }
+
+  if (!(image instanceof File) && !hasCorrection && typeof description === "string") {
+    const water = parseWater(description);
+    if (water) return Response.json(water, { status: "error" in water ? 400 : 200 });
+  }
+  if (typeof description === "string" && !hasCorrection) {
+    const normalized = normalizeDrinkDescription(description);
+    if ("error" in normalized) return Response.json(normalized, { status: 400 });
+    description = normalized.description;
+  }
+  if (hasCorrection && typeof correction === "string") {
+    const normalized = normalizeDrinkDescription(correction);
+    if ("error" in normalized) return Response.json(normalized, { status: 400 });
+    correction = normalized.description;
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    return Response.json(
+      { error: "OPENAI_API_KEY is not set. Add it to .env.local and restart the dev server." },
+      { status: 500 },
+    );
   }
 
   const userParts: ResponseInputContent[] = [];
@@ -65,14 +95,14 @@ export async function POST(req: Request): Promise<Response> {
     });
   }
   if (hasDescription) {
-    userParts.push({ type: "input_text", text: `User description: ${description.trim()}` });
+    userParts.push({ type: "input_text", text: `User description: ${String(description).trim()}` });
   }
   if (hasCorrection) {
     userParts.push({
       type: "input_text",
       text:
         `Previous analysis (JSON):\n${previousResult}\n\n` +
-        `User correction: ${correction.trim()}`,
+        `User correction: ${String(correction).trim()}`,
     });
   }
 
@@ -98,6 +128,7 @@ export async function POST(req: Request): Promise<Response> {
       return Response.json({ error: "Model returned no output." }, { status: 502 });
     }
     const analysis: MealAnalysis = JSON.parse(response.output_text);
+    analysis.totals = sumTotals(analysis.foods);
     return Response.json(analysis);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

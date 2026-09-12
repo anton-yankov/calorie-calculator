@@ -45,6 +45,8 @@ function toRow(meal: LoggedMeal): MealRow {
 export interface MealTotalRow {
   loggedAt: string;
   totals: MealTotals;
+  /** Zero-calorie drink-only entries must not create fake meal days. */
+  nutritionLogged?: boolean;
 }
 
 /**
@@ -61,7 +63,11 @@ export async function listMealTotals(): Promise<MealTotalRow[]> {
   if (error) throw new Error(`Couldn't load stats: ${error.message}`);
   return (data as unknown as { logged_at: string; totals: MealTotals | null }[])
     .filter((row) => row.totals !== null)
-    .map((row) => ({ loggedAt: row.logged_at, totals: row.totals as MealTotals }));
+    .map((row) => ({
+      loggedAt: row.logged_at,
+      totals: row.totals as MealTotals,
+      nutritionLogged: (row.totals as MealTotals).nutrition_logged ?? true,
+    }));
 }
 
 export async function listMeals(): Promise<LoggedMeal[]> {
@@ -141,5 +147,8 @@ export async function sumTotalsBetween(startIso: string, endIso: string): Promis
     .gte("logged_at", startIso)
     .lt("logged_at", endIso);
   if (error) throw new Error(`Couldn't load today's totals: ${error.message}`);
-  return sumTotals((data as { analysis: MealAnalysis }[]).map((row) => row.analysis.totals));
+  const totals = sumTotals(
+    (data as { analysis: MealAnalysis }[]).map((row) => row.analysis.totals),
+  );
+  return data.length === 0 ? { ...totals, water_ml: 0, water_by_drink: [] } : totals;
 }

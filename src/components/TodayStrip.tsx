@@ -15,7 +15,7 @@ import { dayBounds, dayKey, dayLabel } from "@/lib/day";
  * is logged.
  */
 export function TodayStrip() {
-  const { loggedAtLength, logDate } = useAnalysis();
+  const { loggedAtLength, logDate, progressVersion } = useAnalysis();
   const [progress, setProgress] = useState<TodayProgress | null>(null);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function TodayStrip() {
     return () => {
       cancelled = true;
     };
-  }, [loggedAtLength, logDate]);
+  }, [loggedAtLength, logDate, progressVersion]);
 
   if (!progress?.goals) return null;
   const { totals, goals } = progress;
