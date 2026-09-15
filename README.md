@@ -53,28 +53,27 @@ npm run dev
 
 Environment variables (see `.env.example`):
 
-| Variable                               | Purpose                                                                              |
-| -------------------------------------- | ------------------------------------------------------------------------------------ |
-| `OPENAI_API_KEY`                       | Vision analysis (required)                                                           |
-| `VISION_MODEL`                         | Model override; defaults to `gpt-5.6-luna`                                           |
-| `SITE_PASSWORD`                        | When set, the whole site sits behind this password                                   |
-| `NEXT_PUBLIC_SUPABASE_URL`             | Supabase project URL                                                                 |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Fallback database key (`anon` role, needs the RLS policies in `supabase/schema.sql`) |
-| `SUPABASE_SECRET_KEY`                  | Preferred database key (server-only, bypasses RLS)                                   |
+| Variable                               | Purpose                                                                                         |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                       | Vision analysis (required)                                                                      |
+| `VISION_MODEL`                         | Model override; defaults to `gpt-5.6-luna`                                                      |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Supabase project URL                                                                            |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Database key; queries run as the logged-in user under the RLS policies in `supabase/schema.sql` |
 
 Database: create a Supabase project and run `supabase/schema.sql` in the SQL
 Editor. It creates `public.meals` (the log) and `public.settings` (daily
 goals), and `public.barcode_products` (manually entered barcode nutrition).
-For an existing database, run the commented `alter table` statements in
-`supabase/schema.sql` for any columns it is missing (product images and the
-default scan amount were added later).
+
+Accounts: the app is invite-only. In the Supabase dashboard, turn off
+"Allow new users to sign up" (Authentication → Sign In / Providers), then create
+each user under Authentication → Users → Add user with "Auto Confirm User"
+ticked. Every meal, goal and saved product belongs to the logged-in user.
 
 ## Deploying
 
-Deploy to Vercel with the same environment variables. `SITE_PASSWORD` is worth
-setting there — the app is personal and the OpenAI key is on the other side of
-every analyze request. Remaining hardening and deferred work is tracked in
-[FUTURE-TASKS.md](FUTURE-TASKS.md).
+Deploy to Vercel with the same environment variables. Every page and API route
+requires a login, since the OpenAI key is on the other side of every analyze
+request.
 
 ## Scripts
 

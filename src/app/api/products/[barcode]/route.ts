@@ -1,5 +1,6 @@
 import { detectDrinkType, isDrinkType } from "@/lib/water";
 import { getSavedBarcodeProduct, saveBarcodeProduct } from "@/lib/barcode-products";
+import { getUserId } from "@/lib/supabase-session";
 import {
   BARCODE_PATTERN,
   submittedNutrition,
@@ -128,13 +129,17 @@ function defaultAmount(product: OpenFoodFactsProduct): number | null {
 }
 
 export async function GET(_request: Request, context: { params: Promise<{ barcode: string }> }) {
+  // The proxy already rejects logged-out requests; the owner id is needed for the saved lookup
+  const userId = await getUserId();
+  if (!userId) return Response.json({ error: "Authentication required" }, { status: 401 });
+
   const { barcode } = await context.params;
   if (!BARCODE_PATTERN.test(barcode)) {
     return Response.json({ error: "Enter a 7–14 digit food barcode." }, { status: 400 });
   }
 
   try {
-    const saved = await getSavedBarcodeProduct(barcode);
+    const saved = await getSavedBarcodeProduct(userId, barcode);
     if (saved) {
       return Response.json(saved, { headers: { "Cache-Control": "private, no-store" } });
     }
@@ -223,6 +228,9 @@ export async function GET(_request: Request, context: { params: Promise<{ barcod
 }
 
 export async function POST(request: Request, context: { params: Promise<{ barcode: string }> }) {
+  const userId = await getUserId();
+  if (!userId) return Response.json({ error: "Authentication required" }, { status: 401 });
+
   const { barcode } = await context.params;
   if (!BARCODE_PATTERN.test(barcode)) {
     return Response.json({ error: "Enter a 7–14 digit food barcode." }, { status: 400 });
@@ -255,6 +263,7 @@ export async function POST(request: Request, context: { params: Promise<{ barcod
 
   try {
     const product = await saveBarcodeProduct(
+      userId,
       barcode,
       name,
       per100g,

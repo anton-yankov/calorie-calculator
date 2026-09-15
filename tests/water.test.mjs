@@ -163,9 +163,10 @@ test("server rejects invalid water fields and recomputes all totals before savin
   const writes = [];
   const actions = loadModule("src/app/actions.ts", {
     "next/cache": { revalidatePath() {} },
-    "next/headers": { cookies: async () => ({ get: () => ({ value: "token" }) }) },
-    "@/lib/auth": { AUTH_COOKIE: "auth", authTokenFor: async () => "token" },
-    "@/lib/meals": { insertMeals: async (meals) => writes.push(...meals) },
+    "@/lib/supabase-session": { getUserId: async () => "user-1" },
+    "@/lib/meals": {
+      insertMeals: async (meals, userId) => writes.push(...meals.map((m) => ({ ...m, userId }))),
+    },
     "@/lib/barcode-products": { saveLoggedBarcodeProducts: async () => {} },
     "@/lib/settings": {},
   });
@@ -190,6 +191,7 @@ test("server rejects invalid water fields and recomputes all totals before savin
   }
   assert.equal(writes.length, 0);
   assert.deepEqual(await actions.logMealAction(meal), {});
+  assert.equal(writes[0].userId, "user-1");
   assert.equal(writes[0].analysis.totals.water_ml, 500);
   assert.equal(writes[0].analysis.totals.calories, 0);
 });
@@ -198,6 +200,7 @@ test("catalog drinks preserve ml basis, category and litre-sized packages", asyn
   const route = loadModule(
     "src/app/api/products/[barcode]/route.ts",
     {
+      "@/lib/supabase-session": { getUserId: async () => "user-1" },
       "@/lib/barcode-products": { getSavedBarcodeProduct: async () => null },
     },
     {
@@ -233,20 +236,23 @@ test("catalog drinks preserve ml basis, category and litre-sized packages", asyn
   assert.equal(food.productSnapshot.portionUnit, "ml");
 });
 
-test("water goal persists in ml, can be cleared, and reads old settings without losing goals", async () => {
+test("goals are read and saved for the given user, and the water goal can be cleared", async () => {
   const writes = [];
   const queries = [];
   const settings = loadModule("src/lib/settings.ts", {
-    "@/lib/supabase": {
-      supabase: () => ({
+    "@/lib/supabase-session": {
+      createSessionClient: async () => ({
         from: () => ({
-          select: (columns) => ({
-            maybeSingle: async () => {
-              queries.push(columns);
-              return columns.includes("water_goal")
-                ? { data: null, error: { message: "column water_goal does not exist" } }
-                : { data: { calorie_goal: 2000, protein_goal: 100 }, error: null };
-            },
+          select: () => ({
+            eq: (column, value) => ({
+              maybeSingle: async () => {
+                queries.push([column, value]);
+                return {
+                  data: { calorie_goal: 2000, protein_goal: 100, water_goal: null },
+                  error: null,
+                };
+              },
+            }),
           }),
           upsert: async (row) => {
             writes.push(row);
@@ -256,14 +262,15 @@ test("water goal persists in ml, can be cleared, and reads old settings without 
       }),
     },
   });
-  assert.deepEqual(await settings.getGoals(), {
+  assert.deepEqual(await settings.getGoals("user-1"), {
     calorieGoal: 2000,
     proteinGoal: 100,
     waterGoal: null,
   });
-  assert.equal(queries.length, 2);
-  await settings.saveGoals(goals);
-  await settings.saveGoals({ ...goals, waterGoal: null });
+  assert.deepEqual(queries, [["user_id", "user-1"]]);
+  await settings.saveGoals(goals, "user-1");
+  await settings.saveGoals({ ...goals, waterGoal: null }, "user-1");
+  assert.equal(writes[0].user_id, "user-1");
   assert.equal(writes[0].water_goal, 2000);
   assert.equal(writes[1].water_goal, null);
 });

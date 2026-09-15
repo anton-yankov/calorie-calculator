@@ -1,8 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE, authTokenFor } from "@/lib/auth";
 import {
   deleteSavedBarcodeProduct,
   saveBarcodeProduct,
@@ -32,19 +30,17 @@ import type { FoodItem, MealAnalysis, MealTotals } from "@/lib/schema";
 import { sumTotals } from "@/lib/scale";
 import { isDrinkType, type DrinkType } from "@/lib/water";
 import { getGoals, saveGoals, type Goals } from "@/lib/settings";
+import { getUserId } from "@/lib/supabase-session";
 
 /**
  * Server Actions are reachable via direct POST, not just through the UI, so
- * each one re-checks the site password cookie — same rule as the proxy.
+ * each one re-checks the session — same rule as the proxy.
  */
 async function isAuthed(): Promise<boolean> {
-  const password = process.env.SITE_PASSWORD;
-  if (!password) return true;
-  const store = await cookies();
-  return store.get(AUTH_COOKIE)?.value === (await authTokenFor(password));
+  return (await getUserId()) !== null;
 }
 
-export interface ActionResult {
+interface ActionResult {
   error?: string;
   warning?: string;
 }
@@ -138,7 +134,8 @@ export async function logMealAction(
   meal: LoggedMeal,
   backdate?: { startIso: string; endIso: string },
 ): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (!isValidMeal(meal)) return { error: "Invalid meal data" };
   if (backdate) {
     const start = Date.parse(backdate.startIso);
@@ -169,13 +166,13 @@ export async function logMealAction(
   }
   meal = { ...meal, analysis: { ...meal.analysis, totals: sumTotals(meal.analysis.foods) } };
   try {
-    await insertMeals([meal]);
+    await insertMeals([meal], userId);
   } catch (err) {
     return { error: message(err, "Couldn't save the meal") };
   }
   let warning: string | undefined;
   try {
-    await saveLoggedBarcodeProducts(meal.analysis.foods);
+    await saveLoggedBarcodeProducts(userId, meal.analysis.foods);
   } catch (err) {
     console.error("Saving logged barcode products failed:", err);
     warning =
@@ -217,13 +214,14 @@ export async function updateMealAction(
 
 /** Duplicate a logged meal as a fresh entry stamped now — repeat meals cost no API call. */
 export async function relogMealAction(id: string): Promise<ActionResult & { newId?: string }> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   try {
     const meal = await getMealById(id);
     if (!meal) return { error: "That meal no longer exists" };
     const newId = crypto.randomUUID();
-    await insertMeals([{ ...meal, id: newId, loggedAt: new Date().toISOString() }]);
+    await insertMeals([{ ...meal, id: newId, loggedAt: new Date().toISOString() }], userId);
     revalidatePath("/log");
     revalidatePath("/stats");
     return { newId };
@@ -264,7 +262,8 @@ export async function getMealPhotoAction(
 }
 
 export async function saveGoalsAction(goals: Goals): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   const calorieOk =
     typeof goals === "object" &&
     goals !== null &&
@@ -276,11 +275,14 @@ export async function saveGoalsAction(goals: Goals): Promise<ActionResult> {
     goals?.waterGoal === null || (Number.isFinite(goals?.waterGoal) && goals.waterGoal! >= 1);
   if (!calorieOk || !proteinOk || !waterOk) return { error: "Invalid goals" };
   try {
-    await saveGoals({
-      calorieGoal: Math.round(goals.calorieGoal),
-      waterGoal: goals.waterGoal === null ? null : Math.round(goals.waterGoal),
-      proteinGoal: goals.proteinGoal === null ? null : Math.round(goals.proteinGoal),
-    });
+    await saveGoals(
+      {
+        calorieGoal: Math.round(goals.calorieGoal),
+        waterGoal: goals.waterGoal === null ? null : Math.round(goals.waterGoal),
+        proteinGoal: goals.proteinGoal === null ? null : Math.round(goals.proteinGoal),
+      },
+      userId,
+    );
   } catch (err) {
     return { error: message(err, "Couldn't save the goals") };
   }
@@ -304,7 +306,8 @@ export async function todayProgressAction(
   startIso: string,
   endIso: string,
 ): Promise<ActionResult & { progress?: TodayProgress }> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   const start = Date.parse(startIso);
   const end = Date.parse(endIso);
   const twoDays = 48 * 60 * 60 * 1000;
@@ -312,14 +315,17 @@ export async function todayProgressAction(
     return { error: "Invalid range" };
   }
   try {
-    const [totals, goals] = await Promise.all([sumTotalsBetween(startIso, endIso), getGoals()]);
+    const [totals, goals] = await Promise.all([
+      sumTotalsBetween(startIso, endIso),
+      getGoals(userId),
+    ]);
     return { progress: { totals, goals } };
   } catch (err) {
     return { error: message(err, "Couldn't load today's progress") };
   }
 }
 
-export interface ProductFields {
+interface ProductFields {
   portionUnit?: "g" | "ml";
   drinkType?: DrinkType | null;
   name: string;
@@ -338,7 +344,8 @@ export async function saveProductAction(
   barcode: string,
   fields: ProductFields,
 ): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof barcode !== "string" || !BARCODE_PATTERN.test(barcode)) {
     return { error: "Invalid barcode" };
   }
@@ -360,6 +367,7 @@ export async function saveProductAction(
   }
   try {
     await saveBarcodeProduct(
+      userId,
       barcode,
       name,
       per100g,
@@ -376,12 +384,13 @@ export async function saveProductAction(
 }
 
 export async function deleteProductAction(barcode: string): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof barcode !== "string" || !BARCODE_PATTERN.test(barcode)) {
     return { error: "Invalid barcode" };
   }
   try {
-    await deleteSavedBarcodeProduct(barcode);
+    await deleteSavedBarcodeProduct(userId, barcode);
   } catch (err) {
     return { error: message(err, "Couldn't delete the product") };
   }

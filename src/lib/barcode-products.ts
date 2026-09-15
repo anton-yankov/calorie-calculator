@@ -1,75 +1,47 @@
-import { detectDrinkType, type DrinkType } from "@/lib/water";
+import type { DrinkType } from "@/lib/water";
 import type { FoodItem } from "@/lib/schema";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
 import { connection } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createSessionClient } from "@/lib/supabase-session";
 
-/** Server-side data layer for saved barcode products. */
+/**
+ * Server-side data layer for saved barcode products. Every product belongs to
+ * one user: each function takes the logged-in user's id first, and a user can
+ * save each barcode once (the primary key is user_id + barcode). Queries run as
+ * the logged-in user, so RLS already limits them to that user's rows; the
+ * user_id filters say the same thing explicitly.
+ */
 
 interface BarcodeProductRow {
-  portion_unit?: "g" | "ml" | null;
-  drink_type?: DrinkType | null;
+  user_id?: string;
+  portion_unit: "g" | "ml";
+  drink_type: DrinkType | null;
   barcode: string;
   name: string;
   calories_per_100g: number;
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
-  image_url?: string | null;
-  serving_grams?: number | null;
+  image_url: string | null;
+  serving_grams: number | null;
   updated_at: string;
 }
 
-const BASE_COLUMNS =
-  "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, updated_at";
+const PRODUCT_COLUMNS =
+  "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, updated_at, image_url, serving_grams, portion_unit, drink_type";
 
-/**
- * Column sets to try in order, newest first. Older Supabase projects may not
- * have the nullable columns added later (see supabase/schema.sql); reading
- * without them keeps scans working between deploying this code and running
- * the SQL.
- */
-const COLUMN_SETS = [
-  `${BASE_COLUMNS}, image_url, serving_grams, portion_unit, drink_type`,
-  `${BASE_COLUMNS}, image_url, serving_grams`,
-  `${BASE_COLUMNS}, image_url`,
-  BASE_COLUMNS,
-];
-
-const OPTIONAL_COLUMNS = ["image_url", "serving_grams", "portion_unit", "drink_type"];
-
-interface QueryResult {
-  data: unknown;
-  error: { message: string } | null;
-}
-
-/** Runs `query` with each column set until one the database knows succeeds. */
-async function withColumnFallback<T>(
-  query: (columns: string) => PromiseLike<QueryResult>,
-  describe: string,
-): Promise<T | null> {
-  let lastError: string | null = null;
-  for (const columns of COLUMN_SETS) {
-    const { data, error } = await query(columns);
-    if (!error) return data as T | null;
-    lastError = error.message;
-    const missingColumn = OPTIONAL_COLUMNS.some(
-      (column) => columns.includes(column) && error.message.includes(column),
-    );
-    if (!missingColumn) break;
-  }
-  throw new Error(`${describe}: ${lastError}`);
-}
+/** Upserts match on the composite primary key, so one user's save never touches another's. */
+const OWNER_KEY = "user_id,barcode";
 
 function toProduct(row: BarcodeProductRow): BarcodeProduct {
   return {
-    portionUnit: row.portion_unit ?? (detectDrinkType(row.name) ? "ml" : "g"),
-    drinkType: row.portion_unit ? (row.drink_type ?? null) : detectDrinkType(row.name),
+    portionUnit: row.portion_unit,
+    drinkType: row.drink_type,
     barcode: row.barcode,
     name: row.name,
     brand: "",
-    imageUrl: row.image_url ?? null,
-    servingGrams: row.serving_grams ?? null,
+    imageUrl: row.image_url,
+    servingGrams: row.serving_grams,
     per100g: {
       calories: row.calories_per_100g,
       protein_g: row.protein_per_100g,
@@ -80,16 +52,23 @@ function toProduct(row: BarcodeProductRow): BarcodeProduct {
   };
 }
 
-export async function getSavedBarcodeProduct(barcode: string): Promise<BarcodeProduct | null> {
-  const row = await withColumnFallback<BarcodeProductRow>(
-    (columns) =>
-      supabase().from("barcode_products").select(columns).eq("barcode", barcode).maybeSingle(),
-    "Couldn't look up the saved product",
-  );
-  return row ? toProduct(row) : null;
+export async function getSavedBarcodeProduct(
+  userId: string,
+  barcode: string,
+): Promise<BarcodeProduct | null> {
+  const db = await createSessionClient();
+  const { data, error } = await db
+    .from("barcode_products")
+    .select(PRODUCT_COLUMNS)
+    .eq("user_id", userId)
+    .eq("barcode", barcode)
+    .maybeSingle();
+  if (error) throw new Error(`Couldn't look up the saved product: ${error.message}`);
+  return data ? toProduct(data as unknown as BarcodeProductRow) : null;
 }
 
 export async function saveBarcodeProduct(
+  userId: string,
   barcode: string,
   name: string,
   per100g: ProductNutrition,
@@ -99,6 +78,7 @@ export async function saveBarcodeProduct(
   drinkType: DrinkType | null = null,
 ): Promise<BarcodeProduct> {
   const row: BarcodeProductRow = {
+    user_id: userId,
     barcode,
     name,
     portion_unit: portionUnit,
@@ -111,37 +91,49 @@ export async function saveBarcodeProduct(
     serving_grams: servingGrams,
     updated_at: new Date().toISOString(),
   };
-  const { data, error } = await supabase()
+  const db = await createSessionClient();
+  const { data, error } = await db
     .from("barcode_products")
-    .upsert(row, { onConflict: "barcode" })
-    .select(COLUMN_SETS[0])
+    .upsert(row, { onConflict: OWNER_KEY })
+    .select(PRODUCT_COLUMNS)
     .single();
   if (error) throw new Error(`Couldn't save the barcode product: ${error.message}`);
   return toProduct(data as unknown as BarcodeProductRow);
 }
 
-export async function listSavedBarcodeProducts(): Promise<BarcodeProduct[]> {
+export async function listSavedBarcodeProducts(userId: string): Promise<BarcodeProduct[]> {
   await connection();
-  const rows = await withColumnFallback<BarcodeProductRow[]>(
-    (columns) =>
-      supabase().from("barcode_products").select(columns).order("name", { ascending: true }),
-    "Couldn't load saved products",
-  );
-  return (rows ?? []).map(toProduct);
+  const db = await createSessionClient();
+  const { data, error } = await db
+    .from("barcode_products")
+    .select(PRODUCT_COLUMNS)
+    .eq("user_id", userId)
+    .order("name", { ascending: true });
+  if (error) throw new Error(`Couldn't load saved products: ${error.message}`);
+  return (data as unknown as BarcodeProductRow[]).map(toProduct);
 }
 
-export async function deleteSavedBarcodeProduct(barcode: string): Promise<void> {
-  const { error } = await supabase().from("barcode_products").delete().eq("barcode", barcode);
+export async function deleteSavedBarcodeProduct(userId: string, barcode: string): Promise<void> {
+  const db = await createSessionClient();
+  const { error } = await db
+    .from("barcode_products")
+    .delete()
+    .eq("user_id", userId)
+    .eq("barcode", barcode);
   if (error) throw new Error(`Couldn't delete the product: ${error.message}`);
 }
 
 /** Insert new products only; a later scan must never overwrite saved edits or defaults. */
-export async function saveLoggedBarcodeProducts(foods: readonly FoodItem[]): Promise<void> {
+export async function saveLoggedBarcodeProducts(
+  userId: string,
+  foods: readonly FoodItem[],
+): Promise<void> {
   const rows = new Map<string, BarcodeProductRow>();
   for (const food of foods) {
     if (!food.barcode || !food.productSnapshot || rows.has(food.barcode)) continue;
     const product = food.productSnapshot;
     rows.set(food.barcode, {
+      user_id: userId,
       barcode: food.barcode,
       portion_unit: product.portionUnit ?? (food.drink_type ? "ml" : "g"),
       drink_type: product.drinkType !== undefined ? product.drinkType : (food.drink_type ?? null),
@@ -156,8 +148,9 @@ export async function saveLoggedBarcodeProducts(foods: readonly FoodItem[]): Pro
     });
   }
   if (rows.size === 0) return;
-  const { error } = await supabase()
+  const db = await createSessionClient();
+  const { error } = await db
     .from("barcode_products")
-    .upsert([...rows.values()], { onConflict: "barcode", ignoreDuplicates: true });
+    .upsert([...rows.values()], { onConflict: OWNER_KEY, ignoreDuplicates: true });
   if (error) throw new Error(`Couldn't save logged products: ${error.message}`);
 }

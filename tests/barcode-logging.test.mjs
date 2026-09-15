@@ -26,8 +26,7 @@ function actions({ failMeal = false, failProducts = false } = {}) {
   const events = [];
   const loaded = loadModule("src/app/actions.ts", {
     "next/cache": { revalidatePath: (path) => events.push(path) },
-    "next/headers": { cookies: async () => ({ get: () => ({ value: "token" }) }) },
-    "@/lib/auth": { AUTH_COOKIE: "auth", authTokenFor: async () => "token" },
+    "@/lib/supabase-session": { getUserId: async () => "user-1" },
     "@/lib/products": products,
     "@/lib/settings": {},
     "@/lib/meals": {
@@ -37,7 +36,7 @@ function actions({ failMeal = false, failProducts = false } = {}) {
       },
     },
     "@/lib/barcode-products": {
-      saveLoggedBarcodeProducts: async (foods) => {
+      saveLoggedBarcodeProducts: async (_userId, foods) => {
         events.push(foods);
         if (failProducts) throw new Error("Products failed");
       },
@@ -109,8 +108,8 @@ test("batch product saving deduplicates barcodes and never overwrites existing p
   const calls = [];
   const data = loadModule("src/lib/barcode-products.ts", {
     "next/server": {},
-    "@/lib/supabase": {
-      supabase: () => ({
+    "@/lib/supabase-session": {
+      createSessionClient: async () => ({
         from: (table) => ({
           upsert: async (rows, options) => {
             calls.push({ table, rows, options });
@@ -120,14 +119,15 @@ test("batch product saving deduplicates barcodes and never overwrites existing p
       }),
     },
   });
-  await data.saveLoggedBarcodeProducts([food, scaleFood(food, 10), { name: "Plain" }]);
+  await data.saveLoggedBarcodeProducts("user-1", [food, scaleFood(food, 10), { name: "Plain" }]);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].table, "barcode_products");
   assert.equal(calls[0].rows.length, 1);
+  assert.equal(calls[0].rows[0].user_id, "user-1");
   assert.equal(calls[0].rows[0].calories_per_100g, 80);
   assert.equal(calls[0].rows[0].serving_grams, 125.5);
-  assert.deepEqual(calls[0].options, { onConflict: "barcode", ignoreDuplicates: true });
-  await data.saveLoggedBarcodeProducts([{ name: "Plain" }]);
+  assert.deepEqual(calls[0].options, { onConflict: "user_id,barcode", ignoreDuplicates: true });
+  await data.saveLoggedBarcodeProducts("user-1", [{ name: "Plain" }]);
   assert.equal(calls.length, 1);
 });
 
@@ -140,6 +140,7 @@ test("saved barcode lookup returns saved macros and grams without calling the ca
   };
   const route = loadModule("src/app/api/products/[barcode]/route.ts", {
     "@/lib/products": products,
+    "@/lib/supabase-session": { getUserId: async () => "user-1" },
     "@/lib/barcode-products": { getSavedBarcodeProduct: async () => saved },
   });
   const response = await route.GET(new Request("https://example.com"), {
@@ -155,6 +156,7 @@ test("catalog scanning returns nutrition without saving a product", async () => 
     "src/app/api/products/[barcode]/route.ts",
     {
       "@/lib/products": products,
+      "@/lib/supabase-session": { getUserId: async () => "user-1" },
       "@/lib/barcode-products": {
         getSavedBarcodeProduct: async () => null,
         saveBarcodeProduct: async () => assert.fail("Scanning must not save products"),

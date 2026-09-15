@@ -1,35 +1,74 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_COOKIE, authTokenFor } from "@/lib/auth";
 
 /**
- * Site-wide password gate so strangers can't run analyses on our OpenAI
- * credits. Active only when SITE_PASSWORD is set — locally it usually isn't,
- * so dev stays open.
+ * Runs before every page and API request: refreshes the Supabase session when
+ * its access token has expired, then sends logged-out visitors to /login so
+ * strangers can't run analyses on our OpenAI credits.
  *
- * Uses a cookie set by the /login page instead of HTTP Basic Auth: standalone
+ * Uses a login page and cookies instead of HTTP Basic Auth: standalone
  * home-screen web apps can't show the Basic Auth dialog (they just hang on a
  * blank splash screen), but they can render a login page and keep a cookie.
  */
 export default async function proxy(request: NextRequest) {
-  const password = process.env.SITE_PASSWORD;
-  if (!password) return NextResponse.next();
-
-  const authed = request.cookies.get(AUTH_COOKIE)?.value === (await authTokenFor(password));
-  const { pathname } = request.nextUrl;
-
-  if (pathname === "/login") {
-    // Already-unlocked visitors skip straight to the app
-    return authed ? NextResponse.redirect(new URL("/", request.url)) : NextResponse.next();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY — see .env.example",
+    );
   }
 
-  if (authed) return NextResponse.next();
+  let response = NextResponse.next({ request });
+  let sessionHeaders: Record<string, string> = {};
+
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet, headers) {
+        // Refreshed tokens go onto the request too, so the page rendered after
+        // this proxy already sees the new session, not the expired one
+        for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
+        response = NextResponse.next({ request });
+        for (const { name, value, options } of cookiesToSet) {
+          response.cookies.set(name, value, options);
+        }
+        // Responses that set session cookies must never be cached and served to someone else
+        for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
+        sessionHeaders = headers;
+      },
+    },
+  });
+
+  // getClaims verifies the token's signature (and refreshes it if expired);
+  // getSession would trust whatever the cookie says, so it can't guard pages
+  const { data } = await supabase.auth.getClaims();
+  const loggedIn = Boolean(data?.claims);
+  const { pathname } = request.nextUrl;
+
+  // Any response other than `response` must carry the refreshed cookies and
+  // the no-cache headers along, or the browser keeps the stale session
+  const withSession = (res: NextResponse) => {
+    for (const cookie of response.cookies.getAll()) res.cookies.set(cookie);
+    for (const [name, value] of Object.entries(sessionHeaders)) res.headers.set(name, value);
+    return res;
+  };
+
+  if (pathname === "/login") {
+    // Logged-in visitors skip straight to the app
+    return loggedIn ? withSession(NextResponse.redirect(new URL("/", request.url))) : response;
+  }
+
+  if (loggedIn) return response;
 
   // fetch() callers need a status code, not a redirect to an HTML page
   if (pathname.startsWith("/api/")) {
-    return new NextResponse("Authentication required", { status: 401 });
+    return withSession(new NextResponse("Authentication required", { status: 401 }));
   }
 
-  return NextResponse.redirect(new URL("/login", request.url));
+  return withSession(NextResponse.redirect(new URL("/login", request.url)));
 }
 
 export const config = {

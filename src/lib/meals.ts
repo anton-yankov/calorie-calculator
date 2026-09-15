@@ -2,9 +2,14 @@ import { connection } from "next/server";
 import type { LoggedMeal } from "@/lib/log";
 import { sumTotals } from "@/lib/scale";
 import type { MealAnalysis, MealTotals } from "@/lib/schema";
-import { supabase } from "@/lib/supabase";
+import { createSessionClient } from "@/lib/supabase-session";
 
-/** Server-side data layer for the meal log — the only code that touches the table. */
+/**
+ * Server-side data layer for the meal log — the only code that touches the table.
+ * Queries run as the logged-in user, so the database's RLS policy limits every
+ * read, update and delete to that user's own meals; no query here filters by
+ * user itself.
+ */
 
 interface MealRow {
   id: string;
@@ -56,7 +61,8 @@ export interface MealTotalRow {
  */
 export async function listMealTotals(): Promise<MealTotalRow[]> {
   await connection();
-  const { data, error } = await supabase()
+  const db = await createSessionClient();
+  const { data, error } = await db
     .from("meals")
     .select("logged_at, totals:analysis->totals")
     .order("logged_at", { ascending: true });
@@ -73,7 +79,8 @@ export async function listMealTotals(): Promise<MealTotalRow[]> {
 export async function listMeals(): Promise<LoggedMeal[]> {
   // The log must never be prerendered at build time — always fetch per request
   await connection();
-  const { data, error } = await supabase()
+  const db = await createSessionClient();
+  const { data, error } = await db
     .from("meals")
     .select(LIST_COLUMNS)
     .order("logged_at", { ascending: false });
@@ -83,19 +90,25 @@ export async function listMeals(): Promise<LoggedMeal[]> {
 
 /** The large photo for one meal, or null if it has none (or doesn't exist). */
 export async function getMealPhotoById(id: string): Promise<string | null> {
-  const { data, error } = await supabase().from("meals").select("photo").eq("id", id).maybeSingle();
+  const db = await createSessionClient();
+  const { data, error } = await db.from("meals").select("photo").eq("id", id).maybeSingle();
   if (error) throw new Error(`Couldn't load the photo: ${error.message}`);
   return (data as { photo: string | null } | null)?.photo ?? null;
 }
 
 export async function getMealById(id: string): Promise<LoggedMeal | null> {
-  const { data, error } = await supabase().from("meals").select("*").eq("id", id).maybeSingle();
+  const db = await createSessionClient();
+  const { data, error } = await db.from("meals").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(`Couldn't load the meal: ${error.message}`);
   return data ? toMeal(data as MealRow) : null;
 }
 
-export async function insertMeals(meals: LoggedMeal[]): Promise<void> {
-  const { error } = await supabase().from("meals").insert(meals.map(toRow));
+/** Saves meals owned by `userId` — the logged-in user, never a value sent by the client. */
+export async function insertMeals(meals: LoggedMeal[], userId: string): Promise<void> {
+  const db = await createSessionClient();
+  const { error } = await db
+    .from("meals")
+    .insert(meals.map((meal) => ({ ...toRow(meal), user_id: userId })));
   if (error) throw new Error(`Couldn't save: ${error.message}`);
 }
 
@@ -103,7 +116,8 @@ export async function updateMealById(
   id: string,
   patch: { analysis: MealAnalysis; loggedAt: string },
 ): Promise<void> {
-  const { error } = await supabase()
+  const db = await createSessionClient();
+  const { error } = await db
     .from("meals")
     .update({ analysis: patch.analysis, logged_at: patch.loggedAt })
     .eq("id", id);
@@ -112,12 +126,8 @@ export async function updateMealById(
 
 /** Deletes the meal and returns the full row (photo included) so Undo can re-insert it. */
 export async function deleteMealById(id: string): Promise<LoggedMeal | null> {
-  const { data, error } = await supabase()
-    .from("meals")
-    .delete()
-    .eq("id", id)
-    .select("*")
-    .maybeSingle();
+  const db = await createSessionClient();
+  const { data, error } = await db.from("meals").delete().eq("id", id).select("*").maybeSingle();
   if (error) throw new Error(`Couldn't delete: ${error.message}`);
   return data ? toMeal(data as MealRow) : null;
 }
@@ -127,7 +137,8 @@ export async function latestLoggedAtBetween(
   startIso: string,
   endIso: string,
 ): Promise<string | null> {
-  const { data, error } = await supabase()
+  const db = await createSessionClient();
+  const { data, error } = await db
     .from("meals")
     .select("logged_at")
     .gte("logged_at", startIso)
@@ -141,7 +152,8 @@ export async function latestLoggedAtBetween(
 
 /** Calorie/macro sums for meals logged in [startIso, endIso) — used for "today so far". */
 export async function sumTotalsBetween(startIso: string, endIso: string): Promise<MealTotals> {
-  const { data, error } = await supabase()
+  const db = await createSessionClient();
+  const { data, error } = await db
     .from("meals")
     .select("analysis")
     .gte("logged_at", startIso)

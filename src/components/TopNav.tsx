@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { logout } from "@/app/login/actions";
 
 const tabs = [
   { href: "/", label: "Analyze" },
@@ -23,25 +24,36 @@ export function TopNav() {
           <span className="sm:hidden">Calories</span>
           <span className="hidden sm:inline">Calorie Calculator</span>
         </Link>
-        <div
-          className={`flex rounded-full border border-line bg-surface p-1 ${locked ? "invisible" : ""}`}
-        >
-          {tabs.map((tab) => {
-            const active = pathname === tab.href;
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                aria-current={active ? "page" : undefined}
-                // Four tabs only fit beside the wordmark on a 375px phone at this tighter size
-                className={`rounded-full px-2.5 py-1.5 text-center text-[11px] font-semibold transition-colors sm:px-4 sm:text-xs ${
-                  active ? "bg-accent text-background" : "text-muted hover:text-foreground"
-                }`}
+        <div className={`flex flex-col items-end gap-1 ${locked ? "invisible" : ""}`}>
+          <div className="flex rounded-full border border-line bg-surface p-1">
+            {tabs.map((tab) => {
+              const active = pathname === tab.href;
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  aria-current={active ? "page" : undefined}
+                  // Four tabs only fit beside the wordmark on a 375px phone at this tighter size
+                  className={`rounded-full px-2.5 py-1.5 text-center text-[11px] font-semibold transition-colors sm:px-4 sm:text-xs ${
+                    active ? "bg-accent text-background" : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
+          {/* Lives here until the Settings page exists */}
+          {!locked && (
+            <form action={logout}>
+              <button
+                type="submit"
+                className="px-2 text-[11px] font-semibold text-muted transition-colors hover:text-foreground"
               >
-                {tab.label}
-              </Link>
-            );
-          })}
+                Log out
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </nav>

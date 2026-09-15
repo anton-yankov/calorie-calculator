@@ -1,6 +1,8 @@
+import { redirect } from "next/navigation";
 import type { LoggedMeal } from "@/lib/log";
 import { listMeals } from "@/lib/meals";
 import { getGoals, type Goals } from "@/lib/settings";
+import { getUserId } from "@/lib/supabase-session";
 import { GoalsEditor } from "./GoalsEditor";
 import { LogList } from "./LogList";
 
@@ -8,12 +10,15 @@ import { LogList } from "./LogList";
 // cached — see loading.tsx for the streamed skeleton). Grouping/rendering
 // happens in LogList on the client, where the viewer's timezone lives.
 export default async function LogPage() {
+  // The proxy already sends logged-out visitors to /login; this is the page's own check
+  const userId = await getUserId();
+  if (!userId) redirect("/login");
+
   let meals: LoggedMeal[] = [];
   let goals: Goals | null = null;
   let loadError: string | null = null;
   try {
-    // getGoals never throws — a missing settings table just means "no goals yet"
-    [meals, goals] = await Promise.all([listMeals(), getGoals()]);
+    [meals, goals] = await Promise.all([listMeals(), getGoals(userId)]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Couldn't load the meal log.";
   }

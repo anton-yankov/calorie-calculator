@@ -1,15 +1,21 @@
+import { redirect } from "next/navigation";
 import { listSavedBarcodeProducts } from "@/lib/barcode-products";
 import type { BarcodeProduct } from "@/lib/products";
+import { getUserId } from "@/lib/supabase-session";
 import { ProductList } from "./ProductList";
 
 // Server component: products are fetched from Supabase per request (see
 // loading.tsx for the streamed skeleton). Edits and deletes go through Server
 // Actions that revalidate this path, so the list never holds its own copy.
 export default async function ProductsPage() {
+  // The proxy already sends logged-out visitors to /login; this is the page's own check
+  const userId = await getUserId();
+  if (!userId) redirect("/login");
+
   let products: BarcodeProduct[] = [];
   let loadError: string | null = null;
   try {
-    products = await listSavedBarcodeProducts();
+    products = await listSavedBarcodeProducts(userId);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Couldn't load saved products.";
   }
