@@ -16,7 +16,7 @@ export default async function StatsPage() {
   let goals: Goals | null = null;
   let loadError: string | null = null;
   try {
-    [rows, goals] = await Promise.all([listMealTotals(), getGoals(userId)]);
+    [rows, goals] = await Promise.all([listMealTotals(userId), getGoals(userId)]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Couldn't load your stats.";
   }

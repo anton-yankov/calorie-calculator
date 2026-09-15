@@ -1,25 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { SESSION_COOKIE_OPTIONS, supabaseEnv } from "@/lib/supabase-config";
 
 /**
  * Supabase client that acts as the logged-in user: it reads the session from
  * the request cookies, so queries run under that user's RLS policies (unlike a
- * secret-key client, which bypasses RLS).
+ * secret-key client, which bypasses RLS). Reading cookies is a request-time
+ * API, so every page that loads data through this client renders per request
+ * and is never prerendered.
  *
  * Create one per request — never cache it in a module variable, or one user's
  * session could end up in another's request.
  */
 export async function createSessionClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY — see .env.example",
-    );
-  }
-
+  const { url, key } = supabaseEnv();
   const cookieStore = await cookies();
   return createServerClient(url, key, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
         return cookieStore.getAll();

@@ -138,6 +138,7 @@ test("water-only weeks have a water average and no calorie observations", () => 
 
 test("plain water works without an AI key; ambiguous mixed input is rejected before AI", async () => {
   const route = loadModule("src/app/api/analyze/route.ts", {
+    "@/lib/supabase-session": { getUserId: async () => "user-1" },
     openai: class {
       constructor() {
         assert.fail("Water must not call AI");
@@ -165,7 +166,7 @@ test("server rejects invalid water fields and recomputes all totals before savin
     "next/cache": { revalidatePath() {} },
     "@/lib/supabase-session": { getUserId: async () => "user-1" },
     "@/lib/meals": {
-      insertMeals: async (meals, userId) => writes.push(...meals.map((m) => ({ ...m, userId }))),
+      insertMeals: async (userId, meals) => writes.push(...meals.map((m) => ({ ...m, userId }))),
     },
     "@/lib/barcode-products": { saveLoggedBarcodeProducts: async () => {} },
     "@/lib/settings": {},
@@ -268,8 +269,8 @@ test("goals are read and saved for the given user, and the water goal can be cle
     waterGoal: null,
   });
   assert.deepEqual(queries, [["user_id", "user-1"]]);
-  await settings.saveGoals(goals, "user-1");
-  await settings.saveGoals({ ...goals, waterGoal: null }, "user-1");
+  await settings.saveGoals("user-1", goals);
+  await settings.saveGoals("user-1", { ...goals, waterGoal: null });
   assert.equal(writes[0].user_id, "user-1");
   assert.equal(writes[0].water_goal, 2000);
   assert.equal(writes[1].water_goal, null);

@@ -3,6 +3,7 @@ import { sumTotals } from "@/lib/scale";
 import OpenAI from "openai";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
 import { MEAL_ANALYSIS_SCHEMA, type MealAnalysis } from "@/lib/schema";
+import { getUserId } from "@/lib/supabase-session";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,12 @@ Rules:
 - totals must be the sums of the per-food values.`;
 
 export async function POST(req: Request): Promise<Response> {
+  // Checked here too, not only in the proxy: a proxy matcher change could
+  // silently expose the OpenAI key behind this route
+  if (!(await getUserId())) {
+    return Response.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   const form = await req.formData();
   const image = form.get("image");
   let description = form.get("description");

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE_OPTIONS, supabaseEnv } from "@/lib/supabase-config";
 
 /**
  * Runs before every page and API request: refreshes the Supabase session when
@@ -11,18 +12,12 @@ import { NextResponse, type NextRequest } from "next/server";
  * blank splash screen), but they can render a login page and keep a cookie.
  */
 export default async function proxy(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY — see .env.example",
-    );
-  }
-
+  const { url, key } = supabaseEnv();
   let response = NextResponse.next({ request });
   let sessionHeaders: Record<string, string> = {};
 
   const supabase = createServerClient(url, key, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -63,9 +58,10 @@ export default async function proxy(request: NextRequest) {
 
   if (loggedIn) return response;
 
-  // fetch() callers need a status code, not a redirect to an HTML page
+  // fetch() callers need a status code and the same JSON error shape as the
+  // route handlers, not a redirect to an HTML page
   if (pathname.startsWith("/api/")) {
-    return withSession(new NextResponse("Authentication required", { status: 401 }));
+    return withSession(NextResponse.json({ error: "Authentication required" }, { status: 401 }));
   }
 
   return withSession(NextResponse.redirect(new URL("/login", request.url)));

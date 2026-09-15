@@ -14,8 +14,9 @@ interface SettingsRow {
   protein_goal: number | null;
 }
 
-// Queries run as the logged-in user, so RLS already limits them to that
-// user's row; the user_id filters say the same thing explicitly.
+// Every function takes the logged-in user's id first and filters by it. RLS
+// enforces the same rule in the database; the explicit filter keeps each query
+// scoped even if it's ever run with a client that bypasses RLS.
 
 /** The user's goals, or null when they haven't set any yet. */
 export async function getGoals(userId: string): Promise<Goals | null> {
@@ -35,7 +36,7 @@ export async function getGoals(userId: string): Promise<Goals | null> {
   };
 }
 
-export async function saveGoals(goals: Goals, userId: string): Promise<void> {
+export async function saveGoals(userId: string, goals: Goals): Promise<void> {
   const db = await createSessionClient();
   // Upsert on the user_id primary key: creates the user's row the first time, updates it after
   const { error } = await db.from("settings").upsert({

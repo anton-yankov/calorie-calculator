@@ -18,7 +18,7 @@ export default async function LogPage() {
   let goals: Goals | null = null;
   let loadError: string | null = null;
   try {
-    [meals, goals] = await Promise.all([listMeals(), getGoals(userId)]);
+    [meals, goals] = await Promise.all([listMeals(userId), getGoals(userId)]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Couldn't load the meal log.";
   }

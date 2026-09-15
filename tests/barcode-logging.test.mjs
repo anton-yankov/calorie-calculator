@@ -22,11 +22,11 @@ const meal = {
   analysis: { foods: [food], totals: product.per100g, notes: "" },
 };
 
-function actions({ failMeal = false, failProducts = false } = {}) {
+function actions({ failMeal = false, failProducts = false, userId = "user-1" } = {}) {
   const events = [];
   const loaded = loadModule("src/app/actions.ts", {
     "next/cache": { revalidatePath: (path) => events.push(path) },
-    "@/lib/supabase-session": { getUserId: async () => "user-1" },
+    "@/lib/supabase-session": { getUserId: async () => userId },
     "@/lib/products": products,
     "@/lib/settings": {},
     "@/lib/meals": {
@@ -74,6 +74,12 @@ test("logging saves the meal before products and refreshes Products", async () =
   assert.deepEqual(action.events, ["meal", meal.analysis.foods, "/products", "/log", "/stats"]);
 });
 
+test("logged-out requests are rejected before any write", async () => {
+  const action = actions({ userId: null });
+  assert.deepEqual(await action.logMealAction(meal), { error: "Authentication required" });
+  assert.deepEqual(action.events, []);
+});
+
 test("failed logging never saves products", async () => {
   const action = actions({ failMeal: true });
   assert.deepEqual(await action.logMealAction(meal), { error: "Meal failed" });
@@ -107,7 +113,6 @@ test("invalid product snapshots are rejected before either write", async () => {
 test("batch product saving deduplicates barcodes and never overwrites existing products", async () => {
   const calls = [];
   const data = loadModule("src/lib/barcode-products.ts", {
-    "next/server": {},
     "@/lib/supabase-session": {
       createSessionClient: async () => ({
         from: (table) => ({

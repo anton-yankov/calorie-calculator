@@ -49,7 +49,7 @@ create policy "users manage their own settings" on public.settings
   with check ((select auth.uid()) = user_id);
 
 grant select, insert, update, delete on public.settings to authenticated;
-grant select, insert, update on public.settings to service_role;
+grant select, insert, update, delete on public.settings to service_role;
 
 -- Products entered manually after a barcode is missing from Open Food Facts.
 -- Private per user: one row per user per barcode; a later manual entry

@@ -4,6 +4,7 @@ import {
   NUTRITION_LABEL_SCHEMA,
   type NutritionLabelAnalysis,
 } from "@/lib/nutrition-label";
+import { getUserId } from "@/lib/supabase-session";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,12 @@ function validAnalysis(value: unknown): value is NutritionLabelAnalysis {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // Checked here too, not only in the proxy: a proxy matcher change could
+  // silently expose the OpenAI key behind this route
+  if (!(await getUserId())) {
+    return Response.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     return Response.json({ error: "Nutrition scanning is not configured." }, { status: 500 });
   }

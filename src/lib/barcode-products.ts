@@ -1,19 +1,17 @@
 import type { DrinkType } from "@/lib/water";
 import type { FoodItem } from "@/lib/schema";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
-import { connection } from "next/server";
 import { createSessionClient } from "@/lib/supabase-session";
 
 /**
  * Server-side data layer for saved barcode products. Every product belongs to
  * one user: each function takes the logged-in user's id first, and a user can
- * save each barcode once (the primary key is user_id + barcode). Queries run as
- * the logged-in user, so RLS already limits them to that user's rows; the
- * user_id filters say the same thing explicitly.
+ * save each barcode once (the primary key is user_id + barcode). RLS enforces
+ * the same ownership rule in the database; the explicit user_id filters keep
+ * each query scoped even if it's ever run with a client that bypasses RLS.
  */
 
 interface BarcodeProductRow {
-  user_id?: string;
   portion_unit: "g" | "ml";
   drink_type: DrinkType | null;
   barcode: string;
@@ -78,7 +76,6 @@ export async function saveBarcodeProduct(
   drinkType: DrinkType | null = null,
 ): Promise<BarcodeProduct> {
   const row: BarcodeProductRow = {
-    user_id: userId,
     barcode,
     name,
     portion_unit: portionUnit,
@@ -94,7 +91,7 @@ export async function saveBarcodeProduct(
   const db = await createSessionClient();
   const { data, error } = await db
     .from("barcode_products")
-    .upsert(row, { onConflict: OWNER_KEY })
+    .upsert({ ...row, user_id: userId }, { onConflict: OWNER_KEY })
     .select(PRODUCT_COLUMNS)
     .single();
   if (error) throw new Error(`Couldn't save the barcode product: ${error.message}`);
@@ -102,7 +99,6 @@ export async function saveBarcodeProduct(
 }
 
 export async function listSavedBarcodeProducts(userId: string): Promise<BarcodeProduct[]> {
-  await connection();
   const db = await createSessionClient();
   const { data, error } = await db
     .from("barcode_products")
@@ -133,7 +129,6 @@ export async function saveLoggedBarcodeProducts(
     if (!food.barcode || !food.productSnapshot || rows.has(food.barcode)) continue;
     const product = food.productSnapshot;
     rows.set(food.barcode, {
-      user_id: userId,
       barcode: food.barcode,
       portion_unit: product.portionUnit ?? (food.drink_type ? "ml" : "g"),
       drink_type: product.drinkType !== undefined ? product.drinkType : (food.drink_type ?? null),
@@ -149,8 +144,9 @@ export async function saveLoggedBarcodeProducts(
   }
   if (rows.size === 0) return;
   const db = await createSessionClient();
-  const { error } = await db
-    .from("barcode_products")
-    .upsert([...rows.values()], { onConflict: OWNER_KEY, ignoreDuplicates: true });
+  const { error } = await db.from("barcode_products").upsert(
+    [...rows.values()].map((row) => ({ ...row, user_id: userId })),
+    { onConflict: OWNER_KEY, ignoreDuplicates: true },
+  );
   if (error) throw new Error(`Couldn't save logged products: ${error.message}`);
 }

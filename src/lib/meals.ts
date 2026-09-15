@@ -1,4 +1,3 @@
-import { connection } from "next/server";
 import type { LoggedMeal } from "@/lib/log";
 import { sumTotals } from "@/lib/scale";
 import type { MealAnalysis, MealTotals } from "@/lib/schema";
@@ -6,9 +5,9 @@ import { createSessionClient } from "@/lib/supabase-session";
 
 /**
  * Server-side data layer for the meal log — the only code that touches the table.
- * Queries run as the logged-in user, so the database's RLS policy limits every
- * read, update and delete to that user's own meals; no query here filters by
- * user itself.
+ * Every function takes the logged-in user's id first and filters by it. RLS
+ * enforces the same rule in the database; the explicit filter keeps each query
+ * scoped even if it's ever run with a client that bypasses RLS.
  */
 
 interface MealRow {
@@ -59,12 +58,12 @@ export interface MealTotalRow {
  * lists, so a year of meals is ~100 KB. Days are grouped on the client (only
  * the viewer knows their timezone), so this stays a plain row scan.
  */
-export async function listMealTotals(): Promise<MealTotalRow[]> {
-  await connection();
+export async function listMealTotals(userId: string): Promise<MealTotalRow[]> {
   const db = await createSessionClient();
   const { data, error } = await db
     .from("meals")
     .select("logged_at, totals:analysis->totals")
+    .eq("user_id", userId)
     .order("logged_at", { ascending: true });
   if (error) throw new Error(`Couldn't load stats: ${error.message}`);
   return (data as unknown as { logged_at: string; totals: MealTotals | null }[])
@@ -76,35 +75,44 @@ export async function listMealTotals(): Promise<MealTotalRow[]> {
     }));
 }
 
-export async function listMeals(): Promise<LoggedMeal[]> {
-  // The log must never be prerendered at build time — always fetch per request
-  await connection();
+export async function listMeals(userId: string): Promise<LoggedMeal[]> {
   const db = await createSessionClient();
   const { data, error } = await db
     .from("meals")
     .select(LIST_COLUMNS)
+    .eq("user_id", userId)
     .order("logged_at", { ascending: false });
   if (error) throw new Error(`Couldn't load the meal log: ${error.message}`);
   return (data as unknown as MealRow[]).map(toMeal);
 }
 
 /** The large photo for one meal, or null if it has none (or doesn't exist). */
-export async function getMealPhotoById(id: string): Promise<string | null> {
+export async function getMealPhotoById(userId: string, id: string): Promise<string | null> {
   const db = await createSessionClient();
-  const { data, error } = await db.from("meals").select("photo").eq("id", id).maybeSingle();
+  const { data, error } = await db
+    .from("meals")
+    .select("photo")
+    .eq("user_id", userId)
+    .eq("id", id)
+    .maybeSingle();
   if (error) throw new Error(`Couldn't load the photo: ${error.message}`);
   return (data as { photo: string | null } | null)?.photo ?? null;
 }
 
-export async function getMealById(id: string): Promise<LoggedMeal | null> {
+export async function getMealById(userId: string, id: string): Promise<LoggedMeal | null> {
   const db = await createSessionClient();
-  const { data, error } = await db.from("meals").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await db
+    .from("meals")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("id", id)
+    .maybeSingle();
   if (error) throw new Error(`Couldn't load the meal: ${error.message}`);
   return data ? toMeal(data as MealRow) : null;
 }
 
 /** Saves meals owned by `userId` — the logged-in user, never a value sent by the client. */
-export async function insertMeals(meals: LoggedMeal[], userId: string): Promise<void> {
+export async function insertMeals(userId: string, meals: LoggedMeal[]): Promise<void> {
   const db = await createSessionClient();
   const { error } = await db
     .from("meals")
@@ -113,6 +121,7 @@ export async function insertMeals(meals: LoggedMeal[], userId: string): Promise<
 }
 
 export async function updateMealById(
+  userId: string,
   id: string,
   patch: { analysis: MealAnalysis; loggedAt: string },
 ): Promise<void> {
@@ -120,20 +129,28 @@ export async function updateMealById(
   const { error } = await db
     .from("meals")
     .update({ analysis: patch.analysis, logged_at: patch.loggedAt })
+    .eq("user_id", userId)
     .eq("id", id);
   if (error) throw new Error(`Couldn't update: ${error.message}`);
 }
 
 /** Deletes the meal and returns the full row (photo included) so Undo can re-insert it. */
-export async function deleteMealById(id: string): Promise<LoggedMeal | null> {
+export async function deleteMealById(userId: string, id: string): Promise<LoggedMeal | null> {
   const db = await createSessionClient();
-  const { data, error } = await db.from("meals").delete().eq("id", id).select("*").maybeSingle();
+  const { data, error } = await db
+    .from("meals")
+    .delete()
+    .eq("user_id", userId)
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
   if (error) throw new Error(`Couldn't delete: ${error.message}`);
   return data ? toMeal(data as MealRow) : null;
 }
 
 /** Latest logged_at in [startIso, endIso), or null if none — used to order backdated meals. */
 export async function latestLoggedAtBetween(
+  userId: string,
   startIso: string,
   endIso: string,
 ): Promise<string | null> {
@@ -141,6 +158,7 @@ export async function latestLoggedAtBetween(
   const { data, error } = await db
     .from("meals")
     .select("logged_at")
+    .eq("user_id", userId)
     .gte("logged_at", startIso)
     .lt("logged_at", endIso)
     .order("logged_at", { ascending: false })
@@ -151,11 +169,16 @@ export async function latestLoggedAtBetween(
 }
 
 /** Calorie/macro sums for meals logged in [startIso, endIso) — used for "today so far". */
-export async function sumTotalsBetween(startIso: string, endIso: string): Promise<MealTotals> {
+export async function sumTotalsBetween(
+  userId: string,
+  startIso: string,
+  endIso: string,
+): Promise<MealTotals> {
   const db = await createSessionClient();
   const { data, error } = await db
     .from("meals")
     .select("analysis")
+    .eq("user_id", userId)
     .gte("logged_at", startIso)
     .lt("logged_at", endIso);
   if (error) throw new Error(`Couldn't load today's totals: ${error.message}`);

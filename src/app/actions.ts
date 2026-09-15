@@ -30,15 +30,9 @@ import type { FoodItem, MealAnalysis, MealTotals } from "@/lib/schema";
 import { sumTotals } from "@/lib/scale";
 import { isDrinkType, type DrinkType } from "@/lib/water";
 import { getGoals, saveGoals, type Goals } from "@/lib/settings";
+// Server Actions are reachable via direct POST, not just through the UI, so
+// each one re-checks the session with getUserId() — same rule as the proxy.
 import { getUserId } from "@/lib/supabase-session";
-
-/**
- * Server Actions are reachable via direct POST, not just through the UI, so
- * each one re-checks the session — same rule as the proxy.
- */
-async function isAuthed(): Promise<boolean> {
-  return (await getUserId()) !== null;
-}
 
 interface ActionResult {
   error?: string;
@@ -151,7 +145,7 @@ export async function logMealAction(
       return { error: "Invalid backdate" };
     }
     try {
-      const latestIso = await latestLoggedAtBetween(backdate.startIso, backdate.endIso);
+      const latestIso = await latestLoggedAtBetween(userId, backdate.startIso, backdate.endIso);
       const last = latestIso === null ? null : Date.parse(latestIso);
       // A minute after the day's latest meal, halving toward midnight when
       // there's less than that left so the timestamp never leaves the day
@@ -166,7 +160,7 @@ export async function logMealAction(
   }
   meal = { ...meal, analysis: { ...meal.analysis, totals: sumTotals(meal.analysis.foods) } };
   try {
-    await insertMeals([meal], userId);
+    await insertMeals(userId, [meal]);
   } catch (err) {
     return { error: message(err, "Couldn't save the meal") };
   }
@@ -188,7 +182,8 @@ export async function updateMealAction(
   id: string,
   patch: { analysis: MealAnalysis; loggedAt: string },
 ): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   if (
     typeof patch !== "object" ||
@@ -200,7 +195,7 @@ export async function updateMealAction(
     return { error: "Invalid meal data" };
   }
   try {
-    await updateMealById(id, {
+    await updateMealById(userId, id, {
       ...patch,
       analysis: { ...patch.analysis, totals: sumTotals(patch.analysis.foods) },
     });
@@ -218,10 +213,10 @@ export async function relogMealAction(id: string): Promise<ActionResult & { newI
   if (!userId) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   try {
-    const meal = await getMealById(id);
+    const meal = await getMealById(userId, id);
     if (!meal) return { error: "That meal no longer exists" };
     const newId = crypto.randomUUID();
-    await insertMeals([{ ...meal, id: newId, loggedAt: new Date().toISOString() }], userId);
+    await insertMeals(userId, [{ ...meal, id: newId, loggedAt: new Date().toISOString() }]);
     revalidatePath("/log");
     revalidatePath("/stats");
     return { newId };
@@ -235,11 +230,12 @@ export async function relogMealAction(id: string): Promise<ActionResult & { newI
  * client's Undo can re-insert exactly what was removed.
  */
 export async function deleteMealAction(id: string): Promise<ActionResult & { meal?: LoggedMeal }> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   let meal: LoggedMeal | null;
   try {
-    meal = await deleteMealById(id);
+    meal = await deleteMealById(userId, id);
   } catch (err) {
     return { error: message(err, "Couldn't delete the meal") };
   }
@@ -252,10 +248,11 @@ export async function deleteMealAction(id: string): Promise<ActionResult & { mea
 export async function getMealPhotoAction(
   id: string,
 ): Promise<ActionResult & { photo?: string | null }> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   try {
-    return { photo: await getMealPhotoById(id) };
+    return { photo: await getMealPhotoById(userId, id) };
   } catch (err) {
     return { error: message(err, "Couldn't load the photo") };
   }
@@ -275,20 +272,16 @@ export async function saveGoalsAction(goals: Goals): Promise<ActionResult> {
     goals?.waterGoal === null || (Number.isFinite(goals?.waterGoal) && goals.waterGoal! >= 1);
   if (!calorieOk || !proteinOk || !waterOk) return { error: "Invalid goals" };
   try {
-    await saveGoals(
-      {
-        calorieGoal: Math.round(goals.calorieGoal),
-        waterGoal: goals.waterGoal === null ? null : Math.round(goals.waterGoal),
-        proteinGoal: goals.proteinGoal === null ? null : Math.round(goals.proteinGoal),
-      },
-      userId,
-    );
+    await saveGoals(userId, {
+      calorieGoal: Math.round(goals.calorieGoal),
+      waterGoal: goals.waterGoal === null ? null : Math.round(goals.waterGoal),
+      proteinGoal: goals.proteinGoal === null ? null : Math.round(goals.proteinGoal),
+    });
   } catch (err) {
     return { error: message(err, "Couldn't save the goals") };
   }
   revalidatePath("/log");
   revalidatePath("/stats");
-  revalidatePath("/");
   return {};
 }
 
@@ -316,7 +309,7 @@ export async function todayProgressAction(
   }
   try {
     const [totals, goals] = await Promise.all([
-      sumTotalsBetween(startIso, endIso),
+      sumTotalsBetween(userId, startIso, endIso),
       getGoals(userId),
     ]);
     return { progress: { totals, goals } };
