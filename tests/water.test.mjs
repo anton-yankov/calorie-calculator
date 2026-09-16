@@ -9,7 +9,19 @@ const stats = loadModule("src/lib/stats.ts");
 const macros = { calories: 60, protein_g: 3, carbs_g: 5, fat_g: 3 };
 const milk = products.manualProductToFood("Milk", 250, macros, undefined, null, "ml", "milk");
 const legacy = { name: "Lunch", grams: 200, ...macros, confidence: "high", assumptions: "" };
-const goals = { calorieGoal: 2000, proteinGoal: 100, waterGoal: 2000 };
+// One plan covering every day in these ranges
+const plans = [
+  {
+    effectiveFrom: "2026-01-01",
+    goal: "lose",
+    kgPerWeek: 0.5,
+    goalWeightKg: 78,
+    calorieTarget: 2000,
+    proteinTarget: 100,
+    maintenanceKcal: 2550,
+    weightKg: 85,
+  },
+];
 
 test("water shorthand is deterministic, supports decimals/units and rejects ambiguous amounts", () => {
   for (const [text, ml] of [
@@ -105,7 +117,7 @@ test("water stats exclude legacy days and today from averages, water-only days f
       nutritionLogged: false,
     },
   ];
-  const result = stats.computeRange(stats.groupByDay(rows), "7d", goals, "2026-09-10");
+  const result = stats.computeRange(stats.groupByDay(rows), "7d", plans, 2000, "2026-09-10");
   assert.equal(result.summary.avgWater, 1125);
   assert.equal(result.summary.waterCompleteDays, 2);
   assert.equal(result.summary.waterGoalDays, 1);
@@ -116,7 +128,7 @@ test("water stats exclude legacy days and today from averages, water-only days f
     6250,
   );
   assert.equal(result.buckets.find((b) => b.key === "2026-09-07").value.water_ml, undefined);
-  const weekly = stats.computeRange(stats.groupByDay(rows), "90d", goals, "2026-09-10");
+  const weekly = stats.computeRange(stats.groupByDay(rows), "90d", plans, 2000, "2026-09-10");
   const week = weekly.buckets.find((b) => b.key === "2026-09-07");
   assert.equal(week.value.water_ml, 1125);
   assert.equal(week.value.calories, 105);
@@ -130,7 +142,7 @@ test("water-only weeks have a water average and no calorie observations", () => 
       nutritionLogged: false,
     },
   ];
-  const range = stats.computeRange(stats.groupByDay(rows), "90d", goals, "2026-09-10");
+  const range = stats.computeRange(stats.groupByDay(rows), "90d", plans, 2000, "2026-09-10");
   assert.equal(range.summary.avgCalories, null);
   assert.equal(range.summary.avgWater, 1000);
   assert.equal(range.buckets.find((b) => b.key === "2026-09-07").value.nutrition_logged, false);
@@ -169,7 +181,7 @@ test("server rejects invalid water fields and recomputes all totals before savin
       insertMeals: async (userId, meals) => writes.push(...meals.map((m) => ({ ...m, userId }))),
     },
     "@/lib/barcode-products": { saveLoggedBarcodeProducts: async () => {} },
-    "@/lib/settings": {},
+    "@/lib/profiles": {},
   });
   const meal = {
     id: "water",
@@ -235,43 +247,4 @@ test("catalog drinks preserve ml basis, category and litre-sized packages", asyn
   assert.equal(food.volume_ml, 250);
   assert.equal(food.calories, 150);
   assert.equal(food.productSnapshot.portionUnit, "ml");
-});
-
-test("goals are read and saved for the given user, and the water goal can be cleared", async () => {
-  const writes = [];
-  const queries = [];
-  const settings = loadModule("src/lib/settings.ts", {
-    "@/lib/supabase-session": {
-      createSessionClient: async () => ({
-        from: () => ({
-          select: () => ({
-            eq: (column, value) => ({
-              maybeSingle: async () => {
-                queries.push([column, value]);
-                return {
-                  data: { calorie_goal: 2000, protein_goal: 100, water_goal: null },
-                  error: null,
-                };
-              },
-            }),
-          }),
-          upsert: async (row) => {
-            writes.push(row);
-            return { error: null };
-          },
-        }),
-      }),
-    },
-  });
-  assert.deepEqual(await settings.getGoals("user-1"), {
-    calorieGoal: 2000,
-    proteinGoal: 100,
-    waterGoal: null,
-  });
-  assert.deepEqual(queries, [["user_id", "user-1"]]);
-  await settings.saveGoals("user-1", goals);
-  await settings.saveGoals("user-1", { ...goals, waterGoal: null });
-  assert.equal(writes[0].user_id, "user-1");
-  assert.equal(writes[0].water_goal, 2000);
-  assert.equal(writes[1].water_goal, null);
 });

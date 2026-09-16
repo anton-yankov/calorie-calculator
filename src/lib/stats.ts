@@ -1,8 +1,9 @@
 import { addDays, dayKey, dayLabel, shortDate, weekStart } from "@/lib/day";
 import type { MealTotalRow } from "@/lib/meals";
+import type { StoredPlan } from "@/lib/plan-history";
+import { targetsForDay } from "@/lib/plan-targets";
 import { sumTotals } from "@/lib/scale";
 import type { MealTotals } from "@/lib/schema";
-import type { Goals } from "@/lib/settings";
 
 /**
  * Pure math for the Stats page — no React, no Supabase. Meals come in as
@@ -56,7 +57,7 @@ export interface Summary {
   avgWater: number | null;
   waterGoalDays: number | null;
   waterCompleteDays: number;
-  /** Complete days whose calories reached the goal; null without a goal */
+  /** Complete days whose calories reached that day's target; null without any plan */
   calorieGoalDays: number | null;
   proteinGoalDays: number | null;
   /** Highest-calorie complete day, for when no goal is set */
@@ -171,7 +172,8 @@ function mean(values: number[]): number | null {
 export function computeRange(
   days: Map<string, DayStat>,
   range: RangeId,
-  goals: Goals | null,
+  plans: StoredPlan[],
+  waterGoalMl: number | null,
   today: string = dayKey(new Date()),
 ): RangeStats {
   const preset = RANGES.find((r) => r.id === range) ?? RANGES[1];
@@ -212,17 +214,23 @@ export function computeRange(
       avgWater: mean(waterComplete.map((d) => d.totals.water_ml!)),
       waterCompleteDays: waterComplete.length,
       waterGoalDays:
-        goals?.waterGoal != null
-          ? waterComplete.filter((d) => d.totals.water_ml! >= goals.waterGoal!).length
+        waterGoalMl != null
+          ? waterComplete.filter((d) => d.totals.water_ml! >= waterGoalMl).length
           : null,
-      // Goals are floors here, matching GoalBars: reaching the number is the win
-      calorieGoalDays: goals
-        ? complete.filter((d) => d.totals.calories >= goals.calorieGoal).length
+      // Each day counts against its own plan's targets. Targets are floors here,
+      // matching GoalBars: reaching the number is the win (goal-aware in Phase 3)
+      calorieGoalDays: plans.length
+        ? complete.filter((d) => {
+            const target = targetsForDay(plans, d.day, waterGoalMl);
+            return target !== null && d.totals.calories >= target.calorieTarget;
+          }).length
         : null,
-      proteinGoalDays:
-        goals?.proteinGoal != null
-          ? complete.filter((d) => d.totals.protein_g >= goals.proteinGoal!).length
-          : null,
+      proteinGoalDays: plans.length
+        ? complete.filter((d) => {
+            const target = targetsForDay(plans, d.day, waterGoalMl);
+            return target !== null && d.totals.protein_g >= target.proteinTarget;
+          }).length
+        : null,
       best,
     },
   };

@@ -61,8 +61,10 @@ Environment variables (see `.env.example`):
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Database key; queries run as the logged-in user under the RLS policies in `supabase/schema.sql` |
 
 Database: create a Supabase project and run `supabase/schema.sql` in the SQL
-Editor. It creates `public.meals` (the log) and `public.settings` (daily
-goals), and `public.barcode_products` (manually entered barcode nutrition).
+Editor. It creates `public.meals` (the log), `public.barcode_products`
+(manually entered barcode nutrition), `public.profiles` (body details and the
+water setting) and `public.plans` (one row per plan change, so each day is
+judged by the plan that applied on it).
 
 Accounts: the app is invite-only. In the Supabase dashboard, turn off
 "Allow new users to sign up" (Authentication → Sign In / Providers), then create

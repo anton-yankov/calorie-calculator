@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding &amp; Plan Picker Mockups — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --surface-raised: #2A281F;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --danger: #E58B82;
+    --danger-soft: #3B2421;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 {
+    font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: var(--surface-raised);
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 24px; margin: 18px 0; }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 18px 52px; }
+  ol.steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: var(--mono); font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px; width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------- Mockup chrome (document side) ---------- */
+  .phones { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; justify-items: center; margin: 24px 0; }
+  .phone-wrap { width: 100%; max-width: 360px; }
+  .phone-label { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 10px; }
+  .switch { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 18px 0 4px; }
+  .switch span { font-size: 13px; color: var(--ink-soft); align-self: center; margin-right: 4px; }
+  .switch button {
+    font: 600 13px 'Inter', system-ui, sans-serif; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  }
+  .switch button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  /* ---------- The app itself (mirrors src/app/globals.css tokens) ---------- */
+  .phone {
+    width: 100%; border: 1px solid var(--line); border-radius: 28px; overflow: hidden;
+    background: radial-gradient(circle at 50% -10%, rgba(224, 138, 92, 0.08), transparent 22rem), var(--bg);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    font-size: 15px; line-height: 1.5;
+  }
+  .app-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 18px; border-bottom: 1px solid rgba(56, 53, 44, 0.8);
+  }
+  .wordmark { font-family: var(--serif); font-weight: 600; font-size: 18px; }
+  .nav-link { font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+  .app-body { padding: 20px 18px 24px; display: flex; flex-direction: column; gap: 16px; }
+  .progress { display: flex; gap: 6px; }
+  .progress i { flex: 1; height: 4px; border-radius: 99px; background: var(--line); }
+  .progress i.on { background: var(--accent); }
+  .app-head { border-bottom: 2px solid var(--ink); padding-bottom: 14px; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  .app-h1 { font-family: var(--serif); font-size: 29px; font-weight: 600; line-height: 1.1; margin: 6px 0 0; }
+  .app-sub { color: var(--ink-soft); font-size: 14px; margin: 6px 0 0; }
+  .field-label { font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; display: block; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .unit-wrap { position: relative; }
+  .input {
+    width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    border-radius: var(--radius); padding: 10px 44px 10px 14px; font: 15px var(--mono);
+  }
+  .input:focus { outline: none; border-color: var(--accent); }
+  .unit { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-soft); font-size: 12px; pointer-events: none; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 999px; padding: 4px; background: var(--surface); }
+  .seg.three { grid-template-columns: 1fr 1fr 1fr; }
+  .seg button {
+    border: 0; background: transparent; color: var(--ink-soft); border-radius: 999px; padding: 7px;
+    font: 600 13px 'Inter', system-ui, sans-serif; cursor: pointer;
+  }
+  .seg button.on { background: var(--accent); color: var(--bg); }
+  .choices { display: flex; flex-direction: column; gap: 8px; }
+  .choice {
+    display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 10px 12px;
+    color: var(--ink); font: inherit;
+  }
+  .choice.on { border-color: var(--accent); background: var(--accent-soft); }
+  .radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); margin-top: 3px; flex: none; }
+  .choice.on .radio { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 3px var(--accent-soft); }
+  .choice .t { font-weight: 600; font-size: 14px; display: block; }
+  .choice .d { font-size: 12.5px; color: var(--ink-soft); display: block; }
+  .goal-choice { align-items: center; }
+  .goal-choice .emoji { font-size: 20px; }
+  .btn-row { display: grid; grid-template-columns: auto 1fr; gap: 10px; }
+  .btn {
+    border: 0; border-radius: var(--radius); background: var(--accent); color: var(--bg); cursor: pointer;
+    font: 600 15px 'Inter', system-ui, sans-serif; padding: 12px 16px; width: 100%;
+  }
+  .btn.ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); width: auto; }
+  .hint { font-size: 12.5px; color: var(--ink-soft); margin: 6px 0 0; }
+  .maint {
+    border: 1px dashed var(--line); border-radius: var(--radius); padding: 10px 14px;
+  }
+  .maint-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .maint-row .label { font-size: 13px; color: var(--ink-soft); }
+  .maint-row .value { font: 700 17px var(--mono); }
+  .maint details { margin-top: 6px; font-size: 12.5px; color: var(--ink-soft); }
+  .maint summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+  .maint .formula { font-family: var(--mono); font-size: 11.5px; line-height: 1.6; margin-top: 6px; color: var(--ink); }
+  .plan-list { display: flex; flex-direction: column; gap: 10px; }
+  .plan-card {
+    border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 12px 14px;
+    cursor: pointer; text-align: left; width: 100%; color: var(--ink); font: inherit;
+  }
+  .plan-card.on { border-color: var(--accent); background: var(--accent-soft); }
+  .plan-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .plan-name { font-weight: 700; font-size: 14.5px; }
+  .plan-pace { font: 600 12px var(--mono); color: var(--ink-soft); }
+  .badge {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--green); border: 1px solid var(--green); border-radius: 999px; padding: 1px 7px; margin-left: 6px;
+  }
+  .plan-nums { display: flex; gap: 18px; margin-top: 8px; }
+  .num-big { font: 700 20px var(--mono); }
+  .num-unit { font-size: 11.5px; color: var(--ink-soft); margin-left: 3px; }
+  .plan-date { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
+  .plan-date b { color: var(--ink); font-weight: 600; }
+  .slider-box { border: 1px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius); padding: 14px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); margin: 10px 0 2px; }
+  .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-soft); }
+  .text-link { background: none; border: 0; padding: 0; color: var(--accent); font: 600 13.5px 'Inter', system-ui, sans-serif; cursor: pointer; text-align: left; }
+  .custom { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .result { font-size: 13px; color: var(--ink-soft); }
+  .result b { color: var(--ink); }
+  .impossible {
+    border-left: 4px solid var(--danger); background: var(--danger-soft); color: var(--danger);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 9px 12px; font-size: 13px; font-weight: 600;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Mockup · Phase 2 · step 2.1</div>
+  <h1>Onboarding &amp; the Plan Picker</h1>
+  <p class="subtitle">What a new account sees before using the app: three short steps ending in a plan. Step 3 is shown in two competing styles so you can pick one. Every mockup is clickable, and every number comes from the formulas we agreed on.</p>
+  <div class="meta">
+    <span><strong>Example person:</strong> male, born 1999, 180 cm, 85 kg, moderately active</span>
+    <span><strong>Maintenance:</strong> ≈ 2,860 kcal/day</span>
+    <span><strong>"Today":</strong> 16 Sep 2026</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>The flow at a glance</h2>
+<p class="lede">A brand-new account is sent here right after logging in, and can't reach the rest of the app until a plan is picked. The same flow runs again from Settings when you change your plan.</p>
+
+<figure>
+<svg viewBox="0 0 860 150" xmlns="http://www.w3.org/2000/svg" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="10" y="30" width="140" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="80" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">First login</text>
+  <text x="80" y="74" text-anchor="middle" font-size="11.5" fill="#A5A195">no plan yet</text>
+  <line x1="150" y1="60" x2="185" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="185" y="30" width="140" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="255" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">1 · About you</text>
+  <text x="255" y="74" text-anchor="middle" font-size="11.5" fill="#A5A195">body + activity</text>
+  <line x1="325" y1="60" x2="360" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="360" y="30" width="140" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="430" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">2 · Your goal</text>
+  <text x="430" y="74" text-anchor="middle" font-size="11.5" fill="#A5A195">lose / maintain / gain</text>
+  <line x1="500" y1="60" x2="535" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="535" y="30" width="140" height="60" rx="10" fill="#EDEAE0"/>
+  <text x="605" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#1B1A16">3 · Pick a plan</text>
+  <text x="605" y="74" text-anchor="middle" font-size="11.5" fill="#55524A">style A or B</text>
+  <line x1="675" y1="60" x2="710" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="710" y="30" width="140" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="780" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">The app</text>
+  <text x="780" y="74" text-anchor="middle" font-size="11.5" fill="#A5A195">targets set</text>
+
+  <rect x="360" y="104" width="140" height="34" rx="10" fill="#3A2A20"/>
+  <text x="430" y="125" text-anchor="middle" font-size="11.5" font-weight="600" fill="#E08A5C">maintain skips goal weight</text>
+</svg>
+<figcaption>Three steps between the first login and the app. Step 3 is the decision this document is about.</figcaption>
+</figure>
+
+<ol class="steps">
+  <li><strong>About you</strong><span class="step-note">Sex, birth year, height, weight and activity level: exactly what Mifflin-St Jeor and the activity factor need, nothing more.</span></li>
+  <li><strong>Your goal</strong><span class="step-note">Lose, maintain or gain. Lose and gain ask for a goal weight; maintain goes straight on.</span></li>
+  <li><strong>Pick a plan</strong><span class="step-note">Maintenance is shown with a "how we got this" explanation, then the plan choice, then an escape hatch to type your own calories and protein.</span></li>
+</ol>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Step 1 · About you</h2>
+<p class="lede">One screen, no scrolling past the fold on most phones except the activity list. The tabs are hidden during onboarding (like on the login page); only Log out stays, in case someone is on the wrong account.</p>
+
+<div class="phones">
+  <div class="phone-wrap">
+    <div class="phone" data-pickable>
+      <div class="app-nav"><span class="wordmark">Calories</span><span class="nav-link">Log out</span></div>
+      <div class="app-body">
+        <div class="progress"><i class="on"></i><i></i><i></i></div>
+        <div class="app-head">
+          <div class="eyebrow">Step 1 of 3</div>
+          <div class="app-h1">Tell us about you</div>
+          <p class="app-sub">We use this to estimate how many calories your body burns in a day.</p>
+        </div>
+        <div>
+          <span class="field-label">Sex</span>
+          <div class="seg" data-group><button type="button" class="on">Male</button><button type="button">Female</button></div>
+        </div>
+        <div class="grid2">
+          <div><span class="field-label">Birth year</span><div class="unit-wrap"><input class="input" value="1999" inputmode="numeric"></div></div>
+          <div><span class="field-label">Height</span><div class="unit-wrap"><input class="input" value="180" inputmode="numeric"><span class="unit">cm</span></div></div>
+          <div><span class="field-label">Weight</span><div class="unit-wrap"><input class="input" value="85" inputmode="decimal"><span class="unit">kg</span></div></div>
+        </div>
+        <div>
+          <span class="field-label">How active are you?</span>
+          <div class="choices" data-group>
+            <button type="button" class="choice"><span class="radio"></span><span><span class="t">Sedentary</span><span class="d">Desk job, little or no exercise</span></span></button>
+            <button type="button" class="choice"><span class="radio"></span><span><span class="t">Lightly active</span><span class="d">Exercise 1–3 days a week</span></span></button>
+            <button type="button" class="choice on"><span class="radio"></span><span><span class="t">Moderately active</span><span class="d">Exercise 3–5 days a week</span></span></button>
+            <button type="button" class="choice"><span class="radio"></span><span><span class="t">Very active</span><span class="d">Hard exercise 6–7 days a week</span></span></button>
+            <button type="button" class="choice"><span class="radio"></span><span><span class="t">Extra active</span><span class="d">Very hard training or a physical job</span></span></button>
+          </div>
+        </div>
+        <button type="button" class="btn">Continue</button>
+      </div>
+    </div>
+    <div class="phone-label">Tap Male/Female and the activity levels: they're live.</div>
+  </div>
+</div>
+
+<div class="card">
+  <p style="margin:0"><strong>Why these fields:</strong> Mifflin-St Jeor needs weight, height, age and sex; the activity level picks the multiplier (1.2 → 1.9). Birth year instead of age keeps the estimate correct as years pass. Weight here becomes the starting weight Phase 4's weight log builds on.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Step 2 · Your goal</h2>
+<p class="lede">Three big choices. Picking lose or gain reveals the goal weight field with a live "kg to go"; picking maintain hides it.</p>
+
+<div class="phones">
+  <div class="phone-wrap">
+    <div class="phone" data-goal-step>
+      <div class="app-nav"><span class="wordmark">Calories</span><span class="nav-link">Log out</span></div>
+      <div class="app-body">
+        <div class="progress"><i class="on"></i><i class="on"></i><i></i></div>
+        <div class="app-head">
+          <div class="eyebrow">Step 2 of 3</div>
+          <div class="app-h1">What's your goal?</div>
+        </div>
+        <div class="choices">
+          <button type="button" class="choice goal-choice on" data-goal="lose"><span class="radio"></span><span><span class="t">Lose weight</span><span class="d">Eat a little under maintenance</span></span></button>
+          <button type="button" class="choice goal-choice" data-goal="maintain"><span class="radio"></span><span><span class="t">Maintain weight</span><span class="d">Eat around maintenance</span></span></button>
+          <button type="button" class="choice goal-choice" data-goal="gain"><span class="radio"></span><span><span class="t">Gain weight</span><span class="d">Eat a little over maintenance</span></span></button>
+        </div>
+        <div data-goal-weight>
+          <span class="field-label">Goal weight</span>
+          <div class="unit-wrap"><input class="input" value="78" inputmode="decimal" data-goal-input><span class="unit">kg</span></div>
+          <p class="hint" data-goal-hint>7 kg to lose from 85 kg</p>
+        </div>
+        <p class="hint hidden" data-maintain-note>No goal weight needed: we'll aim to keep you at 85 kg.</p>
+        <div class="btn-row"><button type="button" class="btn ghost">Back</button><button type="button" class="btn">Continue</button></div>
+      </div>
+    </div>
+    <div class="phone-label">Switch between the three goals, and try typing a goal weight.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>Step 3 · Option A: three pace cards</h2>
+<p class="lede">Every pace laid out side by side with its calories, protein and goal date. Tap a card to select it. This is the "suggest a few plans" idea taken literally.</p>
+
+<div class="switch" data-switch="a"><span>Preview as:</span><button type="button" class="on" data-goal="lose">Lose (85 → 78 kg)</button><button type="button" data-goal="maintain">Maintain</button><button type="button" data-goal="gain">Gain (85 → 90 kg)</button></div>
+<div class="phones">
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-nav"><span class="wordmark">Calories</span><span class="nav-link">Log out</span></div>
+      <div class="app-body">
+        <div class="progress"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+        <div class="app-head">
+          <div class="eyebrow">Step 3 of 3</div>
+          <div class="app-h1">Pick your plan</div>
+        </div>
+        <div class="maint" data-maint></div>
+        <div class="plan-list" data-plan-list="a"></div>
+        <button type="button" class="text-link" data-custom-toggle>Set my own calories and protein instead</button>
+        <div class="custom hidden" data-custom></div>
+        <button type="button" class="btn">Start this plan</button>
+      </div>
+    </div>
+    <div class="phone-label">Option A: tap cards, switch goals above, try "Set my own".</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>Step 3 · Option B: one recommendation + a slider</h2>
+<p class="lede">One suggested plan up front; a slider fine-tunes the pace in 0.05 kg steps, and the numbers follow. Fewer things on screen, more freedom between the fixed paces.</p>
+
+<div class="switch" data-switch="b"><span>Preview as:</span><button type="button" class="on" data-goal="lose">Lose (85 → 78 kg)</button><button type="button" data-goal="maintain">Maintain</button><button type="button" data-goal="gain">Gain (85 → 90 kg)</button></div>
+<div class="phones">
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-nav"><span class="wordmark">Calories</span><span class="nav-link">Log out</span></div>
+      <div class="app-body">
+        <div class="progress"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+        <div class="app-head">
+          <div class="eyebrow">Step 3 of 3</div>
+          <div class="app-h1">Your plan</div>
+        </div>
+        <div class="maint" data-maint></div>
+        <div data-plan-list="b"></div>
+        <button type="button" class="text-link" data-custom-toggle>Set my own calories and protein instead</button>
+        <div class="custom hidden" data-custom></div>
+        <button type="button" class="btn">Start this plan</button>
+      </div>
+    </div>
+    <div class="phone-label">Option B: drag the slider, switch goals above.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>Your own numbers (both options)</h2>
+<p class="lede">The same panel sits under either option. The goal date is recalculated from your calories with 7,700 kcal per kg; if the numbers can never reach the goal, the date is replaced by the warning.</p>
+
+<div class="phones">
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-body">
+        <div class="custom" data-custom-static="lose" data-calories="2400"></div>
+      </div>
+    </div>
+    <div class="phone-label">Losing, 2,400 kcal: reachable.</div>
+  </div>
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-body">
+        <div class="custom" data-custom-static="lose" data-calories="3000"></div>
+      </div>
+    </div>
+    <div class="phone-label">Losing, 3,000 kcal (above maintenance): impossible.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>A or B?</h2>
+<p class="lede">How the two plan styles compare for this app and these two users.</p>
+
+<table>
+  <tr><th>Question</th><th>A · three cards</th><th>B · slider</th></tr>
+  <tr><td>Deciding</td><td>Compare all options at a glance, one tap</td><td>See one option; exploring means dragging</td></tr>
+  <tr><td>Goal dates</td><td>All three dates visible together, the clearest "faster vs. easier" trade-off</td><td>One date that changes as you drag</td></tr>
+  <tr><td>Flexibility</td><td>Fixed paces; in-between values via "Set my own"</td><td>Any pace in 0.05 kg steps</td></tr>
+  <tr><td>On a phone</td><td>Big tap targets</td><td>Small drags are fiddly with a thumb</td></tr>
+  <tr><td>Maintain</td><td>A single card, consistent with the others</td><td>Slider disappears; screen looks different per goal</td></tr>
+  <tr><td>Build effort</td><td>Simple list of buttons</td><td>Slider + live recalculation + accessible labels</td></tr>
+</table>
+
+<div class="callout good"><strong>My recommendation: Option A.</strong> It shows the real trade-off (how fast vs. how hard) in one glance, is easier to use one-handed, and "Set my own" already covers anyone who wants a value between the fixed paces, so the slider's extra freedom isn't needed.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">08</span>What you decide</h2>
+<p class="lede">Pick the plan style, plus four small details that apply to either style.</p>
+
+<table>
+  <tr><th>Decision</th><th>Shown in the mockups</th><th>Alternative</th></tr>
+  <tr><td>Plan style</td><td>A (three cards) or B (slider)</td><td>—</td></tr>
+  <tr><td>"Recommended" badge</td><td>On Steady (lose 0.5 kg/wk) and Lean (gain 0.25 kg/wk)</td><td>No badge: all paces equal</td></tr>
+  <tr><td>"How we got this"</td><td>Expandable maintenance formula with your numbers</td><td>Just the number</td></tr>
+  <tr><td>Nav during onboarding</td><td>Tabs hidden, only Log out</td><td>Tabs visible but locked</td></tr>
+  <tr><td>Progress bar</td><td>Three segments + "Step N of 3"</td><td>Only the "Step N of 3" text</td></tr>
+</table>
+
+<footer class="doc">
+  Calorie Calculator · Phase 2 · step 2.1 mockups · onboarding flow and plan picker
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var TODAY = new Date(2026, 8, 16);
+  var MAINT = 2860;
+  var WEIGHT = 85;
+  var PROTEIN = 170;
+  var GOAL_WEIGHT = { lose: 78, gain: 90 };
+  var KCAL_PER_KG = 7700;
+  var PACES = {
+    lose: [
+      { name: "Gentle", pace: 0.25 },
+      { name: "Steady", pace: 0.5, rec: true },
+      { name: "Faster", pace: 0.75 }
+    ],
+    gain: [
+      { name: "Lean", pace: 0.25, rec: true },
+      { name: "Steady", pace: 0.5 }
+    ]
+  };
+  var SLIDER = { lose: { min: 0.25, max: 0.75, value: 0.5 }, gain: { min: 0.25, max: 0.5, value: 0.25 } };
+
+  function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+  function dateAfter(days) {
+    var d = new Date(TODAY);
+    d.setDate(d.getDate() + Math.round(days));
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+  function planFor(goal, pace) {
+    var sign = goal === "lose" ? -1 : 1;
+    var kg = Math.abs(GOAL_WEIGHT[goal] - WEIGHT);
+    var weeks = kg / pace;
+    return { kcal: MAINT + sign * pace * KCAL_PER_KG / 7, weeks: weeks, date: dateAfter(weeks * 7) };
+  }
+  function numbers(kcal) {
+    return '<div class="plan-nums"><span><span class="num-big">' + fmt(kcal) + '</span><span class="num-unit">kcal</span></span>' +
+      '<span><span class="num-big">' + PROTEIN + '</span><span class="num-unit">g protein</span></span></div>';
+  }
+
+  function maintHtml() {
+    return '<div class="maint-row"><span class="label">Your maintenance</span><span class="value">≈ ' + fmt(MAINT) + ' kcal</span></div>' +
+      '<details><summary>How we got this</summary><div class="formula">' +
+      'BMR = 10×85 + 6.25×180 − 5×27 + 5 = 1,845<br>' +
+      'Moderately active: 1,845 × 1.55 ≈ 2,860 kcal/day<br>' +
+      'Protein: 2.0 g × 85 kg = 170 g</div></details>';
+  }
+
+  function optionA(goal) {
+    if (goal === "maintain") {
+      return '<button type="button" class="plan-card on"><div class="plan-top"><span class="plan-name">Maintain</span><span class="plan-pace">± 0 kg/wk</span></div>' +
+        numbers(MAINT) + '<div class="plan-date">No goal date: keeps you steady at 85 kg</div></button>';
+    }
+    return PACES[goal].map(function (p) {
+      var plan = planFor(goal, p.pace);
+      return '<button type="button" class="plan-card' + (p.rec ? " on" : "") + '">' +
+        '<div class="plan-top"><span class="plan-name">' + p.name + (p.rec ? '<span class="badge">Recommended</span>' : "") + '</span>' +
+        '<span class="plan-pace">' + (goal === "lose" ? "−" : "+") + p.pace.toFixed(2) + ' kg/wk</span></div>' +
+        numbers(plan.kcal) +
+        '<div class="plan-date">Reach ' + GOAL_WEIGHT[goal] + ' kg in ≈ ' + Math.round(plan.weeks) + ' weeks · <b>' + plan.date + '</b></div></button>';
+    }).join("");
+  }
+
+  function optionB(goal) {
+    if (goal === "maintain") {
+      return '<div class="slider-box"><div class="plan-top"><span class="plan-name">Maintain</span><span class="plan-pace">± 0 kg/wk</span></div>' +
+        numbers(MAINT) + '<div class="plan-date">No goal date: keeps you steady at 85 kg</div></div>';
+    }
+    var s = SLIDER[goal];
+    return '<div class="slider-box" data-slider="' + goal + '">' +
+      '<div class="plan-top"><span class="plan-name">Recommended<span class="badge">for you</span></span><span class="plan-pace" data-pace></span></div>' +
+      '<div data-nums></div>' +
+      '<input type="range" min="' + s.min + '" max="' + s.max + '" step="0.05" value="' + s.value + '" aria-label="Pace in kg per week">' +
+      '<div class="ticks"><span>Easier</span><span>Faster</span></div>' +
+      '<div class="plan-date" data-date></div></div>';
+  }
+
+  function updateSlider(box) {
+    var goal = box.getAttribute("data-slider");
+    var pace = Number(box.querySelector("input").value);
+    var plan = planFor(goal, pace);
+    box.querySelector("[data-pace]").textContent = (goal === "lose" ? "−" : "+") + pace.toFixed(2) + " kg/wk";
+    box.querySelector("[data-nums]").innerHTML = numbers(plan.kcal);
+    box.querySelector("[data-date]").innerHTML = "Reach " + GOAL_WEIGHT[goal] + " kg in ≈ " + Math.round(plan.weeks) + " weeks · <b>" + plan.date + "</b>";
+  }
+
+  function customHtml(calories) {
+    return '<div class="grid2">' +
+      '<div><span class="field-label">Calories</span><div class="unit-wrap"><input class="input" data-cal value="' + calories + '" inputmode="numeric"><span class="unit">kcal</span></div></div>' +
+      '<div><span class="field-label">Protein</span><div class="unit-wrap"><input class="input" value="' + PROTEIN + '" inputmode="numeric"><span class="unit">g</span></div></div>' +
+      '</div><div data-result></div>';
+  }
+
+  function updateCustom(panel, goal) {
+    var cal = Number(panel.querySelector("[data-cal]").value);
+    var out = panel.querySelector("[data-result]");
+    if (!cal || cal <= 0) { out.innerHTML = ""; return; }
+    if (goal === "maintain") {
+      var diff = cal - MAINT;
+      out.innerHTML = '<div class="result">' + (Math.abs(diff) < 1 ? "Exactly your maintenance." :
+        "<b>" + fmt(Math.abs(diff)) + " kcal " + (diff < 0 ? "below" : "above") + "</b> maintenance, about " +
+        (Math.abs(diff) * 7 / KCAL_PER_KG).toFixed(2) + " kg a week " + (diff < 0 ? "lost" : "gained")) + "</div>";
+      return;
+    }
+    var daily = goal === "lose" ? MAINT - cal : cal - MAINT;
+    if (daily <= 0) {
+      out.innerHTML = '<div class="impossible">At this intake it\'s impossible to reach your goal weight.</div>';
+      return;
+    }
+    var kg = Math.abs(GOAL_WEIGHT[goal] - WEIGHT);
+    var days = kg * KCAL_PER_KG / daily;
+    out.innerHTML = '<div class="result">About <b>' + (daily * 7 / KCAL_PER_KG).toFixed(2) + ' kg a week</b> · reach ' +
+      GOAL_WEIGHT[goal] + ' kg around <b>' + dateAfter(days) + '</b></div>';
+  }
+
+  // Single-choice groups (sex, activity level) and plan cards
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest(".seg button, .choices .choice, .plan-card");
+    if (!button || button.closest("[data-goal-step]") && button.hasAttribute("data-goal")) return;
+    var group = button.parentElement;
+    Array.prototype.forEach.call(group.children, function (el) { el.classList.toggle("on", el === button); });
+  });
+
+  // Step 2: goal choice shows or hides the goal weight
+  var goalStep = document.querySelector("[data-goal-step]");
+  var goalInput = goalStep.querySelector("[data-goal-input]");
+  var goalHint = goalStep.querySelector("[data-goal-hint]");
+  var currentGoal = "lose";
+  function refreshGoalHint() {
+    var target = Number(goalInput.value);
+    if (!target) { goalHint.textContent = ""; return; }
+    var diff = target - WEIGHT;
+    goalHint.textContent = diff === 0 ? "That's your current weight: pick maintain instead" :
+      Math.abs(diff) + " kg to " + (diff < 0 ? "lose" : "gain") + " from " + WEIGHT + " kg";
+  }
+  goalStep.querySelectorAll("[data-goal]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      currentGoal = button.getAttribute("data-goal");
+      goalStep.querySelectorAll("[data-goal]").forEach(function (b) { b.classList.toggle("on", b === button); });
+      goalStep.querySelector("[data-goal-weight]").classList.toggle("hidden", currentGoal === "maintain");
+      goalStep.querySelector("[data-maintain-note]").classList.toggle("hidden", currentGoal !== "maintain");
+      if (currentGoal !== "maintain") { goalInput.value = GOAL_WEIGHT[currentGoal]; refreshGoalHint(); }
+    });
+  });
+  goalInput.addEventListener("input", refreshGoalHint);
+
+  // Step 3: both options, with a goal preview switch each
+  ["a", "b"].forEach(function (option) {
+    var switcher = document.querySelector('[data-switch="' + option + '"]');
+    var phone = switcher.nextElementSibling;
+    var list = phone.querySelector("[data-plan-list]");
+    var custom = phone.querySelector("[data-custom]");
+    var goal = "lose";
+    phone.querySelector("[data-maint]").innerHTML = maintHtml();
+
+    function render() {
+      list.innerHTML = option === "a" ? optionA(goal) : optionB(goal);
+      var box = list.querySelector("[data-slider]");
+      if (box) {
+        updateSlider(box);
+        box.querySelector("input").addEventListener("input", function () { updateSlider(box); });
+      }
+      custom.innerHTML = customHtml(goal === "gain" ? 3200 : 2400);
+      custom.querySelector("[data-cal]").addEventListener("input", function () { updateCustom(custom, goal); });
+      updateCustom(custom, goal);
+    }
+
+    switcher.querySelectorAll("button").forEach(function (button) {
+      button.addEventListener("click", function () {
+        goal = button.getAttribute("data-goal");
+        switcher.querySelectorAll("button").forEach(function (b) { b.classList.toggle("on", b === button); });
+        render();
+      });
+    });
+    phone.querySelector("[data-custom-toggle]").addEventListener("click", function () {
+      custom.classList.toggle("hidden");
+    });
+    render();
+  });
+
+  // Section 06: static custom examples
+  document.querySelectorAll("[data-custom-static]").forEach(function (panel) {
+    var goal = panel.getAttribute("data-custom-static");
+    panel.innerHTML = customHtml(panel.getAttribute("data-calories"));
+    panel.querySelector("[data-cal]").addEventListener("input", function () { updateCustom(panel, goal); });
+    updateCustom(panel, goal);
+  });
+})();
+</script>
+</body>
+</html>

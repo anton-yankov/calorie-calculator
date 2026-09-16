@@ -38,6 +38,15 @@ export function addDays(key: string, n: number): string {
   return dayKey(d);
 }
 
+/** "23 Dec 2026" — for plan dates, which read better spelled out than as dd.mm. */
+export function longDate(key: string): string {
+  return new Date(`${key}T12:00:00`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 /** "dd.mm", with the year appended only when it isn't the current one. */
 export function shortDate(key: string): string {
   const d = new Date(`${key}T12:00:00`);

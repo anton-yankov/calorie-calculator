@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import type { LoggedMeal } from "@/lib/log";
 import { listMeals } from "@/lib/meals";
-import { getGoals, type Goals } from "@/lib/settings";
+import { listPlans, type StoredPlan } from "@/lib/plan-history";
+import { activeWaterGoal, getProfile, type Profile } from "@/lib/profiles";
 import { getUserId } from "@/lib/supabase-session";
-import { GoalsEditor } from "./GoalsEditor";
 import { LogList } from "./LogList";
 
 // Server component: the log is fetched from Supabase per request (nothing is
@@ -15,10 +15,15 @@ export default async function LogPage() {
   if (!userId) redirect("/login");
 
   let meals: LoggedMeal[] = [];
-  let goals: Goals | null = null;
+  let plans: StoredPlan[] = [];
+  let profile: Profile | null = null;
   let loadError: string | null = null;
   try {
-    [meals, goals] = await Promise.all([listMeals(userId), getGoals(userId)]);
+    [meals, plans, profile] = await Promise.all([
+      listMeals(userId),
+      listPlans(userId),
+      getProfile(userId),
+    ]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Couldn't load the meal log.";
   }
@@ -35,14 +40,12 @@ export default async function LogPage() {
         <p className="mt-2 text-[15px] text-muted">Your saved meals, grouped by day.</p>
       </header>
 
-      <GoalsEditor goals={goals} />
-
       {loadError ? (
         <p className="rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           {loadError} — check your connection and reload.
         </p>
       ) : (
-        <LogList meals={meals} goals={goals} />
+        <LogList meals={meals} plans={plans} waterGoalMl={activeWaterGoal(profile)} />
       )}
     </main>
   );

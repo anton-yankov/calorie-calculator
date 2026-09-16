@@ -16,6 +16,8 @@ import {
   sumTotalsBetween,
   updateMealById,
 } from "@/lib/meals";
+import { listPlans } from "@/lib/plan-history";
+import { targetsForDay, type DayTargets } from "@/lib/plan-targets";
 import {
   BARCODE_PATTERN,
   isJpegDataUrl,
@@ -29,7 +31,7 @@ import {
 import type { FoodItem, MealAnalysis, MealTotals } from "@/lib/schema";
 import { sumTotals } from "@/lib/scale";
 import { isDrinkType, type DrinkType } from "@/lib/water";
-import { getGoals, saveGoals, type Goals } from "@/lib/settings";
+import { activeWaterGoal, getProfile } from "@/lib/profiles";
 // Server Actions are reachable via direct POST, not just through the UI, so
 // each one re-checks the session with getUserId() — same rule as the proxy.
 import { getUserId } from "@/lib/supabase-session";
@@ -258,49 +260,26 @@ export async function getMealPhotoAction(
   }
 }
 
-export async function saveGoalsAction(goals: Goals): Promise<ActionResult> {
-  const userId = await getUserId();
-  if (!userId) return { error: "Authentication required" };
-  const calorieOk =
-    typeof goals === "object" &&
-    goals !== null &&
-    Number.isFinite(goals.calorieGoal) &&
-    goals.calorieGoal > 0;
-  const proteinOk =
-    goals?.proteinGoal === null || (Number.isFinite(goals?.proteinGoal) && goals.proteinGoal! > 0);
-  const waterOk =
-    goals?.waterGoal === null || (Number.isFinite(goals?.waterGoal) && goals.waterGoal! >= 1);
-  if (!calorieOk || !proteinOk || !waterOk) return { error: "Invalid goals" };
-  try {
-    await saveGoals(userId, {
-      calorieGoal: Math.round(goals.calorieGoal),
-      waterGoal: goals.waterGoal === null ? null : Math.round(goals.waterGoal),
-      proteinGoal: goals.proteinGoal === null ? null : Math.round(goals.proteinGoal),
-    });
-  } catch (err) {
-    return { error: message(err, "Couldn't save the goals") };
-  }
-  revalidatePath("/log");
-  revalidatePath("/stats");
-  return {};
-}
-
 export interface TodayProgress {
   totals: MealTotals;
-  goals: Goals | null;
+  /** null until the user has a plan */
+  targets: DayTargets | null;
 }
 
 /**
- * Totals for [startIso, endIso) plus the current goals, for the Analyze page's
- * "today so far" strip. The client supplies the bounds because "today" depends
- * on the viewer's timezone, which the server doesn't know (Vercel runs in UTC).
+ * Totals for [startIso, endIso) plus that day's targets, for the Analyze page's
+ * "today so far" strip. The client supplies the day and bounds because "today"
+ * depends on the viewer's timezone, which the server doesn't know (Vercel runs
+ * in UTC).
  */
 export async function todayProgressAction(
+  day: string,
   startIso: string,
   endIso: string,
 ): Promise<ActionResult & { progress?: TodayProgress }> {
   const userId = await getUserId();
   if (!userId) return { error: "Authentication required" };
+  if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return { error: "Invalid day" };
   const start = Date.parse(startIso);
   const end = Date.parse(endIso);
   const twoDays = 48 * 60 * 60 * 1000;
@@ -308,11 +287,12 @@ export async function todayProgressAction(
     return { error: "Invalid range" };
   }
   try {
-    const [totals, goals] = await Promise.all([
+    const [totals, plans, profile] = await Promise.all([
       sumTotalsBetween(userId, startIso, endIso),
-      getGoals(userId),
+      listPlans(userId),
+      getProfile(userId),
     ]);
-    return { progress: { totals, goals } };
+    return { progress: { totals, targets: targetsForDay(plans, day, activeWaterGoal(profile)) } };
   } catch (err) {
     return { error: message(err, "Couldn't load today's progress") };
   }

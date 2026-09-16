@@ -20,8 +20,10 @@ export function TodayStrip() {
 
   useEffect(() => {
     let cancelled = false;
-    const { startIso, endIso } = dayBounds(logDate ?? dayKey(new Date()));
-    void todayProgressAction(startIso, endIso).then((result) => {
+    // The day key decides which plan's targets apply, so it travels with the bounds
+    const day = logDate ?? dayKey(new Date());
+    const { startIso, endIso } = dayBounds(day);
+    void todayProgressAction(day, startIso, endIso).then((result) => {
       if (!cancelled && result.progress) setProgress(result.progress);
     });
     return () => {
@@ -29,15 +31,15 @@ export function TodayStrip() {
     };
   }, [loggedAtLength, logDate, progressVersion]);
 
-  if (!progress?.goals) return null;
-  const { totals, goals } = progress;
+  if (!progress?.targets) return null;
+  const { totals, targets } = progress;
 
   return (
     <div className="flex flex-col gap-2 rounded-panel border border-line bg-surface px-4 py-3 lg:col-span-2">
       <span className="text-xs font-bold uppercase tracking-[0.14em] text-muted">
         {logDate ? `Logging to ${dayLabel(logDate)}` : "Today"}
       </span>
-      <GoalBars totals={totals} goals={goals} />
+      <GoalBars totals={totals} targets={targets} />
     </div>
   );
 }

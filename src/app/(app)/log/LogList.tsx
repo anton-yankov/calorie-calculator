@@ -1,5 +1,6 @@
 "use client";
 
+import { useWaterTracking } from "@/components/WaterTracking";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
@@ -16,9 +17,10 @@ import { GoalBars } from "@/components/GoalBars";
 import { ZoomableImage } from "@/components/ImageLightbox";
 import { dayKey, dayLabel, timeLabel } from "@/lib/day";
 import type { LoggedMeal } from "@/lib/log";
+import type { StoredPlan } from "@/lib/plan-history";
+import { targetsForDay } from "@/lib/plan-targets";
 import { scaleFood, sumTotals } from "@/lib/scale";
 import type { FoodItem, MealTotals } from "@/lib/schema";
-import type { Goals } from "@/lib/settings";
 
 const fmt = (n: number) => (Number.isInteger(n) ? n.toString() : n.toFixed(1));
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -59,6 +61,7 @@ function GramsInput({
 }
 
 function MealEntry({ meal }: { meal: LoggedMeal }) {
+  const waterTracking = useWaterTracking();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   // Edit drafts; grams edits rescale from the saved analysis (the baseline)
@@ -252,7 +255,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
                     )}
                     {food.name}
                   </span>
-                  {editing && (
+                  {editing && waterTracking && (
                     <div className="mt-2">
                       <DrinkTypeSelect
                         name={food.name}
@@ -296,7 +299,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
         </table>
       </div>
 
-      {totals.water_ml !== undefined && (
+      {waterTracking && totals.water_ml !== undefined && (
         <p className="border-t border-line px-4 py-2 text-xs font-semibold text-muted">
           Water · {formatWater(totals.water_ml)}
         </p>
@@ -379,7 +382,16 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
   );
 }
 
-export function LogList({ meals, goals }: { meals: LoggedMeal[]; goals: Goals | null }) {
+export function LogList({
+  meals,
+  plans,
+  waterGoalMl,
+}: {
+  meals: LoggedMeal[];
+  plans: StoredPlan[];
+  waterGoalMl: number | null;
+}) {
+  const waterTracking = useWaterTracking();
   if (meals.length === 0) {
     return (
       <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted">
@@ -401,6 +413,8 @@ export function LogList({ meals, goals }: { meals: LoggedMeal[]; goals: Goals | 
     <>
       {[...days.entries()].map(([key, dayMeals]) => {
         const totals = sumTotals(dayMeals.map((m) => m.analysis.totals));
+        // Each day is judged by the plan that applied on it, not today's plan
+        const targets = targetsForDay(plans, key, waterGoalMl);
         return (
           <section key={key} className="flex flex-col gap-2">
             <header className="flex flex-col gap-1.5 px-1 pt-3">
@@ -414,11 +428,13 @@ export function LogList({ meals, goals }: { meals: LoggedMeal[]; goals: Goals | 
                     {" "}
                     kcal · P {fmt(totals.protein_g)} · C {fmt(totals.carbs_g)} · F{" "}
                     {fmt(totals.fat_g)}
-                    {totals.water_ml !== undefined && ` · Water ${formatWater(totals.water_ml)}`}
+                    {waterTracking &&
+                      totals.water_ml !== undefined &&
+                      ` · Water ${formatWater(totals.water_ml)}`}
                   </span>
                 </span>
               </div>
-              {goals && <GoalBars totals={totals} goals={goals} />}
+              {targets && <GoalBars totals={totals} targets={targets} />}
             </header>
             {dayMeals.map((meal) => (
               <MealEntry key={meal.id} meal={meal} />

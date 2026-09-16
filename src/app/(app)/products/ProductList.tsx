@@ -1,5 +1,6 @@
 "use client";
 
+import { useWaterTracking } from "@/components/WaterTracking";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteProductAction, saveProductAction } from "@/app/actions";
@@ -141,6 +142,7 @@ function ProductEditor({
   onSave: (draft: Draft) => void;
   onCancel: () => void;
 }) {
+  const waterTracking = useWaterTracking();
   const [draft, setDraft] = useState<Draft>(() => draftFrom(product));
   const [error, setError] = useState<string | null>(null);
 
@@ -190,12 +192,14 @@ function ProductEditor({
             className={`mt-1 ${inputClass}`}
           />
         </label>
-        <DrinkTypeSelect
-          value={draft.drinkType}
-          name={draft.name}
-          disabled={pending}
-          onChange={(drinkType) => setDraft((current) => ({ ...current, drinkType }))}
-        />
+        {waterTracking && (
+          <DrinkTypeSelect
+            value={draft.drinkType}
+            name={draft.name}
+            disabled={pending}
+            onChange={(drinkType) => setDraft((current) => ({ ...current, drinkType }))}
+          />
+        )}
         <label className="flex items-center gap-2 text-xs text-muted">
           Nutrition basis
           <select

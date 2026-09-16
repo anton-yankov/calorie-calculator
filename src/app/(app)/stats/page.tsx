@@ -1,22 +1,29 @@
 import { redirect } from "next/navigation";
 import { listMealTotals, type MealTotalRow } from "@/lib/meals";
-import { getGoals, type Goals } from "@/lib/settings";
+import { listPlans, type StoredPlan } from "@/lib/plan-history";
+import { activeWaterGoal, getProfile, type Profile } from "@/lib/profiles";
 import { getUserId } from "@/lib/supabase-session";
 import { StatsView } from "./StatsView";
 
-// Server component: meal totals and goals are fetched from Supabase per
-// request (see loading.tsx for the streamed skeleton). Day grouping, ranges
-// and chart math happen in StatsView on the client, where the timezone lives.
+// Server component: meal totals, plans and the profile are fetched from
+// Supabase per request (see loading.tsx for the streamed skeleton). Day
+// grouping, ranges and chart math happen in StatsView on the client, where the
+// timezone lives.
 export default async function StatsPage() {
   // The proxy already sends logged-out visitors to /login; this is the page's own check
   const userId = await getUserId();
   if (!userId) redirect("/login");
 
   let rows: MealTotalRow[] = [];
-  let goals: Goals | null = null;
+  let plans: StoredPlan[] = [];
+  let profile: Profile | null = null;
   let loadError: string | null = null;
   try {
-    [rows, goals] = await Promise.all([listMealTotals(userId), getGoals(userId)]);
+    [rows, plans, profile] = await Promise.all([
+      listMealTotals(userId),
+      listPlans(userId),
+      getProfile(userId),
+    ]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Couldn't load your stats.";
   }
@@ -29,7 +36,7 @@ export default async function StatsPage() {
           Stats
         </h1>
         <p className="mt-2 text-[15px] text-muted">
-          Calories and protein, day by day, against your goals.
+          Calories and protein, day by day, against your plan.
         </p>
       </header>
 
@@ -38,7 +45,7 @@ export default async function StatsPage() {
           {loadError} — check your connection and reload.
         </p>
       ) : (
-        <StatsView rows={rows} goals={goals} />
+        <StatsView rows={rows} plans={plans} waterGoalMl={activeWaterGoal(profile)} />
       )}
     </main>
   );

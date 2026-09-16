@@ -1,7 +1,7 @@
 "use client";
 
+import { useWaterTracking } from "@/components/WaterTracking";
 import { DRINK_TYPES, DRINK_LABELS, formatWater } from "@/lib/water";
-import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { DailyBars, type BarDatum } from "@/components/charts/DailyBars";
 import { RangePicker } from "@/components/charts/RangePicker";
@@ -10,7 +10,8 @@ import { SkeletonStats } from "@/components/loaders";
 import { dayKey, dayLabel, shortDate } from "@/lib/day";
 import type { MealTotalRow } from "@/lib/meals";
 import type { MealTotals } from "@/lib/schema";
-import type { Goals } from "@/lib/settings";
+import type { StoredPlan } from "@/lib/plan-history";
+import { targetsForDay } from "@/lib/plan-targets";
 import { computeRange, groupByDay, type RangeId, type RangeStats } from "@/lib/stats";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -47,14 +48,23 @@ function toBars(
  * Renders the skeleton until mounted: "today" and every day boundary come from
  * the viewer's clock, which the server (UTC on Vercel) can't know.
  */
-export function StatsView({ rows, goals }: { rows: MealTotalRow[]; goals: Goals | null }) {
+export function StatsView({
+  rows,
+  plans,
+  waterGoalMl,
+}: {
+  rows: MealTotalRow[];
+  plans: StoredPlan[];
+  waterGoalMl: number | null;
+}) {
+  const waterTracking = useWaterTracking();
   const [range, setRange] = useState<RangeId>("30d");
   const today = useMounted() ? dayKey(new Date()) : null;
 
   const days = useMemo(() => groupByDay(rows), [rows]);
   const stats = useMemo(
-    () => (today ? computeRange(days, range, goals, today) : null),
-    [days, range, goals, today],
+    () => (today ? computeRange(days, range, plans, waterGoalMl, today) : null),
+    [days, range, plans, waterGoalMl, today],
   );
 
   if (rows.length === 0) {
@@ -69,9 +79,12 @@ export function StatsView({ rows, goals }: { rows: MealTotalRow[]; goals: Goals 
   if (!stats) return <SkeletonStats />;
 
   const { summary, mode } = stats;
-  const calorieGoal = goals?.calorieGoal ?? null;
-  const proteinGoal = goals?.proteinGoal ?? null;
-  const waterGoal = goals?.waterGoal ?? null;
+  // The chart lines show today's plan (stats.end is today); the day counts in
+  // summary use each day's own plan. Per-day lines come with the Phase 3 rework.
+  const todayTargets = targetsForDay(plans, stats.end, waterGoalMl);
+  const calorieGoal = todayTargets?.calorieTarget ?? null;
+  const proteinGoal = todayTargets?.proteinTarget ?? null;
+  const waterGoal = waterGoalMl;
   const waterBars: BarDatum[] = stats.buckets.map((b) => ({
     key: b.key,
     label: b.short,
@@ -125,18 +138,24 @@ export function StatsView({ rows, goals }: { rows: MealTotalRow[]; goals: Goals 
             unit={summary.avgProtein === null ? undefined : "g"}
             caption={proteinGoal !== null ? `goal ${proteinGoal} g` : "no protein goal"}
           />
-          <StatTile
-            label="Avg water"
-            value={summary.avgWater === null ? "—" : String(Math.round(summary.avgWater))}
-            unit={summary.avgWater === null ? undefined : "ml"}
-            caption={`${summary.waterCompleteDays} tracked days${waterGoal !== null ? ` · goal ${formatWater(waterGoal)}` : ""}`}
-          />
-          <StatTile
-            label="Water days at goal"
-            value={summary.waterGoalDays === null ? "—" : String(summary.waterGoalDays)}
-            unit={summary.waterGoalDays === null ? undefined : `of ${summary.waterCompleteDays}`}
-            caption={waterGoal === null ? "no water goal" : "today excluded from averages"}
-          />
+          {waterTracking && (
+            <>
+              <StatTile
+                label="Avg water"
+                value={summary.avgWater === null ? "—" : String(Math.round(summary.avgWater))}
+                unit={summary.avgWater === null ? undefined : "ml"}
+                caption={`${summary.waterCompleteDays} tracked days${waterGoal !== null ? ` · goal ${formatWater(waterGoal)}` : ""}`}
+              />
+              <StatTile
+                label="Water days at goal"
+                value={summary.waterGoalDays === null ? "—" : String(summary.waterGoalDays)}
+                unit={
+                  summary.waterGoalDays === null ? undefined : `of ${summary.waterCompleteDays}`
+                }
+                caption={waterGoal === null ? "no water goal" : "today excluded from averages"}
+              />
+            </>
+          )}
           {summary.calorieGoalDays !== null ? (
             <StatTile
               label="Days at goal"
@@ -167,77 +186,71 @@ export function StatsView({ rows, goals }: { rows: MealTotalRow[]; goals: Goals 
             }
           />
         </div>
-
-        {!goals && (
-          <p className="text-sm text-muted">
-            Goal lines appear once you{" "}
-            <Link href="/log" className="font-semibold text-accent hover:underline">
-              set daily goals
-            </Link>{" "}
-            on the Log page.
-          </p>
-        )}
       </div>
 
       <section className="flex min-w-0 flex-col gap-4">
-        <DailyBars
-          title={mode === "day" ? "Water per day" : "Water per day, weekly average"}
-          unit="ml"
-          data={waterBars}
-          goal={waterGoal}
-          mode={mode}
-          emptyLabel="No water tracked in this range"
-          summary={`Water per ${mode}, ${spanLabel}: ${summary.avgWater === null ? "no average yet" : `average ${formatWater(summary.avgWater)}`}.`}
-        />
-        <section className="rounded-panel border border-line bg-surface px-4 py-3">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold">Water by drink</h2>
-            <span className="font-mono text-sm">{formatWater(waterTotal)}</span>
-          </div>
-          <p className="mt-1 text-xs text-muted">
-            All drinks count at full volume. Range totals include today; older untracked entries are
-            excluded.
-          </p>
-          {waterTotal === 0 ? (
-            <p className="mt-3 text-sm text-muted">Log a drink to see the breakdown.</p>
-          ) : (
-            <div className="mt-3 divide-y divide-line">
-              {DRINK_TYPES.map((type) => {
-                const drinks = stats.waterByDrink
-                  .filter((d) => d.type === type)
-                  .sort((a, b) => b.ml - a.ml);
-                const total = drinks.reduce((sum, d) => sum + d.ml, 0);
-                if (!total) return null;
-                return (
-                  <details key={type} className="py-2">
-                    <summary className="cursor-pointer text-sm">
-                      <span className="inline-flex w-[calc(100%-1.5rem)] items-baseline justify-between gap-2">
-                        <span>{DRINK_LABELS[type]}</span>
-                        <span className="font-mono text-xs text-muted">
-                          {formatWater(total)} · {Math.round((total / waterTotal) * 100)}%
-                        </span>
-                      </span>
-                    </summary>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-line">
-                      <div
-                        className="h-full bg-accent"
-                        style={{ width: `${(total / waterTotal) * 100}%` }}
-                      />
-                    </div>
-                    <ul className="mt-2 space-y-1 pl-4 text-xs text-muted">
-                      {drinks.map((d) => (
-                        <li key={d.name} className="flex justify-between gap-3">
-                          <span>{d.name}</span>
-                          <span className="shrink-0 font-mono">{formatWater(d.ml)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                );
-              })}
-            </div>
-          )}
-        </section>
+        {waterTracking && (
+          <>
+            <DailyBars
+              title={mode === "day" ? "Water per day" : "Water per day, weekly average"}
+              unit="ml"
+              data={waterBars}
+              goal={waterGoal}
+              mode={mode}
+              emptyLabel="No water tracked in this range"
+              summary={`Water per ${mode}, ${spanLabel}: ${summary.avgWater === null ? "no average yet" : `average ${formatWater(summary.avgWater)}`}.`}
+            />
+            <section className="rounded-panel border border-line bg-surface px-4 py-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="text-sm font-semibold">Water by drink</h2>
+                <span className="font-mono text-sm">{formatWater(waterTotal)}</span>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                All drinks count at full volume. Range totals include today; older untracked entries
+                are excluded.
+              </p>
+              {waterTotal === 0 ? (
+                <p className="mt-3 text-sm text-muted">Log a drink to see the breakdown.</p>
+              ) : (
+                <div className="mt-3 divide-y divide-line">
+                  {DRINK_TYPES.map((type) => {
+                    const drinks = stats.waterByDrink
+                      .filter((d) => d.type === type)
+                      .sort((a, b) => b.ml - a.ml);
+                    const total = drinks.reduce((sum, d) => sum + d.ml, 0);
+                    if (!total) return null;
+                    return (
+                      <details key={type} className="py-2">
+                        <summary className="cursor-pointer text-sm">
+                          <span className="inline-flex w-[calc(100%-1.5rem)] items-baseline justify-between gap-2">
+                            <span>{DRINK_LABELS[type]}</span>
+                            <span className="font-mono text-xs text-muted">
+                              {formatWater(total)} · {Math.round((total / waterTotal) * 100)}%
+                            </span>
+                          </span>
+                        </summary>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-line">
+                          <div
+                            className="h-full bg-accent"
+                            style={{ width: `${(total / waterTotal) * 100}%` }}
+                          />
+                        </div>
+                        <ul className="mt-2 space-y-1 pl-4 text-xs text-muted">
+                          {drinks.map((d) => (
+                            <li key={d.name} className="flex justify-between gap-3">
+                              <span>{d.name}</span>
+                              <span className="shrink-0 font-mono">{formatWater(d.ml)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </>
+        )}
         <DailyBars
           title={mode === "day" ? "Calories per day" : "Calories per day, weekly average"}
           unit="kcal"

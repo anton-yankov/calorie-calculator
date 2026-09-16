@@ -28,7 +28,7 @@ function actions({ failMeal = false, failProducts = false, userId = "user-1" } =
     "next/cache": { revalidatePath: (path) => events.push(path) },
     "@/lib/supabase-session": { getUserId: async () => userId },
     "@/lib/products": products,
-    "@/lib/settings": {},
+    "@/lib/profiles": {},
     "@/lib/meals": {
       insertMeals: async () => {
         events.push("meal");

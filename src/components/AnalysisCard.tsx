@@ -1,5 +1,6 @@
 "use client";
 
+import { useWaterTracking } from "@/components/WaterTracking";
 import { useState } from "react";
 import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
 import { foodAmount, foodUnit, formatWater, type DrinkType } from "@/lib/water";
@@ -47,6 +48,7 @@ function FoodRow({
   onGramsChange: (grams: number) => void;
   onDrinkTypeChange: (type: DrinkType | null) => void;
 }) {
+  const waterTracking = useWaterTracking();
   const [expanded, setExpanded] = useState(false);
   // Local draft so the field can be empty mid-edit; null = not editing, show real grams
   const [draft, setDraft] = useState<string | null>(null);
@@ -106,7 +108,7 @@ function FoodRow({
         </span>
       </button>
 
-      {expanded && (
+      {expanded && waterTracking && (
         <div className="mt-2">
           <DrinkTypeSelect
             value={food.drink_type ?? null}
@@ -116,7 +118,7 @@ function FoodRow({
           />
         </div>
       )}
-      {food.volume_ml != null && (
+      {waterTracking && food.volume_ml != null && (
         <p className="mt-1 text-xs text-muted">{formatWater(food.volume_ml)} toward Water</p>
       )}
       <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
@@ -151,6 +153,7 @@ export function AnalysisCard({
   onGramsChange,
   onDrinkTypeChange,
 }: AnalysisCardProps) {
+  const waterTracking = useWaterTracking();
   const prevByName = new Map(previous?.foods.map((f) => [norm(f.name), f]) ?? []);
   const currentNames = new Set(analysis.foods.map((f) => norm(f.name)));
   const removed = previous?.foods.filter((f) => !currentNames.has(norm(f.name))) ?? [];
@@ -196,7 +199,7 @@ export function AnalysisCard({
         </span>
       </footer>
 
-      {analysis.totals.water_ml !== undefined && (
+      {waterTracking && analysis.totals.water_ml !== undefined && (
         <p className="border-t border-line px-4 py-2 text-sm font-semibold">
           Water · {formatWater(analysis.totals.water_ml)}
         </p>

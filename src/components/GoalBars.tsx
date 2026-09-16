@@ -1,8 +1,8 @@
 "use client";
 
 import { formatWater } from "@/lib/water";
+import type { DayTargets } from "@/lib/plan-targets";
 import type { MealTotals } from "@/lib/schema";
-import type { Goals } from "@/lib/settings";
 
 /** One goal as a self-contained cell: label, current/target numbers, and its own bar. */
 function GoalCell({
@@ -63,23 +63,22 @@ function GoalCell({
  * Side-by-side labeled cells (matching the meal cards' macro strip) — each
  * goal owns its own label, numbers, and bar, so nothing needs decoding.
  */
-export function GoalBars({ totals, goals }: { totals: MealTotals; goals: Goals }) {
+export function GoalBars({ totals, targets }: { totals: MealTotals; targets: DayTargets }) {
   return (
     <div
-      className={`grid gap-x-5 ${goals.waterGoal != null ? (goals.proteinGoal !== null ? "grid-cols-1 gap-y-3 sm:grid-cols-3" : "grid-cols-1 gap-y-3 sm:grid-cols-2") : goals.proteinGoal !== null ? "grid-cols-2" : "grid-cols-1"}`}
+      className={`grid gap-x-5 ${targets.waterGoalMl != null ? "grid-cols-1 gap-y-3 sm:grid-cols-3" : "grid-cols-2"}`}
     >
-      <GoalCell label="Calories" value={totals.calories} target={goals.calorieGoal} />
-      {goals.waterGoal != null && (
+      <GoalCell label="Calories" value={totals.calories} target={targets.calorieTarget} />
+      {targets.waterGoalMl != null && (
         <GoalCell
           label="Water"
           value={totals.water_ml ?? null}
-          target={goals.waterGoal}
+          target={targets.waterGoalMl}
           unit="ml"
         />
       )}
-      {goals.proteinGoal !== null && (
-        <GoalCell label="Protein" value={totals.protein_g} target={goals.proteinGoal} unit="g" />
-      )}
+      {/* Every plan sets a protein target, so this cell is always shown */}
+      <GoalCell label="Protein" value={totals.protein_g} target={targets.proteinTarget} unit="g" />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useWaterTracking } from "@/components/WaterTracking";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { AnalysisCard, CompactAnalysis } from "@/components/AnalysisCard";
@@ -21,6 +22,7 @@ function CorrectionBubble({ text }: { text: string }) {
 }
 
 export default function Home() {
+  const waterTracking = useWaterTracking();
   // All analysis state lives in AnalysisProvider (mounted in the layout) so it
   // survives navigating away from this page mid-analysis
   const {
@@ -76,22 +78,24 @@ export default function Home() {
       </header>
 
       <TodayStrip />
-      <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
-        <span className="mr-1 text-xs font-semibold text-muted">
-          Quick water{logDate ? ` · ${dayLabel(logDate)}` : " · today"}
-        </span>
-        {[250, 500, 1000].map((ml) => (
-          <button
-            key={ml}
-            type="button"
-            disabled={quickWaterPending}
-            onClick={() => void quickAddWater(ml)}
-            className="rounded-panel border border-line bg-surface px-3 py-2 text-sm font-semibold text-accent transition hover:border-accent disabled:opacity-40"
-          >
-            +{ml === 1000 ? "1 L" : `${ml} ml`}
-          </button>
-        ))}
-      </div>
+      {waterTracking && (
+        <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
+          <span className="mr-1 text-xs font-semibold text-muted">
+            Quick water{logDate ? ` · ${dayLabel(logDate)}` : " · today"}
+          </span>
+          {[250, 500, 1000].map((ml) => (
+            <button
+              key={ml}
+              type="button"
+              disabled={quickWaterPending}
+              onClick={() => void quickAddWater(ml)}
+              className="rounded-panel border border-line bg-surface px-3 py-2 text-sm font-semibold text-accent transition hover:border-accent disabled:opacity-40"
+            >
+              +{ml === 1000 ? "1 L" : `${ml} ml`}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Controls column — on lg it sticks below the nav while the thread scrolls */}
       <div className="flex flex-col gap-4 lg:sticky lg:top-24">
@@ -136,9 +140,11 @@ export default function Home() {
           )}
         </div>
 
-        <p className="-mt-2 text-xs text-muted">
-          Water 500 = 500 ml · water 1 = 1 L. All drinks count toward Water.
-        </p>
+        {waterTracking && (
+          <p className="-mt-2 text-xs text-muted">
+            Water 500 = 500 ml · water 1 = 1 L. All drinks count toward Water.
+          </p>
+        )}
 
         {(!latest || sourceBlob || description.trim()) && (
           <button

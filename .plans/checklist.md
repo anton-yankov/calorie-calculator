@@ -24,15 +24,20 @@ One step at a time: explain the why, implement only that step, stop. Tick `[x]` 
 
 ## Phase 2 — Goal setup & plans
 
-- [ ] 2.1 HTML mockups: onboarding flow + both plan styles (3 pace cards vs. slider) → you choose.
-- [ ] 2.2 Profile table: height, weight, birth year, sex, activity level, goal weight.
-- [ ] 2.3 Maintenance calculator with tests: Mifflin-St Jeor BMR × activity factor (1.2 / 1.375 / 1.55 / 1.725 / 1.9).
-- [ ] 2.4 Plan generator with tests: lose 0.25/0.5/0.75 kg/wk, maintain, gain 0.25/0.5 kg/wk; protein 2.0 g/kg; no calorie floor.
-- [ ] 2.5 Custom plan: own calories + protein; goal date estimated with 7,700 kcal/kg, or "At this intake it's impossible to reach your goal weight" if it points the wrong way.
-- [ ] 2.6 Plan history table so each day is judged by the plan active on that date; targets change only when edited manually.
-- [ ] 2.7 Onboarding UI, required for new accounts (you go through it too).
-- [ ] 2.8 HTML mockup, then Settings page: profile, plan, water toggle, change password, log out. When log out moves here, add `revalidatePath("/", "layout")` so Back can't show the previous user's cached page, and give login errors other than a wrong password (rate limit, banned) their own message.
-- [ ] 2.9 Water off by default; hide all water UI when off (drinks still count as food).
+Decisions: maintain skips goal weight; your first plan also covers all earlier days; a plan change starts today; "water 500" still logs when water is off; changing password asks for the current one; Settings opens from a gear icon in the top bar.
+
+- [x] 2.1 HTML mockups ([postplan](https://jlr7u9cwep6y.postplan.dev), `.plans/onboarding-plan-mockups.html`). Chosen: option A (three pace cards) + "Set my own"; "Recommended" badge on lose 0.5 / gain 0.25 kg/wk; expandable "How we got this"; tabs hidden during onboarding (Log out only); progress bar + "Step N of 3".
+- [x] 2.2 Maintenance calculator in `src/lib/plan.ts` (`bmr`, `maintenanceCalories`) with tests in `tests/plan.test.mjs`: Mifflin-St Jeor BMR × activity factor (1.2 / 1.375 / 1.55 / 1.725 / 1.9).
+- [x] 2.3 Plan generator `suggestPlans` with tests: lose 0.25/0.5/0.75 kg/wk, maintain, gain 0.25/0.5 kg/wk; daily adjustment pace × 7,700 ÷ 7; protein 2.0 g/kg; goal date via `addDays`; one recommended plan per goal; no calorie floor.
+- [x] 2.4 Custom plan `customPlanOutlook` with tests: own calories → reachable (pace + recalculated goal date), impossible (shown as "At this intake it's impossible to reach your goal weight"), or the weekly change when maintaining. Protein is stored as typed.
+- [x] 2.5 `profiles` + `plans` tables: `src/lib/profiles.ts` (`getProfile`, `saveProfile`), `src/lib/plan-history.ts` (`listPlans`, `savePlan`), RLS policies, tests. Goal weight lives on the plan; water columns come in 2.9. SQL run.
+- [x] 2.6 Onboarding gate: tracker pages moved into `src/app/(app)/` whose layout redirects users without a plan (`hasPlan`) to `/onboarding`; placeholder onboarding page; nav tabs hidden there (Log out stays).
+- [x] 2.7 Onboarding UI: `OnboardingFlow` (details → goal → pick a plan, live maintenance + "How we got this", pace cards, "Set my own") and `saveOnboardingAction`, which revalidates inputs, recomputes targets server-side and stores the profile + first plan. 8 tests.
+- [x] 2.8 Use plan targets everywhere: new `src/lib/plan-targets.ts` (`planForDay`, `targetsForDay`, oldest plan covers earlier days); `GoalBars` takes a day's targets; Log, Today strip (`todayProgressAction` now takes the day key) and Stats pass the plan history. Water goal still from `settings` until 2.9. 4 tests.
+- [x] 2.9 Removed `settings` table, `src/lib/settings.ts`, `GoalsEditor` and `saveGoalsAction`; `water_tracking` + `water_goal_ml` now live on `profiles` with `activeWaterGoal()`. SQL run.
+- [x] 2.10 Settings page ([mockup](https://voml7535uqx7.postplan.dev)): gear in the top bar, plan card + history + "Change plan" (shared `PlanPicker` with setup), details with live maintenance, water toggle + goal, change password (checks the current one), log out. Logout now calls `revalidatePath("/", "layout")`; login errors distinguish rate-limit/banned/server problems. Shared `src/lib/profile-input.ts` + `src/components/fields.tsx`. Desktop (`lg`) gets a 2fr/3fr grid: sticky plan rail left, forms right. 9 tests.
+- [x] 2.11 Water off by default: `WaterTrackingProvider`/`useWaterTracking()` (filled by the `(app)` layout) hides drink-type selectors, water lines, the Stats water tiles/charts, the Analyze quick-water buttons and hint when off; drinks still count as food and "water 500" still logs. Verified live with tracking off.
+- [x] 2.12 Phase 2 dead-code scan clean (unneeded exports and the unread `DayTargets.goal` removed, stale comment fixed), committed and pushed to `feat/multi-user-rework`.
 
 ## Phase 3 — Tracking experience
 
@@ -58,7 +63,7 @@ One step at a time: explain the why, implement only that step, stop. Tick `[x]` 
 
 - [ ] 5.1 Helpful empty states on every page.
 - [ ] 5.2 Loading and error states audit.
-- [ ] 5.3 Final dead-code scan, README refresh, add an `npm test` script.
+- [ ] 5.3 Final dead-code scan (incl. pre-existing exports only used in their own file: `parseDrinkAmount`, `MAX_PRODUCT_IMAGE_LENGTH`, `HistoryEntry`, `LightboxImage`, `NutritionLabelBasis`, `DayStat`/`Bucket`/`Summary`), README refresh, add an `npm test` script.
 - [ ] 5.4 Complete every "Pending manual checks" and "Later, non-blocking" item below, then a final run-through on the branch.
 - [ ] 5.5 Open one PR from `feat/multi-user-rework` into `main`, review, merge (Vercel deploys), check the live site, then create his account and send him his credentials.
 

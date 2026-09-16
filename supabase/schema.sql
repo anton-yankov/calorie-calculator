@@ -33,24 +33,6 @@ grant select, insert, update, delete on public.meals to authenticated;
 -- (RLS doesn't apply to it, but plain table privileges still do).
 grant select, insert, update, delete on public.meals to service_role;
 
--- Daily goals — one row per user (user_id is the primary key).
-create table public.settings (
-  user_id uuid primary key references auth.users (id) on delete cascade,
-  calorie_goal integer not null check (calorie_goal > 0),
-  protein_goal integer check (protein_goal > 0),
-  water_goal integer check (water_goal > 0)
-);
-
-alter table public.settings enable row level security;
-
-create policy "users manage their own settings" on public.settings
-  for all to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
-grant select, insert, update, delete on public.settings to authenticated;
-grant select, insert, update, delete on public.settings to service_role;
-
 -- Products entered manually after a barcode is missing from Open Food Facts.
 -- Private per user: one row per user per barcode; a later manual entry
 -- replaces that user's earlier nutrition.
@@ -80,3 +62,57 @@ create policy "users manage their own barcode products" on public.barcode_produc
 
 grant select, insert, update, delete on public.barcode_products to authenticated;
 grant select, insert, update, delete on public.barcode_products to service_role;
+
+-- Body details behind the maintenance estimate — one row per user, created
+-- during onboarding. Latest known weight lives here; each plan keeps its own copy.
+create table public.profiles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  sex text not null check (sex in ('male', 'female')),
+  birth_year integer not null check (birth_year between 1900 and 2100),
+  height_cm double precision not null check (height_cm > 0),
+  weight_kg double precision not null check (weight_kg > 0),
+  activity_level text not null check (activity_level in ('sedentary', 'light', 'moderate', 'very', 'extra')),
+  -- Water tracking is off until the user turns it on in Settings.
+  water_tracking boolean not null default false,
+  water_goal_ml integer check (water_goal_ml > 0)
+);
+
+alter table public.profiles enable row level security;
+
+create policy "users manage their own profile" on public.profiles
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+grant select, insert, update, delete on public.profiles to authenticated;
+grant select, insert, update, delete on public.profiles to service_role;
+
+-- Plan history — a new row whenever the plan changes, never edited afterwards,
+-- so each day is judged by the plan that applied on it. At most one plan per
+-- user per start date: a second change the same day replaces the first.
+create table public.plans (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  effective_from date not null,
+  goal text not null check (goal in ('lose', 'maintain', 'gain')),
+  -- The chosen pace; null for a custom plan.
+  kg_per_week double precision check (kg_per_week >= 0),
+  goal_weight_kg double precision check (goal_weight_kg > 0),
+  calorie_target integer not null check (calorie_target > 0),
+  protein_target integer not null check (protein_target > 0),
+  -- Snapshots of what the plan was built from, so old plans still make sense.
+  maintenance_kcal integer not null check (maintenance_kcal > 0),
+  weight_kg double precision not null check (weight_kg > 0),
+  primary key (user_id, effective_from),
+  -- Maintaining has no goal weight; losing and gaining always have one.
+  check ((goal = 'maintain') = (goal_weight_kg is null))
+);
+
+alter table public.plans enable row level security;
+
+create policy "users manage their own plans" on public.plans
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+grant select, insert, update, delete on public.plans to authenticated;
+grant select, insert, update, delete on public.plans to service_role;

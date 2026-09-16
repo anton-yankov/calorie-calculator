@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings Page Mockups — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --surface-raised: #2A281F;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --danger: #E58B82;
+    --danger-soft: #3B2421;
+    --line: #38352C;
+    --radius: 10px;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif; font-size: 16px; line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  .phones { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; justify-items: center; margin: 24px 0; }
+  .phone-wrap { width: 100%; max-width: 360px; }
+  .phone-label { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 10px; }
+
+  /* The app itself (mirrors src/app/globals.css tokens) */
+  .phone {
+    width: 100%; border: 1px solid var(--line); border-radius: 28px; overflow: hidden;
+    background: radial-gradient(circle at 50% -10%, rgba(224, 138, 92, 0.08), transparent 22rem), var(--bg);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35); font-size: 15px; line-height: 1.5;
+  }
+  .app-nav { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-bottom: 1px solid rgba(56, 53, 44, 0.8); }
+  .wordmark { font-family: var(--serif); font-weight: 600; font-size: 18px; }
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+  .tabs { display: flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
+  .tabs span { font-size: 10.5px; font-weight: 600; color: var(--ink-soft); padding: 5px 7px; border-radius: 999px; }
+  .tabs span.on { background: var(--accent); color: var(--bg); }
+  .gear { width: 30px; height: 30px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); display: flex; align-items: center; justify-content: center; }
+  .gear.on { border-color: var(--accent); background: var(--accent-soft); }
+  .gear svg { width: 15px; height: 15px; display: block; }
+  .app-body { padding: 20px 18px 24px; display: flex; flex-direction: column; gap: 18px; }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  .app-h1 { font-family: var(--serif); font-size: 29px; font-weight: 600; line-height: 1.1; margin: 6px 0 0; }
+  .app-head { border-bottom: 2px solid var(--ink); padding-bottom: 14px; }
+  .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+  .card { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 12px 14px; }
+  .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .row + .row { margin-top: 6px; }
+  .row .k { font-size: 13px; color: var(--ink-soft); }
+  .row .v { font-family: var(--mono); font-size: 13.5px; }
+  .plan-goal { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .plan-name { font-weight: 700; font-size: 15px; }
+  .pill { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; border: 1px solid var(--green); color: var(--green); }
+  .nums { display: flex; gap: 16px; margin-top: 8px; }
+  .num-big { font: 700 20px var(--mono); }
+  .num-unit { font-size: 11.5px; color: var(--ink-soft); margin-left: 3px; }
+  .btn { border: 0; border-radius: var(--radius); background: var(--accent); color: var(--bg); cursor: pointer; font: 600 14.5px 'Inter', system-ui, sans-serif; padding: 11px 14px; width: 100%; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .field-label { font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; display: block; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .unit-wrap { position: relative; }
+  .input { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--radius); padding: 10px 44px 10px 14px; font: 15px var(--mono); }
+  .input:focus { outline: none; border-color: var(--accent); }
+  .unit { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-soft); font-size: 12px; pointer-events: none; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 999px; padding: 4px; background: var(--surface); }
+  .seg button { border: 0; background: transparent; color: var(--ink-soft); border-radius: 999px; padding: 7px; font: 600 13px 'Inter', system-ui, sans-serif; cursor: pointer; }
+  .seg button.on { background: var(--accent); color: var(--bg); }
+  .select { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: var(--radius); padding: 10px 14px; font: 14px 'Inter', system-ui, sans-serif; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .switch { width: 44px; height: 26px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); position: relative; cursor: pointer; flex: none; }
+  .switch i { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 999px; background: var(--ink-soft); transition: left 0.15s, background 0.15s; }
+  .switch.on { border-color: var(--accent); background: var(--accent-soft); }
+  .switch.on i { left: 20px; background: var(--accent); }
+  .hint { font-size: 12px; color: var(--ink-soft); margin: 0; }
+  .note { border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 8px 11px; font-size: 12.5px; }
+  details.history summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent); }
+  .hist-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--ink-soft); padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .hist-row:last-child { border-bottom: 0; }
+  .hist-row b { color: var(--ink); font-weight: 600; }
+  .hidden { display: none !important; }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Mockup · Phase 2 · step 2.10</div>
+  <h1>The Settings Page</h1>
+  <p class="subtitle">One place for the plan, the body details behind it, water tracking and the account. Reached from a gear in the top bar, since the four tabs already fill the row on a phone.</p>
+  <div class="meta">
+    <span><strong>Example:</strong> male, born 1999, 190 cm, 70 kg, moderately active</span>
+    <span><strong>Gaining 0.5 kg/wk:</strong> 3,274 kcal · 140 g (maintenance 2,724)</span>
+    <span><strong>Interactive:</strong> toggles, change-plan panel, plan history</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>Getting there</h2>
+<p class="lede">A gear sits to the right of the tabs on every tracker page. It's the only new navigation; the tab row is untouched.</p>
+
+<div class="phones">
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-nav">
+        <span class="wordmark">Calories</span>
+        <span class="nav-right">
+          <span class="tabs"><span class="on">Analyze</span><span>Log</span><span>Products</span><span>Stats</span></span>
+          <span class="gear" title="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#A5A195" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </span>
+        </span>
+      </div>
+      <div class="app-body">
+        <p class="hint">Tabs unchanged; the gear is 30px, the same tap size as a tab.</p>
+      </div>
+    </div>
+    <div class="phone-label">Top bar on a tracker page.</div>
+  </div>
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-nav">
+        <span class="wordmark">Calories</span>
+        <span class="nav-right">
+          <span class="tabs"><span>Analyze</span><span>Log</span><span>Products</span><span>Stats</span></span>
+          <span class="gear on" title="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#E08A5C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </span>
+        </span>
+      </div>
+      <div class="app-body">
+        <p class="hint">On Settings the gear is highlighted and no tab is active.</p>
+      </div>
+    </div>
+    <div class="phone-label">Top bar while on Settings.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>The page, top to bottom</h2>
+<p class="lede">Four sections in order of how often you'd touch them: your plan, your details, water, account. Everything is live: flip the water switch, open "Change plan", expand the history.</p>
+
+<div class="phones">
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-nav">
+        <span class="wordmark">Calories</span>
+        <span class="nav-right">
+          <span class="tabs"><span>Analyze</span><span>Log</span><span>Products</span><span>Stats</span></span>
+          <span class="gear on">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#E08A5C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </span>
+        </span>
+      </div>
+      <div class="app-body">
+        <div class="app-head">
+          <div class="eyebrow">Your account</div>
+          <div class="app-h1">Settings</div>
+        </div>
+
+        <!-- Plan -->
+        <div class="stack">
+          <span class="section-title">Your plan</span>
+          <div class="card">
+            <div class="plan-goal">
+              <span class="plan-name">Gain weight · Steady</span>
+              <span class="pill">Active</span>
+            </div>
+            <div class="nums">
+              <span><span class="num-big">3,274</span><span class="num-unit">kcal</span></span>
+              <span><span class="num-big">140</span><span class="num-unit">g protein</span></span>
+            </div>
+            <div style="margin-top:10px">
+              <div class="row"><span class="k">Pace</span><span class="v">+0.50 kg/wk</span></div>
+              <div class="row"><span class="k">Goal weight</span><span class="v">75 kg</span></div>
+              <div class="row"><span class="k">Goal date</span><span class="v">25 Nov 2026</span></div>
+              <div class="row"><span class="k">Started</span><span class="v">16 Sep 2026</span></div>
+              <div class="row"><span class="k">Maintenance then</span><span class="v">2,724 kcal</span></div>
+            </div>
+          </div>
+          <button type="button" class="btn ghost" data-toggle="change-plan">Change plan</button>
+          <div class="card hidden" data-panel="change-plan">
+            <span class="field-label">Goal</span>
+            <div class="seg" data-group style="grid-template-columns:1fr 1fr 1fr">
+              <button type="button">Lose</button><button type="button">Maintain</button><button type="button" class="on">Gain</button>
+            </div>
+            <div style="margin-top:10px">
+              <span class="field-label">Goal weight</span>
+              <div class="unit-wrap"><input class="input" value="75"><span class="unit">kg</span></div>
+            </div>
+            <p class="hint" style="margin-top:10px">Then the same plan cards as setup, using your current details.</p>
+            <div class="note" style="margin-top:10px">Starts today. Earlier days keep the plan they were logged under.</div>
+            <button type="button" class="btn" style="margin-top:10px">Pick a new plan</button>
+          </div>
+          <details class="history">
+            <summary>Plan history (2)</summary>
+            <div style="margin-top:8px">
+              <div class="hist-row"><span>16 Sep 2026 → now</span><span><b>Gain</b> · 3,274 kcal</span></div>
+              <div class="hist-row"><span>12 Aug 2026 → 15 Sep</span><span><b>Maintain</b> · 2,700 kcal</span></div>
+            </div>
+          </details>
+        </div>
+
+        <!-- Details -->
+        <div class="stack">
+          <span class="section-title">Your details</span>
+          <div class="seg" data-group>
+            <button type="button" class="on">Male</button><button type="button">Female</button>
+          </div>
+          <div class="grid2">
+            <div><span class="field-label">Birth year</span><div class="unit-wrap"><input class="input" value="1999"></div></div>
+            <div><span class="field-label">Height</span><div class="unit-wrap"><input class="input" value="190"><span class="unit">cm</span></div></div>
+            <div><span class="field-label">Weight</span><div class="unit-wrap"><input class="input" value="70" data-weight><span class="unit">kg</span></div></div>
+          </div>
+          <div>
+            <span class="field-label">Activity level</span>
+            <select class="select">
+              <option>Sedentary — desk job, little exercise</option>
+              <option selected>Moderately active — 3–5 days a week</option>
+              <option>Very active — 6–7 days a week</option>
+            </select>
+          </div>
+          <div class="row"><span class="k">Maintenance now</span><span class="v" data-maint>2,724 kcal</span></div>
+          <div class="note hidden" data-weight-note>Your plan was built at 70 kg. Change your plan to use the new weight — your targets stay as they are until you do.</div>
+          <button type="button" class="btn ghost">Save details</button>
+        </div>
+
+        <!-- Water -->
+        <div class="stack">
+          <span class="section-title">Water</span>
+          <div class="card">
+            <div class="toggle-row">
+              <span>
+                <span style="font-weight:600;font-size:14px">Track water</span>
+                <p class="hint">Drinks always count as food; this adds the water bar and stats.</p>
+              </span>
+              <span class="switch" data-switch="water" role="switch" aria-checked="false"><i></i></span>
+            </div>
+            <div class="hidden" style="margin-top:10px" data-water-goal>
+              <span class="field-label">Daily water goal</span>
+              <div class="unit-wrap"><input class="input" value="2450"><span class="unit">ml</span></div>
+              <p class="hint" style="margin-top:6px">Suggested for 70 kg: about 2,450 ml (35 ml per kg).</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account -->
+        <div class="stack">
+          <span class="section-title">Account</span>
+          <div class="card">
+            <div class="row"><span class="k">Email</span><span class="v">you@example.com</span></div>
+          </div>
+          <button type="button" class="btn ghost" data-toggle="password">Change password</button>
+          <div class="card hidden" data-panel="password">
+            <span class="field-label">Current password</span>
+            <input class="input" type="password" value="········" style="padding-right:14px">
+            <div style="margin-top:10px">
+              <span class="field-label">New password</span>
+              <input class="input" type="password" value="············" style="padding-right:14px">
+            </div>
+            <p class="hint" style="margin-top:8px">At least 8 characters. You stay logged in on this device.</p>
+            <button type="button" class="btn" style="margin-top:10px">Update password</button>
+          </div>
+          <button type="button" class="btn danger">Log out</button>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">The whole page. Flip the water switch, open the panels, change the weight.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>The rules behind it</h2>
+
+<table>
+  <tr><th>Rule</th><th>Why</th></tr>
+  <tr><td>Editing details never moves targets</td><td>Your decision: targets change only when you change them. Saving a new weight shows a note offering a plan change instead of silently rewriting today's numbers.</td></tr>
+  <tr><td>A plan change starts today</td><td>Earlier days keep the plan they were logged under, so history stays honest.</td></tr>
+  <tr><td>Water off ≠ drinks ignored</td><td>A latte still adds calories and protein; only the water bar and water stats disappear.</td></tr>
+  <tr><td>Changing the password asks for the current one</td><td>Someone holding your unlocked phone can't lock you out.</td></tr>
+  <tr><td>Log out stays at the bottom</td><td>It moves off the top bar (where it lives now), so the tab row gets its space back.</td></tr>
+</table>
+
+<div class="callout">"Change plan" reuses the setup flow's goal step and plan cards rather than a second implementation, so any change to the plan picker shows up in both places.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>What you decide</h2>
+
+<table>
+  <tr><th>Decision</th><th>Shown here</th><th>Alternative</th></tr>
+  <tr><td>Plan history</td><td>Collapsed list of past plans with their date ranges</td><td>Leave it out; only the active plan</td></tr>
+  <tr><td>Weight-change note</td><td>A note offering a plan change when you save a different weight</td><td>No note; you'd remember to change the plan yourself</td></tr>
+  <tr><td>Water goal suggestion</td><td>"Suggested for 70 kg: about 2,500 ml" (35 ml per kg)</td><td>Empty field, no suggestion</td></tr>
+  <tr><td>Activity level control</td><td>A dropdown here (the five radio cards would fill the screen)</td><td>Same radio cards as setup</td></tr>
+  <tr><td>Log out</td><td>Bottom of Settings, outlined in red</td><td>Keep it in the top bar as well</td></tr>
+</table>
+
+<footer class="doc">
+  Calorie Calculator · Phase 2 · step 2.10 mockups · the Settings page
+</footer>
+
+</div>
+
+<script>
+(function () {
+  // Mifflin-St Jeor for this example (male, 190 cm, 27 in 2026) × 1.55 for "moderately active",
+  // the same maths as src/lib/plan.ts — maintenance is not linear in weight
+  var maintenanceFor = function (kg) {
+    return Math.round((10 * kg + 6.25 * 190 - 5 * 27 + 5) * 1.55);
+  };
+
+  // Single-choice groups
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-group] button");
+    if (!button) return;
+    Array.prototype.forEach.call(button.parentElement.children, function (el) {
+      el.classList.toggle("on", el === button);
+    });
+  });
+
+  // Expandable panels
+  document.querySelectorAll("[data-toggle]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var panel = document.querySelector('[data-panel="' + button.getAttribute("data-toggle") + '"]');
+      panel.classList.toggle("hidden");
+    });
+  });
+
+  // Water switch reveals its goal
+  var waterSwitch = document.querySelector('[data-switch="water"]');
+  var waterGoal = document.querySelector("[data-water-goal]");
+  waterSwitch.addEventListener("click", function () {
+    var on = waterSwitch.classList.toggle("on");
+    waterSwitch.setAttribute("aria-checked", String(on));
+    waterGoal.classList.toggle("hidden", !on);
+  });
+
+  // Changing the weight updates maintenance and shows the plan note
+  var weight = document.querySelector("[data-weight]");
+  var maint = document.querySelector("[data-maint]");
+  var note = document.querySelector("[data-weight-note]");
+  weight.addEventListener("input", function () {
+    var kg = Number(weight.value);
+    if (!kg) return;
+    maint.textContent = maintenanceFor(kg).toLocaleString("en-US") + " kcal";
+    note.classList.toggle("hidden", kg === 70);
+  });
+})();
+</script>
+</body>
+</html>
