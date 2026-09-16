@@ -182,33 +182,47 @@ export function SkeletonEstimate({ label }: { label: string }) {
 
 const GHOST_BARS = [62, 78, 55, 84, 70, 66, 88, 74, 58, 80, 68, 76, 64, 82];
 
+function GhostTiles({ count }: { count: number }) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="rounded-panel border border-line bg-surface px-4 py-3">
+          <GhostBar className="h-2.5 w-20" />
+          <GhostBar className={`mt-2.5 h-7 ${i % 2 ? "w-14" : "w-20"}`} />
+          <GhostBar className="mt-2.5 h-2.5 w-28" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
- * Ghost version of the stats page: range pill, four tiles and the macro split in one column,
- * two chart frames in the other. `contents` lets the page grid place the two
- * columns itself, exactly where StatsView's columns land.
+ * Ghost version of the stats page: range pill, four tiles, the macro split,
+ * the weight tiles and form in one column; three chart frames and the weigh-ins
+ * list in the other. `contents` lets the page grid place the two columns itself, exactly
+ * where StatsView's columns land.
  */
 export function SkeletonStats() {
   return (
     <div role="status" aria-label="Stats loading" className="contents">
       <div className="flex flex-col gap-4" aria-hidden>
         <GhostBar className="h-9 w-44 rounded-full" />
-        <div className="grid grid-cols-2 gap-3">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-panel border border-line bg-surface px-4 py-3">
-              <GhostBar className="h-2.5 w-20" />
-              <GhostBar className={`mt-2.5 h-7 ${i % 2 ? "w-14" : "w-20"}`} />
-              <GhostBar className="mt-2.5 h-2.5 w-28" />
-            </div>
-          ))}
-        </div>
+        <GhostTiles count={4} />
         <div className="rounded-panel border border-line bg-surface px-4 py-3">
           <GhostBar className="h-2.5 w-40" />
           <GhostBar className="mt-2.5 h-2 w-full rounded-full" />
           <GhostBar className="mt-2.5 h-3 w-56" />
         </div>
+        <GhostTiles count={2} />
+        <div className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-4">
+          <GhostBar className="h-3.5 w-24" />
+          <GhostBar className="h-[46px] w-full rounded-panel" />
+          <GhostBar className="h-[42px] w-full rounded-panel" />
+        </div>
       </div>
       <div className="flex flex-col gap-4" aria-hidden>
-        {[0, 1].map((i) => (
+        {/* Calories, protein and weight */}
+        {[0, 1, 2].map((i) => (
           <div key={i} className="rounded-panel border border-line bg-surface px-4 pb-3 pt-3">
             <GhostBar className="h-3.5 w-32" />
             <div className="mt-4 flex h-44 items-end gap-1.5">
@@ -219,6 +233,9 @@ export function SkeletonStats() {
             <GhostBar className="mt-3 h-3 w-24" />
           </div>
         ))}
+        <div className="rounded-panel border border-line bg-surface px-4 py-3">
+          <GhostBar className="h-4 w-32" />
+        </div>
       </div>
     </div>
   );

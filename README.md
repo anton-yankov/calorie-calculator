@@ -59,17 +59,30 @@ Environment variables (see `.env.example`):
 | `VISION_MODEL`                         | Model override; defaults to `gpt-5.6-luna`                                                      |
 | `NEXT_PUBLIC_SUPABASE_URL`             | Supabase project URL                                                                            |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Database key; queries run as the logged-in user under the RLS policies in `supabase/schema.sql` |
+| `SUPABASE_SECRET_KEY`                  | Server-only key that skips RLS: the admin pages and refunds of failed AI requests               |
 
 Database: create a Supabase project and run `supabase/schema.sql` in the SQL
 Editor. It creates `public.meals` (the log), `public.barcode_products`
 (manually entered barcode nutrition), `public.profiles` (body details and the
-water setting) and `public.plans` (one row per plan change, so each day is
-judged by the plan that applied on it).
+water setting), `public.plans` (one row per plan change, so each day is
+judged by the plan that applied on it), `public.weight_entries` (one weigh-in
+per day), and `public.ai_limits` / `public.ai_usage` with the functions that
+enforce the daily AI cap (20 analyses a day unless changed on the admin page).
 
 Accounts: the app is invite-only. In the Supabase dashboard, turn off
 "Allow new users to sign up" (Authentication → Sign In / Providers), then create
 each user under Authentication → Users → Add user with "Auto Confirm User"
 ticked. Every meal, goal and saved product belongs to the logged-in user.
+
+Admin: mark one account as the admin in the SQL Editor (it applies from that
+account's next login). The admin has no AI cap and gets an "Admin" link in
+Settings with every account's activity (read-only) and an editable daily cap:
+
+```sql
+update auth.users
+set raw_app_meta_data = raw_app_meta_data || '{"role": "admin"}'::jsonb
+where email = 'you@example.com';
+```
 
 ## Deploying
 

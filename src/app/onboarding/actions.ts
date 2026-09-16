@@ -13,6 +13,7 @@ import {
 } from "@/lib/profile-input";
 import { saveProfile } from "@/lib/profiles";
 import { getUserId } from "@/lib/supabase-session";
+import { saveWeight } from "@/lib/weights";
 
 /**
  * What the setup form submits. The chosen plan arrives as a pace or as custom
@@ -32,7 +33,7 @@ interface OnboardingInput extends BodyInput {
 }
 
 /**
- * Saves the profile and the first plan, then opens the app. The plan starts
+ * Saves the profile, the first plan and the first weigh-in, then opens the app. The plan starts
  * today, so every day from here on is judged by it (earlier days fall back to
  * the oldest plan).
  */
@@ -83,6 +84,8 @@ export async function saveOnboardingAction(input: OnboardingInput): Promise<{ er
       maintenanceKcal,
       weightKg: body.weightKg,
     });
+    // The weight entered here is the first point on the Stats weight chart
+    await saveWeight(userId, { day: today, weightKg: body.weightKg });
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Couldn't save your plan" };
   }

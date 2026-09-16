@@ -3,6 +3,7 @@
 import { createContext, useContext, useRef, useState } from "react";
 import { toast } from "sonner";
 import { deleteMealAction, logMealAction } from "@/app/actions";
+import { useAiAllowance } from "@/components/AiAllowance";
 import { waterAnalysis, withDrinkType, type DrinkType } from "@/lib/water";
 import { dayBounds, dayKey } from "@/lib/day";
 import { reattachFoodExtras, stripFoodExtras } from "@/lib/products";
@@ -65,6 +66,7 @@ const AnalysisContext = createContext<AnalysisState | null>(null);
  * results that arrive while the page is away are waiting on return.
  */
 export function AnalysisProvider({ children }: { children: React.ReactNode }) {
+  const { refresh: refreshAllowance } = useAiAllowance();
   // The selected photo, converted to a browser-displayable format if needed (HEIC → JPEG)
   const [progressVersion, setProgressVersion] = useState(0);
   const quickAdding = useRef(false);
@@ -349,6 +351,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
       setPendingCorrection(null);
+      refreshAllowance();
     }
   }
 

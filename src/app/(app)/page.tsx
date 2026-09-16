@@ -3,6 +3,7 @@
 import { useWaterTracking } from "@/components/WaterTracking";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import { useAiAllowance } from "@/components/AiAllowance";
 import { AnalysisCard, CompactAnalysis } from "@/components/AnalysisCard";
 import { useAnalysis } from "@/components/AnalysisProvider";
 import { BarcodeInput } from "@/components/BarcodeInput";
@@ -11,6 +12,7 @@ import { DatePicker } from "@/components/DatePicker";
 import { SkeletonEstimate, Spinner } from "@/components/loaders";
 import { PhotoInput } from "@/components/PhotoInput";
 import { TodayStrip } from "@/components/TodayStrip";
+import { WeighInNudge } from "@/components/WeighInNudge";
 import { dayKey, dayLabel } from "@/lib/day";
 
 function CorrectionBubble({ text }: { text: string }) {
@@ -52,6 +54,9 @@ export default function Home() {
     quickWaterPending,
   } = useAnalysis();
 
+  // Out of analyses: photos and corrections pause; text still goes through, since
+  // "water 500" needs no AI and anything else gets the server's cap message
+  const { allowance, capReached } = useAiAllowance();
   const todayKey = dayKey(new Date());
   const logged = latest !== undefined && loggedAtLength === history.length;
 
@@ -78,6 +83,7 @@ export default function Home() {
       </header>
 
       <TodayStrip />
+      <WeighInNudge />
       {waterTracking && (
         <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
           <span className="mr-1 text-xs font-semibold text-muted">
@@ -99,9 +105,21 @@ export default function Home() {
 
       {/* Controls column — on lg it sticks below the nav while the thread scrolls */}
       <div className="flex flex-col gap-4 lg:sticky lg:top-24">
+        {capReached && allowance?.cap != null && (
+          <p className="rounded-r-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm">
+            <span className="block font-semibold">
+              You&apos;ve used today&apos;s {allowance.cap} analyses.
+            </span>
+            They&apos;re back at midnight. Barcodes, water and{" "}
+            <Link href="/log" className="font-semibold text-accent hover:underline">
+              adding food manually
+            </Link>{" "}
+            still work.
+          </p>
+        )}
         <PhotoInput
           previewUrl={previewUrl}
-          disabled={loading || preparing}
+          disabled={loading || preparing || capReached}
           preparing={preparing}
           compact={history.length > 0}
           onSelect={(f) => void handleSelect(f)}
@@ -149,7 +167,12 @@ export default function Home() {
         {(!latest || sourceBlob || description.trim()) && (
           <button
             type="button"
-            disabled={(!sourceBlob && !description.trim()) || loading || preparing}
+            disabled={
+              (!sourceBlob && !description.trim()) ||
+              (capReached && sourceBlob !== null) ||
+              loading ||
+              preparing
+            }
             onClick={() => analyze()}
             className="flex items-center justify-center gap-2 rounded-panel bg-accent px-4 py-3 font-semibold text-background transition duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
           >
@@ -273,7 +296,7 @@ export default function Home() {
               </div>
             )}
             <CorrectionBar
-              disabled={loading}
+              disabled={loading || capReached}
               loading={loading}
               onSubmit={(correction) => analyze(correction)}
             />

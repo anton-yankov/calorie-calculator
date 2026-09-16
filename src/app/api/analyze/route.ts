@@ -3,6 +3,7 @@ import { sumTotals } from "@/lib/scale";
 import OpenAI from "openai";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
 import { MEAL_ANALYSIS_SCHEMA, type MealAnalysis } from "@/lib/schema";
+import { claimAnalysis, refundAnalysis } from "@/lib/ai-usage";
 import { getUserId } from "@/lib/supabase-session";
 
 export const runtime = "nodejs";
@@ -47,7 +48,8 @@ Rules:
 export async function POST(req: Request): Promise<Response> {
   // Checked here too, not only in the proxy: a proxy matcher change could
   // silently expose the OpenAI key behind this route
-  if (!(await getUserId())) {
+  const userId = await getUserId();
+  if (!userId) {
     return Response.json({ error: "Authentication required" }, { status: 401 });
   }
 
@@ -113,7 +115,13 @@ export async function POST(req: Request): Promise<Response> {
     });
   }
 
+  // Water shorthand and bad input have returned by now, so they never use an analysis
+  const refused = await claimAnalysis();
+  if (refused) return refused;
+
   const client = new OpenAI();
+  // Anything but a delivered estimate gives the analysis back
+  let delivered = false;
   try {
     const response = await client.responses.create({
       model: process.env.VISION_MODEL ?? "gpt-5.6-luna",
@@ -136,10 +144,13 @@ export async function POST(req: Request): Promise<Response> {
     }
     const analysis: MealAnalysis = JSON.parse(response.output_text);
     analysis.totals = sumTotals(analysis.foods);
+    delivered = true;
     return Response.json(analysis);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("analyze failed:", err);
     return Response.json({ error: `Analysis failed: ${message}` }, { status: 502 });
+  } finally {
+    if (!delivered) await refundAnalysis(userId);
   }
 }

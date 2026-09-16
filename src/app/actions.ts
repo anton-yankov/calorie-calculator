@@ -6,6 +6,7 @@ import {
   saveBarcodeProduct,
   saveLoggedBarcodeProducts,
 } from "@/lib/barcode-products";
+import { getAiAllowance, type AiAllowance } from "@/lib/ai-usage";
 import type { LoggedMeal } from "@/lib/log";
 import {
   deleteMealById,
@@ -34,7 +35,8 @@ import { isDrinkType, type DrinkType } from "@/lib/water";
 import { activeWaterGoal, getProfile } from "@/lib/profiles";
 // Server Actions are reachable via direct POST, not just through the UI, so
 // each one re-checks the session with getUserId() — same rule as the proxy.
-import { getUserId } from "@/lib/supabase-session";
+import { getUserId, getViewer } from "@/lib/supabase-session";
+import { latestWeighInDay } from "@/lib/weights";
 
 interface ActionResult {
   error?: string;
@@ -296,6 +298,28 @@ export async function todayProgressAction(
     return { progress: { totals, targets: targetsForDay(plans, day, activeWaterGoal(profile)) } };
   } catch (err) {
     return { error: message(err, "Couldn't load today's progress") };
+  }
+}
+
+/** Today's AI analyses used and the cap, for the counter under the nav. */
+export async function aiAllowanceAction(): Promise<ActionResult & { allowance?: AiAllowance }> {
+  const viewer = await getViewer();
+  if (!viewer) return { error: "Authentication required" };
+  try {
+    return { allowance: await getAiAllowance(viewer) };
+  } catch (err) {
+    return { error: message(err, "Couldn't load your analyses left") };
+  }
+}
+
+/** The day of the latest weigh-in, for the Analyze page's weigh-in nudge. */
+export async function latestWeighInAction(): Promise<ActionResult & { day?: string | null }> {
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
+  try {
+    return { day: await latestWeighInDay(userId) };
+  } catch (err) {
+    return { error: message(err, "Couldn't load the latest weigh-in") };
   }
 }
 

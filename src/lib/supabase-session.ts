@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE_OPTIONS, supabaseEnv } from "@/lib/supabase-config";
 
@@ -35,9 +36,33 @@ export async function createSessionClient() {
   });
 }
 
-/** The logged-in user's id (the verified token's `sub` claim), or null when logged out. */
-export async function getUserId(): Promise<string | null> {
+/**
+ * A Supabase client passed into a read function. Pages pass nothing and read
+ * as the logged-in user; the admin pages pass the secret-key client to read
+ * another user's rows (the userId filter still applies).
+ */
+export type Db = SupabaseClient;
+
+export interface Viewer {
+  userId: string;
+  /**
+   * Set with SQL in the Supabase dashboard (auth.users.raw_app_meta_data).
+   * app_metadata is part of the verified token and only the server can write
+   * it, unlike user_metadata, which every user can edit for themselves. It
+   * reaches the token at the next login.
+   */
+  isAdmin: boolean;
+}
+
+/** Who is logged in, from the verified token; null when logged out. */
+export async function getViewer(): Promise<Viewer | null> {
   const supabase = await createSessionClient();
   const { data } = await supabase.auth.getClaims();
-  return data?.claims.sub ?? null;
+  if (!data) return null;
+  return { userId: data.claims.sub, isAdmin: data.claims.app_metadata?.role === "admin" };
+}
+
+/** The logged-in user's id (the verified token's `sub` claim), or null when logged out. */
+export async function getUserId(): Promise<string | null> {
+  return (await getViewer())?.userId ?? null;
 }

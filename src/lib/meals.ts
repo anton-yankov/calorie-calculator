@@ -1,7 +1,7 @@
 import type { LoggedMeal } from "@/lib/log";
 import { sumTotals } from "@/lib/scale";
 import type { MealAnalysis, MealTotals } from "@/lib/schema";
-import { createSessionClient } from "@/lib/supabase-session";
+import { createSessionClient, type Db } from "@/lib/supabase-session";
 
 /**
  * Server-side data layer for the meal log — the only code that touches the table.
@@ -58,9 +58,9 @@ export interface MealTotalRow {
  * lists, so a year of meals is ~100 KB. Days are grouped on the client (only
  * the viewer knows their timezone), so this stays a plain row scan.
  */
-export async function listMealTotals(userId: string): Promise<MealTotalRow[]> {
-  const db = await createSessionClient();
-  const { data, error } = await db
+export async function listMealTotals(userId: string, db?: Db): Promise<MealTotalRow[]> {
+  const client = db ?? (await createSessionClient());
+  const { data, error } = await client
     .from("meals")
     .select("logged_at, totals:analysis->totals")
     .eq("user_id", userId)
@@ -75,9 +75,9 @@ export async function listMealTotals(userId: string): Promise<MealTotalRow[]> {
     }));
 }
 
-export async function listMeals(userId: string): Promise<LoggedMeal[]> {
-  const db = await createSessionClient();
-  const { data, error } = await db
+export async function listMeals(userId: string, db?: Db): Promise<LoggedMeal[]> {
+  const client = db ?? (await createSessionClient());
+  const { data, error } = await client
     .from("meals")
     .select(LIST_COLUMNS)
     .eq("user_id", userId)

@@ -4,6 +4,7 @@ import {
   NUTRITION_LABEL_SCHEMA,
   type NutritionLabelAnalysis,
 } from "@/lib/nutrition-label";
+import { claimAnalysis, refundAnalysis } from "@/lib/ai-usage";
 import { getUserId } from "@/lib/supabase-session";
 
 export const runtime = "nodejs";
@@ -46,7 +47,8 @@ function validAnalysis(value: unknown): value is NutritionLabelAnalysis {
 export async function POST(request: Request): Promise<Response> {
   // Checked here too, not only in the proxy: a proxy matcher change could
   // silently expose the OpenAI key behind this route
-  if (!(await getUserId())) {
+  const userId = await getUserId();
+  if (!userId) {
     return Response.json({ error: "Authentication required" }, { status: 401 });
   }
 
@@ -85,6 +87,12 @@ export async function POST(request: Request): Promise<Response> {
     },
   ];
 
+  // Every free rejection is above; from here the request uses an analysis
+  const refused = await claimAnalysis();
+  if (refused) return refused;
+
+  // Anything but readable label values gives the analysis back
+  let delivered = false;
   try {
     const client = new OpenAI();
     const response = await client.responses.create({
@@ -125,6 +133,7 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
+    delivered = true;
     return Response.json(analysis, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("nutrition label analysis failed:", error);
@@ -132,5 +141,7 @@ export async function POST(request: Request): Promise<Response> {
       { error: "Couldn't read the nutrition label. Retake the photo and try again." },
       { status: 502 },
     );
+  } finally {
+    if (!delivered) await refundAnalysis(userId);
   }
 }

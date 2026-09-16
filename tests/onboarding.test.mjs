@@ -35,6 +35,7 @@ function onboarding({ userId = "user-1" } = {}) {
     "@/lib/supabase-session": { getUserId: async () => userId },
     "@/lib/profiles": { saveProfile: async (id, profile) => (saved.profile = { id, profile }) },
     "@/lib/plan-history": { savePlan: async (id, plan) => (saved.plan = { id, plan }) },
+    "@/lib/weights": { saveWeight: async (id, entry) => (saved.weight = { id, entry }) },
   });
   return { saved, save: loaded.saveOnboardingAction };
 }
@@ -62,6 +63,8 @@ test("a suggested pace is stored with server-computed targets and snapshots", as
     maintenanceKcal: maintenance,
     weightKg: 85,
   });
+  // The setup weight becomes the first weigh-in, dated the plan's start
+  assert.deepEqual(saved.weight, { id: "user-1", entry: { day: todayKey, weightKg: 85 } });
   assert.deepEqual(saved.revalidated, ["/", "layout"]);
   assert.equal(saved.redirect, "/");
 });

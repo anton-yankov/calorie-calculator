@@ -29,6 +29,24 @@ export function submittedToday(value: unknown): string | null {
   return Math.abs(submitted - Date.now()) <= 48 * 60 * 60 * 1000 ? value : null;
 }
 
+/**
+ * A weigh-in's YYYY-MM-DD day: a real calendar date, and not after tomorrow
+ * by the server's clock (the user's timezone may already be a day ahead).
+ */
+export function submittedPastDay(value: unknown): string | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T12:00:00Z`);
+  // Date.parse rolls "2026-02-31" over to March; a real date survives the round trip
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) return null;
+  return date.getTime() <= Date.now() + 36 * 60 * 60 * 1000 ? value : null;
+}
+
+/** A weigh-in in kg, rounded to 0.1 — the same 30–300 kg range as the body details. */
+export function validWeighIn(value: unknown): number | string {
+  const kg = decimal(value, 30, 300);
+  return kg === null ? "Enter a weight between 30 and 300 kg." : Math.round(kg * 10) / 10;
+}
+
 export interface BodyInput {
   sex: Sex;
   birthYear: number;

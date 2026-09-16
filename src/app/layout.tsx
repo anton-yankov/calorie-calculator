@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { AiAllowanceProvider } from "@/components/AiAllowance";
 import { AnalysisProvider } from "@/components/AnalysisProvider";
 import { LightboxProvider } from "@/components/ImageLightbox";
 import { TopNav } from "@/components/TopNav";
@@ -52,10 +53,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <TopNav />
-        <LightboxProvider>
-          <AnalysisProvider>{children}</AnalysisProvider>
-        </LightboxProvider>
+        <AiAllowanceProvider>
+          <TopNav />
+          <LightboxProvider>
+            <AnalysisProvider>{children}</AnalysisProvider>
+          </LightboxProvider>
+        </AiAllowanceProvider>
         <Toaster
           position="bottom-center"
           toastOptions={{

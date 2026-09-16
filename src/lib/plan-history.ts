@@ -1,5 +1,5 @@
 import type { Goal } from "@/lib/plan";
-import { createSessionClient } from "@/lib/supabase-session";
+import { createSessionClient, type Db } from "@/lib/supabase-session";
 
 /**
  * Server-side data layer for public.plans: every plan a user has had, one per
@@ -55,9 +55,9 @@ export async function hasPlan(userId: string): Promise<boolean> {
 }
 
 /** All of the user's plans, oldest first. */
-export async function listPlans(userId: string): Promise<StoredPlan[]> {
-  const db = await createSessionClient();
-  const { data, error } = await db
+export async function listPlans(userId: string, db?: Db): Promise<StoredPlan[]> {
+  const client = db ?? (await createSessionClient());
+  const { data, error } = await client
     .from("plans")
     .select(PLAN_COLUMNS)
     .eq("user_id", userId)

@@ -50,15 +50,22 @@ Decisions: maintain skips goal weight; your first plan also covers all earlier d
 
 ## Phase 4 — Weight, AI cap & admin
 
-- [ ] 4.1 Weight entries table + log weight any day (one per day).
-- [ ] 4.2 Weight chart with trend on Stats.
-- [ ] 4.3 Weekly weigh-in nudge after 7 days without an entry.
-- [ ] 4.4 Admin role: mark your account as the admin (in `app_metadata`, so the verified token carries it without a database lookup).
-- [ ] 4.5 AI usage counting with a per-user daily cap (default 20, admin unlimited, resets at midnight Sofia time).
-- [ ] 4.6 Always-visible "analyses left" counter; when the cap is hit, only photo/label AI is blocked.
-- [ ] 4.7 HTML mockups: admin users list + user detail.
-- [ ] 4.8 Admin users list with editable AI cap.
-- [ ] 4.9 Admin user detail (read-only): profile & plan, charts, meals, products, AI usage.
+Decisions: every request that reaches OpenAI uses one analysis (photo, description, correction, label scan), and a failed call gives it back; water shorthand, barcodes and quick entry are free. Weight is logged on Stats and never changes the plan (Settings pre-fills the latest entry). Trend = exponential moving average (10% a day) plus a dashed goal-weight line. Nudge = dismissible banner on Analyze (hidden until the next day). Your counter shows "∞". Admin sees everything read-only, including photos.
+
+- [x] 4.1 Mockups ([postplan](https://szja98kdtm7b.postplan.dev), `.plans/weight-and-ai-cap-mockups.html`): weight on Stats, trend explainer, weigh-in nudge, "analyses left" counter options, cap-reached state. Chosen: phone counter = slim strip under the tabs (desktop = pill beside the tabs); amber at 3 or fewer left; weight tiles + form in the left column, chart + entries on the right.
+- [x] 4.2 `weight_entries` table (one per user per day, RLS) + backfill from each plan's weight snapshot; in `supabase/schema.sql` and run (1 row: 16.09, 70 kg).
+- [x] 4.3 Log weight on Stats (`WeightLog.tsx`, actions in `stats/actions.ts`, data in `src/lib/weights.ts`): value + day (same day replaces, with a hint), "All weigh-ins" list with edit/delete/undo; also on an empty Stats page. Onboarding saves the first weigh-in; Settings pre-fills its weight from the latest weigh-in.
+- [x] 4.4 Weight chart (`WeightChart.tsx`, math in `src/lib/weight-trend.ts`): weigh-ins as dots by date, 10% EMA trend in the goal tint, dashed goal weight, hover/tap + table; "Latest weight" and "Trend change" tiles (trend in effect on the range's first day → last weigh-in). "All" reaches back to the first weigh-in.
+- [x] 4.5 Weigh-in nudge (`WeighInNudge.tsx`): banner on Analyze when the latest weigh-in is 7+ days old (or missing), "Log weight" → `/stats#weight`, × hides it until tomorrow (localStorage).
+- [x] 4.6 Admin role: `getViewer()` in `supabase-session.ts` reads `app_metadata.role` from the verified token. **SQL still to run + log out and in** (see the Phase 4 SQL item below).
+- [x] 4.7 AI usage (`src/lib/ai-usage.ts`): `ai_limits` (own cap, default 20; users can only read it, so the cap lives outside `profiles`) and `ai_usage` per Sofia day; `claim_ai_analysis()` checks and counts in one statement (admin uncapped); both AI routes claim right before OpenAI and refund anything not delivered via the secret-key-only `refund_ai_analysis`. Unchecked = refused (503). **SQL still to run.**
+- [x] 4.8 Counter (`AiAllowance.tsx`): slim strip under the tabs below lg, pill beside them on lg; amber at ≤3, red at 0, "∞" for admin; refreshed on navigation, tab focus and after each AI request. Cap reached: message on Analyze, photo + corrections paused, text still sent (water shorthand is free), label scan paused with a hint.
+- [x] 4.9 Mockups ([postplan](https://nq54v552uk6w.postplan.dev), `.plans/admin-mockups.html`). Taken as recommended: way in = "Admin" section in Settings; user detail = tabs reusing Log/Stats/Products read-only; cap 0–1000 (0 pauses AI).
+- [x] 4.10 Admin gate: `requireAdmin()` (`src/lib/admin.ts`) → 404 for everyone else; secret-key client in `src/lib/supabase-admin.ts` (`server-only`); read functions take an optional client (`Db`).
+- [x] 4.11 `/admin`: table on desktop, cards on phones — email (you/admin tag), current plan, last meal, AI today, cap field + Save (`setDailyCapAction`, admin-checked).
+- [x] 4.12 `/admin/users/[userId]`: tabs Overview (details, plan history, 14-day AI use) · Log · Stats · Products, reusing the real views with `readOnly` (no quick entry, weight form, edit/delete/relog; thumbnails only) and the user's own water setting.
+- [x] 4.13 Phase 4 dead-code scan clean (only the pre-existing 5.3 exports). README and `.env.example` document the secret key, new tables and admin setup. Commit and push when you ask.
+- [x] **Phase 4 SQL** run on 16.09: AI tables + functions; your account is the only admin (the other account has no role). Log out and in once so the token carries it.
 
 ## Phase 5 — Polish & handover
 
@@ -72,7 +79,8 @@ Decisions: maintain skips goal weight; your first plan also covers all earlier d
 
 Must be done before he gets his account (5.4).
 
-_None right now._
+- [ ] Vercel: `SUPABASE_SECRET_KEY` is set (you checked on 16.09); confirm its value matches the current secret key in Supabase before the 5.5 deploy. It stays server-only (no `NEXT_PUBLIC_` prefix).
+- [ ] Tell your friend that the admin view lets you see his meals and photos.
 
 ## Later, non-blocking
 

@@ -285,7 +285,7 @@ function ProductEditor({
   );
 }
 
-function ProductCard({ product }: { product: BarcodeProduct }) {
+function ProductCard({ product, readOnly }: { product: BarcodeProduct; readOnly: boolean }) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
 
@@ -381,31 +381,40 @@ function ProductCard({ product }: { product: BarcodeProduct }) {
           <div className="px-4 pb-4">
             <MacroSplit per100g={product.per100g} />
           </div>
-          <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs font-semibold">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => setEditing(true)}
-              className="text-accent hover:underline disabled:text-muted"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={handleDelete}
-              className="ml-auto text-danger hover:underline disabled:text-muted"
-            >
-              {pending ? "Deleting…" : "Delete"}
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs font-semibold">
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setEditing(true)}
+                className="text-accent hover:underline disabled:text-muted"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleDelete}
+                className="ml-auto text-danger hover:underline disabled:text-muted"
+              >
+                {pending ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          )}
         </>
       )}
     </article>
   );
 }
 
-export function ProductList({ products }: { products: BarcodeProduct[] }) {
+/** `readOnly` (the admin's view of another account) hides Edit and Delete. */
+export function ProductList({
+  products,
+  readOnly = false,
+}: {
+  products: BarcodeProduct[];
+  readOnly?: boolean;
+}) {
   const [query, setQuery] = useState("");
 
   if (products.length === 0) {
@@ -454,7 +463,9 @@ export function ProductList({ products }: { products: BarcodeProduct[] }) {
           Nothing matches “{query.trim()}”.
         </p>
       ) : (
-        visible.map((product) => <ProductCard key={product.barcode} product={product} />)
+        visible.map((product) => (
+          <ProductCard key={product.barcode} product={product} readOnly={readOnly} />
+        ))
       )}
     </section>
   );

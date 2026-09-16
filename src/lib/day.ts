@@ -38,6 +38,13 @@ export function addDays(key: string, n: number): string {
   return dayKey(d);
 }
 
+/** Whole days from `from` to `to` (negative when `to` is earlier); noon-based so DST can't shift it. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round(
+    (new Date(`${to}T12:00:00`).getTime() - new Date(`${from}T12:00:00`).getTime()) / 86_400_000,
+  );
+}
+
 /** "23 Dec 2026" — for plan dates, which read better spelled out than as dd.mm. */
 export function longDate(key: string): string {
   return new Date(`${key}T12:00:00`).toLocaleDateString("en-GB", {

@@ -6,6 +6,7 @@ import { goalStatus } from "@/lib/goal-status";
 import { DRINK_TYPES, DRINK_LABELS, formatWater } from "@/lib/water";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { DailyBars, type BarDatum } from "@/components/charts/DailyBars";
+import { WeightChart } from "@/components/charts/WeightChart";
 import { RangePicker } from "@/components/charts/RangePicker";
 import { StatTile } from "@/components/charts/StatTile";
 import { SkeletonStats } from "@/components/loaders";
@@ -16,6 +17,9 @@ import type { MealTotals } from "@/lib/schema";
 import type { StoredPlan } from "@/lib/plan-history";
 import { targetsForDay } from "@/lib/plan-targets";
 import { computeRange, groupByDay, macroSplit, type RangeId, type RangeStats } from "@/lib/stats";
+import { trendOverRange, withTrend } from "@/lib/weight-trend";
+import type { WeightEntry } from "@/lib/weights";
+import { WeightEntries, WeightForm } from "./WeightLog";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -66,6 +70,12 @@ function goalBars(
 }
 
 const kcal = (n: number) => Math.round(n).toLocaleString("en-US");
+const kg = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+/** "−1.2", "+0.4", "0" — a weight change with its direction */
+const signedKg = (n: number) => {
+  const rounded = Math.round(n * 10) / 10;
+  return rounded === 0 ? "0" : `${rounded > 0 ? "+" : "−"}${kg(Math.abs(rounded))}`;
+};
 
 /** What "on track" meant, worded for the current goal (see goal-status.ts). */
 const ON_TRACK_CAPTION: Record<Goal, string> = {
@@ -138,27 +148,43 @@ export function StatsView({
   rows,
   plans,
   waterGoalMl,
+  weights,
+  readOnly = false,
 }: {
   rows: MealTotalRow[];
   plans: StoredPlan[];
   waterGoalMl: number | null;
+  weights: WeightEntry[];
+  /** The admin's view of another account: no weight form, no edits */
+  readOnly?: boolean;
 }) {
   const waterTracking = useWaterTracking();
   const [range, setRange] = useState<RangeId>("30d");
   const today = useMounted() ? dayKey(new Date()) : null;
 
   const days = useMemo(() => groupByDay(rows), [rows]);
+  const weightPoints = useMemo(() => withTrend(weights), [weights]);
   const stats = useMemo(
     () => (today ? computeRange(days, range, plans, waterGoalMl, today) : null),
     [days, range, plans, waterGoalMl, today],
   );
 
   if (rows.length === 0) {
+    // Weigh-ins don't need meals, so they stay available on an empty page
     return (
-      <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted lg:col-span-2">
-        <p className="font-serif text-xl font-semibold text-foreground">Nothing to chart yet</p>
-        <p className="mt-1 text-sm">Log a few days of meals and the trends appear here.</p>
-      </div>
+      <>
+        <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted lg:col-span-2">
+          <p className="font-serif text-xl font-semibold text-foreground">Nothing to chart yet</p>
+          <p className="mt-1 text-sm">Log a few days of meals and the trends appear here.</p>
+        </div>
+        {today && (
+          <>
+            {/* An empty cell keeps the list in the right-hand column */}
+            {readOnly ? <div /> : <WeightForm weights={weights} today={today} />}
+            <WeightEntries weights={weights} readOnly={readOnly} />
+          </>
+        )}
+      </>
     );
   }
 
@@ -199,6 +225,15 @@ export function StatsView({
     (t) => `${Math.round(t.protein_g)} g protein`,
   );
   const proteinBars = goalBars(stats, plans, "protein", (t) => `${Math.round(t.calories)} kcal`);
+
+  // "All" starts at the first meal; reach back further if weighing in started earlier
+  const firstWeighIn = weights[0]?.day;
+  const weightStart =
+    range === "all" && firstWeighIn && firstWeighIn < stats.start ? firstWeighIn : stats.start;
+  const weightRange = trendOverRange(weightPoints, weightStart, stats.end);
+  const latestWeighIn = weights.at(-1);
+  // Plans never start in the future, so the newest one is today's
+  const goalWeight = plans.at(-1)?.goalWeightKg ?? null;
 
   const avgCalories = summary.avgCalories === null ? "—" : kcal(summary.avgCalories);
   const avgProtein = summary.avgProtein === null ? "—" : String(Math.round(summary.avgProtein));
@@ -244,6 +279,25 @@ export function StatsView({
         </div>
 
         <MacroSplit protein={summary.avgProtein} carbs={summary.avgCarbs} fat={summary.avgFat} />
+        <div className="grid grid-cols-2 gap-3">
+          <StatTile
+            label="Latest weight"
+            value={latestWeighIn ? kg(latestWeighIn.weightKg) : "—"}
+            unit={latestWeighIn ? "kg" : undefined}
+            caption={
+              latestWeighIn
+                ? `${dayLabel(latestWeighIn.day)}${goalWeight !== null ? ` · goal ${kg(goalWeight)} kg` : ""}`
+                : "no weigh-ins yet"
+            }
+          />
+          <StatTile
+            label="Trend change"
+            value={weightRange.change === null ? "—" : signedKg(weightRange.change)}
+            unit={weightRange.change === null ? undefined : "kg"}
+            caption={weightRange.change === null ? "needs two weigh-ins" : "over this range"}
+          />
+        </div>
+        {!readOnly && <WeightForm weights={weights} today={stats.end} />}
       </div>
 
       <section className="flex min-w-0 flex-col gap-4">
@@ -265,6 +319,21 @@ export function StatsView({
             proteinGoal !== null ? ` against a ${proteinGoal} g target` : ""
           }.`}
         />
+        <WeightChart
+          points={weightRange.points}
+          start={weightStart}
+          end={stats.end}
+          goalKg={goalWeight}
+          trendColor={todayTargets ? statusColor(todayTargets.goal, "progress") : "var(--accent)"}
+          summary={`Weight, ${spanLabel}: ${
+            weightRange.points.length === 0
+              ? "no weigh-ins"
+              : `${plural(weightRange.points.length, "weigh-in")}${
+                  weightRange.change === null ? "" : `, trend ${signedKg(weightRange.change)} kg`
+                }`
+          }${goalWeight !== null ? `, goal ${kg(goalWeight)} kg` : ""}.`}
+        />
+        <WeightEntries weights={weights} readOnly={readOnly} />
         {waterTracking && (
           <>
             <div className="grid grid-cols-2 gap-3">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/login/actions";
+import { AiCounterPill, AiCounterStrip } from "@/components/AiAllowance";
 
 const tabs = [
   { href: "/", label: "Analyze" },
@@ -75,6 +76,7 @@ export function TopNav() {
                 );
               })}
             </div>
+            <AiCounterPill />
             <Link
               href="/settings"
               aria-label="Settings"
@@ -90,6 +92,8 @@ export function TopNav() {
           </div>
         )}
       </div>
+      {/* The AI counter is always in view, except where there's no AI to count */}
+      {!onLogin && !onOnboarding && <AiCounterStrip />}
     </nav>
   );
 }

@@ -1,5 +1,5 @@
 import type { ActivityLevel, BodyDetails, Sex } from "@/lib/plan";
-import { createSessionClient } from "@/lib/supabase-session";
+import { createSessionClient, type Db } from "@/lib/supabase-session";
 
 /**
  * Server-side data layer for public.profiles: one row per user with the body
@@ -32,9 +32,9 @@ const PROFILE_COLUMNS =
   "sex, birth_year, height_cm, weight_kg, activity_level, water_tracking, water_goal_ml";
 
 /** The user's profile, or null before onboarding. */
-export async function getProfile(userId: string): Promise<Profile | null> {
-  const db = await createSessionClient();
-  const { data, error } = await db
+export async function getProfile(userId: string, db?: Db): Promise<Profile | null> {
+  const client = db ?? (await createSessionClient());
+  const { data, error } = await client
     .from("profiles")
     .select(PROFILE_COLUMNS)
     .eq("user_id", userId)

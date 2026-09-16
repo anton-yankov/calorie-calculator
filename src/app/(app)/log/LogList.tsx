@@ -61,7 +61,7 @@ function GramsInput({
   );
 }
 
-function MealEntry({ meal }: { meal: LoggedMeal }) {
+function MealEntry({ meal, readOnly }: { meal: LoggedMeal; readOnly: boolean }) {
   const waterTracking = useWaterTracking();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
@@ -188,10 +188,15 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
               src={meal.thumbnail}
               alt={names || "Meal"}
               label={`View photo of ${names || "meal"}`}
-              load={async () => {
-                const result = await getMealPhotoAction(meal.id);
-                return result.photo ?? null;
-              }}
+              // The large photo is fetched as the viewer, so a read-only view keeps the thumbnail
+              load={
+                readOnly
+                  ? undefined
+                  : async () => {
+                      const result = await getMealPhotoAction(meal.id);
+                      return result.photo ?? null;
+                    }
+              }
               className="h-12 w-12 shrink-0 rounded-panel border border-transparent"
             />
           ) : (
@@ -319,73 +324,75 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
         </p>
       )}
 
-      <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs font-semibold">
-        {editing ? (
-          <>
-            <span className="flex items-center gap-1.5 font-normal text-muted">
-              When
-              <DatePicker
-                value={dateDraft}
-                max={dayKey(new Date())}
+      {!readOnly && (
+        <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs font-semibold">
+          {editing ? (
+            <>
+              <span className="flex items-center gap-1.5 font-normal text-muted">
+                When
+                <DatePicker
+                  value={dateDraft}
+                  max={dayKey(new Date())}
+                  disabled={pending}
+                  onChange={setDateDraft}
+                  className="rounded-md border-line bg-background px-1.5 py-0.5 text-xs"
+                />
+                <input
+                  type="time"
+                  value={timeDraft}
+                  disabled={pending}
+                  aria-label="Time"
+                  onChange={(e) => setTimeDraft(e.target.value)}
+                  className="rounded-md border border-line bg-background px-1.5 py-0.5 font-mono text-xs text-foreground focus:border-accent focus:outline-none"
+                />
+              </span>
+              <button
+                type="button"
                 disabled={pending}
-                onChange={setDateDraft}
-                className="rounded-md border-line bg-background px-1.5 py-0.5 text-xs"
-              />
-              <input
-                type="time"
-                value={timeDraft}
+                onClick={handleSave}
+                className="ml-auto text-success hover:underline disabled:text-muted"
+              >
+                {pending ? "Saving…" : "Save"}
+              </button>
+              <button
+                type="button"
                 disabled={pending}
-                aria-label="Time"
-                onChange={(e) => setTimeDraft(e.target.value)}
-                className="rounded-md border border-line bg-background px-1.5 py-0.5 font-mono text-xs text-foreground focus:border-accent focus:outline-none"
-              />
-            </span>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={handleSave}
-              className="ml-auto text-success hover:underline disabled:text-muted"
-            >
-              {pending ? "Saving…" : "Save"}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={cancelEdit}
-              className="text-muted hover:underline"
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={startEdit}
-              className="text-accent hover:underline disabled:text-muted"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={handleRelog}
-              className="text-success hover:underline disabled:text-muted"
-            >
-              {pending ? "Logging…" : "Log again"}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={handleDelete}
-              className="ml-auto text-danger hover:underline disabled:text-muted"
-            >
-              Delete
-            </button>
-          </>
-        )}
-      </div>
+                onClick={cancelEdit}
+                className="text-muted hover:underline"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={startEdit}
+                className="text-accent hover:underline disabled:text-muted"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleRelog}
+                className="text-success hover:underline disabled:text-muted"
+              >
+                {pending ? "Logging…" : "Log again"}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleDelete}
+                className="ml-auto text-danger hover:underline disabled:text-muted"
+              >
+                Delete
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </details>
   );
 }
@@ -393,16 +400,19 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
 /**
  * The Log's two columns: a rail with today's bars (desktop only) and the quick
  * entry, then the days. On desktop the rail sticks while the days scroll, and
- * today's bars live in the rail instead of above today's meals.
+ * today's bars live in the rail instead of above today's meals. `readOnly`
+ * (the admin's view of another account) drops the quick entry and every edit.
  */
 export function LogList({
   meals,
   plans,
   waterGoalMl,
+  readOnly = false,
 }: {
   meals: LoggedMeal[];
   plans: StoredPlan[];
   waterGoalMl: number | null;
+  readOnly?: boolean;
 }) {
   const waterTracking = useWaterTracking();
   const todayKey = dayKey(new Date());
@@ -423,7 +433,7 @@ export function LogList({
             <GoalBars totals={todayTotals} targets={todayTargets} isToday />
           </div>
         )}
-        <QuickEntry />
+        {!readOnly && <QuickEntry />}
       </div>
 
       <div className="flex flex-col gap-5">
@@ -467,7 +477,7 @@ export function LogList({
                   )}
                 </header>
                 {dayMeals.map((meal) => (
-                  <MealEntry key={meal.id} meal={meal} />
+                  <MealEntry key={meal.id} meal={meal} readOnly={readOnly} />
                 ))}
               </section>
             );

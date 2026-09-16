@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { logout } from "@/app/login/actions";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/plan";
 import type { StoredPlan } from "@/lib/plan-history";
 import type { Profile } from "@/lib/profiles";
+import type { WeightEntry } from "@/lib/weights";
 import { formatWater } from "@/lib/water";
 import {
   changePasswordAction,
@@ -102,10 +104,14 @@ export function SettingsView({
   email,
   profile,
   plans,
+  latestWeighIn,
+  isAdmin,
 }: {
   email: string;
+  isAdmin: boolean;
   profile: Profile;
   plans: StoredPlan[];
+  latestWeighIn: WeightEntry | null;
 }) {
   const today = useMemo(() => dayKey(new Date()), []);
   const active = plans[plans.length - 1];
@@ -114,7 +120,11 @@ export function SettingsView({
   const [sex, setSex] = useState<Sex>(profile.sex);
   const [birthYear, setBirthYear] = useState(String(profile.birthYear));
   const [heightCm, setHeightCm] = useState(String(profile.heightCm));
-  const [weightKg, setWeightKg] = useState(String(profile.weightKg));
+  // The latest weigh-in is the current weight; saving details stores it in the profile
+  const weighInIsNewer = latestWeighIn !== null && latestWeighIn.weightKg !== profile.weightKg;
+  const [weightKg, setWeightKg] = useState(
+    String(weighInIsNewer ? latestWeighIn.weightKg : profile.weightKg),
+  );
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
   const [savingDetails, saveDetails] = useTransition();
 
@@ -396,6 +406,12 @@ export function SettingsView({
               ))}
             </select>
           </label>
+          {weighInIsNewer && Number(weightKg) === latestWeighIn.weightKg && (
+            <p className="text-xs text-muted">
+              Weight from your weigh-in on {longDate(latestWeighIn.day)} (saved details say{" "}
+              {profile.weightKg} kg). Save details to use it.
+            </p>
+          )}
           {maintenanceNow !== null && (
             <Row label="Maintenance now" value={`${fmt(maintenanceNow)} kcal`} />
           )}
@@ -511,6 +527,18 @@ export function SettingsView({
             </button>
           </form>
         </section>
+
+        {isAdmin && (
+          <section className="flex flex-col gap-3">
+            <SectionTitle>Admin</SectionTitle>
+            <Link
+              href="/admin"
+              className="rounded-panel border border-line px-4 py-3 text-center font-semibold text-accent transition hover:border-accent"
+            >
+              Users and AI caps
+            </Link>
+          </section>
+        )}
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
 import type { DrinkType } from "@/lib/water";
 import type { FoodItem } from "@/lib/schema";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
-import { createSessionClient } from "@/lib/supabase-session";
+import { createSessionClient, type Db } from "@/lib/supabase-session";
 
 /**
  * Server-side data layer for saved barcode products. Every product belongs to
@@ -98,9 +98,9 @@ export async function saveBarcodeProduct(
   return toProduct(data as unknown as BarcodeProductRow);
 }
 
-export async function listSavedBarcodeProducts(userId: string): Promise<BarcodeProduct[]> {
-  const db = await createSessionClient();
-  const { data, error } = await db
+export async function listSavedBarcodeProducts(userId: string, db?: Db): Promise<BarcodeProduct[]> {
+  const client = db ?? (await createSessionClient());
+  const { data, error } = await client
     .from("barcode_products")
     .select(PRODUCT_COLUMNS)
     .eq("user_id", userId)
