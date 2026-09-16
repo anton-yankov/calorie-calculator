@@ -1,6 +1,8 @@
 "use client";
 
+import { statusColor } from "@/components/goal-colors";
 import { useWaterTracking } from "@/components/WaterTracking";
+import { goalStatus } from "@/lib/goal-status";
 import { DRINK_TYPES, DRINK_LABELS, formatWater } from "@/lib/water";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { DailyBars, type BarDatum } from "@/components/charts/DailyBars";
@@ -9,10 +11,11 @@ import { StatTile } from "@/components/charts/StatTile";
 import { SkeletonStats } from "@/components/loaders";
 import { dayKey, dayLabel, shortDate } from "@/lib/day";
 import type { MealTotalRow } from "@/lib/meals";
+import type { Goal } from "@/lib/plan";
 import type { MealTotals } from "@/lib/schema";
 import type { StoredPlan } from "@/lib/plan-history";
 import { targetsForDay } from "@/lib/plan-targets";
-import { computeRange, groupByDay, type RangeId, type RangeStats } from "@/lib/stats";
+import { computeRange, groupByDay, macroSplit, type RangeId, type RangeStats } from "@/lib/stats";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -25,19 +28,102 @@ const useMounted = () =>
     () => false,
   );
 
-function toBars(
+/**
+ * One bar per day (or week) for calories or protein, coloured by how it went
+ * against the plan that applied to it. A weekly bar uses the plan in effect on
+ * its Monday; plans rarely change mid-week, and the next week picks up the new one.
+ */
+function goalBars(
   stats: RangeStats,
-  pick: (t: MealTotals) => number,
+  plans: StoredPlan[],
+  metric: "calories" | "protein",
   detail: (t: MealTotals) => string,
 ): BarDatum[] {
-  return stats.buckets.map((b) => ({
-    key: b.key,
-    label: b.label,
-    short: b.short,
-    value: b.value && b.value.nutrition_logged !== false ? pick(b.value) : null,
-    detail: b.value ? detail(b.value) : "",
-    partial: b.partial,
-  }));
+  return stats.buckets.map((b) => {
+    const logged = b.value && b.value.nutrition_logged !== false ? b.value : null;
+    const value = logged ? (metric === "calories" ? logged.calories : logged.protein_g) : null;
+    const targets = targetsForDay(plans, b.key, null);
+    const target = targets
+      ? metric === "calories"
+        ? targets.calorieTarget
+        : targets.proteinTarget
+      : null;
+    const color =
+      targets && target !== null && value !== null
+        ? statusColor(targets.goal, goalStatus(targets.goal, metric, value, target, b.partial))
+        : "var(--muted)";
+    return {
+      key: b.key,
+      label: b.label,
+      short: b.short,
+      value,
+      detail: b.value ? detail(b.value) : "",
+      partial: b.partial,
+      target,
+      color,
+    };
+  });
+}
+
+const kcal = (n: number) => Math.round(n).toLocaleString("en-US");
+
+/** What "on track" meant, worded for the current goal (see goal-status.ts). */
+const ON_TRACK_CAPTION: Record<Goal, string> = {
+  lose: "calories under your limit",
+  maintain: "calories within your range",
+  gain: "calories at your target or more",
+};
+
+const MACROS = [
+  { key: "protein", label: "Protein", color: "var(--green)" },
+  { key: "carbs", label: "Carbs", color: "var(--accent)" },
+  { key: "fat", label: "Fat", color: "var(--macro-fat)" },
+] as const;
+
+/** Where the average day's calories come from, as one stacked bar. */
+function MacroSplit({
+  protein,
+  carbs,
+  fat,
+}: {
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+}) {
+  const grams = { protein: protein ?? 0, carbs: carbs ?? 0, fat: fat ?? 0 };
+  const split = macroSplit(grams);
+  return (
+    <section className="rounded-panel border border-line bg-surface px-4 py-3">
+      <h2 className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+        Where the calories come from
+      </h2>
+      {split ? (
+        <>
+          <div
+            role="img"
+            aria-label={MACROS.map((m) => `${m.label} ${Math.round(split[m.key] * 100)}%`).join(
+              ", ",
+            )}
+            className="mt-2.5 flex h-2 overflow-hidden rounded-full"
+          >
+            {MACROS.map((m) => (
+              <span key={m.key} style={{ width: `${split[m.key] * 100}%`, background: m.color }} />
+            ))}
+          </div>
+          <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-muted">
+            {MACROS.map((m) => (
+              <li key={m.key} className="flex items-center gap-1.5">
+                <span aria-hidden className="h-2 w-2 rounded-sm" style={{ background: m.color }} />
+                {m.label} {Math.round(grams[m.key])} g · {Math.round(split[m.key] * 100)}%
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p className="mt-1.5 text-sm text-muted">Appears once a full day is logged.</p>
+      )}
+    </section>
+  );
 }
 
 /**
@@ -79,8 +165,8 @@ export function StatsView({
   if (!stats) return <SkeletonStats />;
 
   const { summary, mode } = stats;
-  // The chart lines show today's plan (stats.end is today); the day counts in
-  // summary use each day's own plan. Per-day lines come with the Phase 3 rework.
+  // Captions and chart summaries quote today's plan (stats.end is today); the
+  // bars, target lines and day counts use each day's own plan
   const todayTargets = targetsForDay(plans, stats.end, waterGoalMl);
   const calorieGoal = todayTargets?.calorieTarget ?? null;
   const proteinGoal = todayTargets?.proteinTarget ?? null;
@@ -94,24 +180,27 @@ export function StatsView({
       .map((d) => `${d.name}: ${formatWater(d.ml)}`)
       .join(" · "),
     partial: b.partial,
+    // Water isn't judged by the plan's goal, so its bars keep the accent colour
+    target: waterGoal,
+    color: "var(--accent)",
   }));
   const waterTotal = stats.waterByDrink.reduce((sum, d) => sum + d.ml, 0);
-  const rangeLabel = `${shortDate(stats.start)} – ${shortDate(stats.end)}`;
+  const emptyDays = summary.calendarDays - summary.loggedDays;
+  const rangeLabel = `${shortDate(stats.start)} – ${shortDate(stats.end)} · ${
+    emptyDays === 0 ? "every day logged" : `${plural(emptyDays, "day")} empty`
+  }`;
   const spanLabel =
     stats.start === stats.end ? dayLabel(stats.end) : `${stats.start} to ${stats.end}`;
 
-  const calorieBars = toBars(
+  const calorieBars = goalBars(
     stats,
-    (t) => t.calories,
+    plans,
+    "calories",
     (t) => `${Math.round(t.protein_g)} g protein`,
   );
-  const proteinBars = toBars(
-    stats,
-    (t) => t.protein_g,
-    (t) => `${Math.round(t.calories)} kcal`,
-  );
+  const proteinBars = goalBars(stats, plans, "protein", (t) => `${Math.round(t.calories)} kcal`);
 
-  const avgCalories = summary.avgCalories === null ? "—" : String(Math.round(summary.avgCalories));
+  const avgCalories = summary.avgCalories === null ? "—" : kcal(summary.avgCalories);
   const avgProtein = summary.avgProtein === null ? "—" : String(Math.round(summary.avgProtein));
 
   return (
@@ -128,23 +217,62 @@ export function StatsView({
             value={avgCalories}
             unit={summary.avgCalories === null ? undefined : "kcal"}
             caption={
-              plural(summary.completeDays, "logged day") +
-              (calorieGoal !== null ? ` · goal ${calorieGoal}` : "")
+              plural(summary.completeDays, "day") +
+              (calorieGoal !== null ? ` · target ${kcal(calorieGoal)}` : "")
             }
           />
           <StatTile
             label="Avg protein"
             value={avgProtein}
             unit={summary.avgProtein === null ? undefined : "g"}
-            caption={proteinGoal !== null ? `goal ${proteinGoal} g` : "no protein goal"}
+            caption={proteinGoal !== null ? `target ${proteinGoal} g` : "no target"}
           />
-          {waterTracking && (
-            <>
+          <StatTile
+            label="Days on track"
+            value={String(summary.onTrackDays)}
+            unit={`of ${summary.completeDays}`}
+            caption={
+              todayTargets ? ON_TRACK_CAPTION[todayTargets.goal] : "judged by each day's plan"
+            }
+          />
+          <StatTile
+            label="Protein reached"
+            value={String(summary.proteinDays)}
+            unit={`of ${summary.completeDays}`}
+            caption={proteinGoal !== null ? `days at ${proteinGoal} g or more` : "days at target"}
+          />
+        </div>
+
+        <MacroSplit protein={summary.avgProtein} carbs={summary.avgCarbs} fat={summary.avgFat} />
+      </div>
+
+      <section className="flex min-w-0 flex-col gap-4">
+        <DailyBars
+          title={mode === "day" ? "Calories per day" : "Calories per day, weekly average"}
+          unit="kcal"
+          data={calorieBars}
+          mode={mode}
+          summary={`Calories per ${mode}, ${spanLabel}: average ${avgCalories} kcal${
+            calorieGoal !== null ? ` against a ${calorieGoal} kcal target` : ""
+          }.`}
+        />
+        <DailyBars
+          title={mode === "day" ? "Protein per day" : "Protein per day, weekly average"}
+          unit="g"
+          data={proteinBars}
+          mode={mode}
+          summary={`Protein per ${mode}, ${spanLabel}: average ${avgProtein} g${
+            proteinGoal !== null ? ` against a ${proteinGoal} g target` : ""
+          }.`}
+        />
+        {waterTracking && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
               <StatTile
                 label="Avg water"
                 value={summary.avgWater === null ? "—" : String(Math.round(summary.avgWater))}
                 unit={summary.avgWater === null ? undefined : "ml"}
-                caption={`${summary.waterCompleteDays} tracked days${waterGoal !== null ? ` · goal ${formatWater(waterGoal)}` : ""}`}
+                caption={`${plural(summary.waterCompleteDays, "tracked day")}${waterGoal !== null ? ` · goal ${formatWater(waterGoal)}` : ""}`}
               />
               <StatTile
                 label="Water days at goal"
@@ -152,50 +280,13 @@ export function StatsView({
                 unit={
                   summary.waterGoalDays === null ? undefined : `of ${summary.waterCompleteDays}`
                 }
-                caption={waterGoal === null ? "no water goal" : "today excluded from averages"}
+                caption={waterGoal === null ? "no water goal" : "today excluded"}
               />
-            </>
-          )}
-          {summary.calorieGoalDays !== null ? (
-            <StatTile
-              label="Days at goal"
-              value={String(summary.calorieGoalDays)}
-              unit={`of ${summary.completeDays}`}
-              caption={
-                summary.proteinGoalDays !== null
-                  ? `protein ${summary.proteinGoalDays} of ${summary.completeDays}`
-                  : "calories reached the goal"
-              }
-            />
-          ) : (
-            <StatTile
-              label="Biggest day"
-              value={summary.best ? String(Math.round(summary.best.calories)) : "—"}
-              unit={summary.best ? "kcal" : undefined}
-              caption={summary.best ? dayLabel(summary.best.day) : "no complete days yet"}
-            />
-          )}
-          <StatTile
-            label="Days logged"
-            value={String(summary.loggedDays)}
-            unit={`of ${summary.calendarDays}`}
-            caption={
-              summary.loggedDays === summary.calendarDays
-                ? "every day logged"
-                : `${plural(summary.calendarDays - summary.loggedDays, "day")} empty`
-            }
-          />
-        </div>
-      </div>
-
-      <section className="flex min-w-0 flex-col gap-4">
-        {waterTracking && (
-          <>
+            </div>
             <DailyBars
               title={mode === "day" ? "Water per day" : "Water per day, weekly average"}
               unit="ml"
               data={waterBars}
-              goal={waterGoal}
               mode={mode}
               emptyLabel="No water tracked in this range"
               summary={`Water per ${mode}, ${spanLabel}: ${summary.avgWater === null ? "no average yet" : `average ${formatWater(summary.avgWater)}`}.`}
@@ -251,26 +342,6 @@ export function StatsView({
             </section>
           </>
         )}
-        <DailyBars
-          title={mode === "day" ? "Calories per day" : "Calories per day, weekly average"}
-          unit="kcal"
-          data={calorieBars}
-          goal={calorieGoal}
-          mode={mode}
-          summary={`Calories per ${mode}, ${spanLabel}: average ${avgCalories} kcal${
-            calorieGoal !== null ? ` against a ${calorieGoal} kcal goal` : ""
-          }.`}
-        />
-        <DailyBars
-          title={mode === "day" ? "Protein per day" : "Protein per day, weekly average"}
-          unit="g"
-          data={proteinBars}
-          goal={proteinGoal}
-          mode={mode}
-          summary={`Protein per ${mode}, ${spanLabel}: average ${avgProtein} g${
-            proteinGoal !== null ? ` against a ${proteinGoal} g goal` : ""
-          }.`}
-        />
       </section>
     </>
   );

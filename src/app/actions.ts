@@ -63,6 +63,7 @@ function isValidFood(food: FoodItem): boolean {
     )
       return false;
   }
+  if (food.quickEntry !== undefined && food.quickEntry !== true) return false;
   if (food.barcode !== undefined && !BARCODE_PATTERN.test(String(food.barcode))) return false;
   if (food.imageUrl !== undefined && !isJpegDataUrl(food.imageUrl, MAX_FOOD_IMAGE_LENGTH)) {
     return false;

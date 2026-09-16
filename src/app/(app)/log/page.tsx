@@ -29,8 +29,8 @@ export default async function LogPage() {
   }
 
   return (
-    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-5 py-8 sm:px-6 sm:py-11 lg:max-w-3xl">
-      <header className="border-b-2 border-foreground pb-6">
+    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-5 py-8 sm:px-6 sm:py-11 lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:content-start lg:items-start lg:gap-x-10">
+      <header className="border-b-2 border-foreground pb-6 lg:col-span-2">
         <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
           Daily record
         </p>
@@ -41,7 +41,7 @@ export default async function LogPage() {
       </header>
 
       {loadError ? (
-        <p className="rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
+        <p className="rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm text-danger lg:col-span-2">
           {loadError} — check your connection and reload.
         </p>
       ) : (

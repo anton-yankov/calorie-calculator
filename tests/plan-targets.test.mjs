@@ -35,13 +35,15 @@ test("no plans means no targets", () => {
   assert.equal(targetsForDay([], "2026-09-16", 2000), null);
 });
 
-test("targets carry the day's numbers and the water goal", () => {
+test("targets carry the day's goal, its numbers and the water goal", () => {
   assert.deepEqual(targetsForDay(plans, "2026-09-20", 2500), {
+    goal: "lose",
     calorieTarget: 2310,
     proteinTarget: 170,
     waterGoalMl: 2500,
   });
   assert.deepEqual(targetsForDay(plans, "2026-10-05", null), {
+    goal: "maintain",
     calorieTarget: 2500,
     proteinTarget: 170,
     waterGoalMl: null,

@@ -15,6 +15,10 @@ export interface BarDatum {
   detail: string;
   /** Still accumulating — drawn outlined, excluded from the average line */
   partial: boolean;
+  /** The target this slot is judged against; null when there's none */
+  target: number | null;
+  /** Bar fill (a CSS colour), e.g. the day's goal-status colour */
+  color: string;
 }
 
 // Plot geometry in CSS pixels; the SVG is sized to the card, so text stays crisp
@@ -56,9 +60,10 @@ interface TrendSegment {
 }
 
 /**
- * Column chart of one measure per day (or per week): bars in the accent hue,
- * the goal as a labeled ink hairline, and the average completed logged day as
- * a horizontal segment for each Monday-to-Sunday week.
+ * Column chart of one measure per day (or per week): bars in each slot's own
+ * colour, the target as a labeled ink line that steps wherever the target
+ * changed (a plan change), and the average completed logged day as a
+ * horizontal segment for each Monday-to-Sunday week.
  * Hover or tap a slot for its values; the details table below is the
  * keyboard and screen-reader path to the same numbers.
  */
@@ -66,7 +71,6 @@ export function DailyBars({
   title,
   unit,
   data,
-  goal,
   mode,
   summary,
   emptyLabel = "No meals in this range",
@@ -74,7 +78,6 @@ export function DailyBars({
   title: string;
   unit: string;
   data: BarDatum[];
-  goal: number | null;
   mode: "day" | "week";
   /** Spoken description of the chart for assistive tech */
   summary: string;
@@ -119,7 +122,8 @@ export function DailyBars({
   const baseline = MARGIN.top + PLOT_H;
 
   const values = data.map((d) => d.value).filter((v): v is number => v !== null);
-  const { top, ticks } = niceScale(Math.max(0, ...values, goal ?? 0));
+  const targets = data.map((d) => d.target).filter((t): t is number => t !== null);
+  const { top, ticks } = niceScale(Math.max(0, ...values, ...targets));
   const y = (v: number) => baseline - (v / top) * PLOT_H;
   const cx = (i: number) => MARGIN.left + i * pitch + pitch / 2;
   const empty = values.length === 0;
@@ -153,6 +157,24 @@ export function DailyBars({
     }
   }
 
+  // The target line: one flat run per slot, with a vertical step wherever the
+  // target changes, and a break over slots that have no target
+  let targetPath = "";
+  let previous: number | null = null;
+  data.forEach((d, i) => {
+    if (d.target === null) {
+      previous = null;
+      return;
+    }
+    const x2 = MARGIN.left + (i + 1) * pitch;
+    const ty = y(d.target);
+    targetPath +=
+      previous === null ? `M${MARGIN.left + i * pitch} ${ty} H${x2} ` : `V${ty} H${x2} `;
+    previous = d.target;
+  });
+  const lastTarget = targets.at(-1) ?? null;
+  const legendColor = data.find((d) => d.value !== null)?.color;
+
   const current = active !== null ? data[active] : undefined;
   const last = data[n - 1];
   const endLabel = last?.partial ? (mode === "day" ? "today" : "this week") : last?.short;
@@ -175,8 +197,12 @@ export function DailyBars({
         {mode === "day" && !empty && (
           <span className="flex items-center gap-3 text-[11px] text-muted">
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-[3px] bg-accent" aria-hidden />
-              {mode === "day" ? "daily" : "weekly"}
+              <span
+                className="h-2.5 w-2.5 rounded-[3px]"
+                style={{ background: legendColor }}
+                aria-hidden
+              />
+              daily
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-0.5 w-3.5 rounded-full bg-foreground" aria-hidden />
@@ -255,41 +281,40 @@ export function DailyBars({
                 <path
                   key={d.key}
                   d={path}
-                  fill="var(--accent)"
+                  fill={d.color}
                   fillOpacity={0.18}
-                  stroke="var(--accent)"
+                  stroke={d.color}
                   strokeWidth={1}
                 />
               ) : (
                 <path
                   key={d.key}
                   d={path}
-                  fill="var(--accent)"
+                  fill={d.color}
                   style={active === i ? { filter: "brightness(1.15)" } : undefined}
                 />
               );
             })}
 
-            {/* Goal hairline, labeled at its end */}
-            {goal !== null && !empty && (
+            {/* Target line, stepping with plan changes, labeled with the latest target */}
+            {lastTarget !== null && !empty && (
               <g>
-                <line
-                  x1={MARGIN.left}
-                  x2={width - MARGIN.right}
-                  y1={y(goal)}
-                  y2={y(goal)}
+                <path
+                  d={targetPath}
+                  fill="none"
                   stroke="var(--foreground)"
                   strokeWidth={1}
+                  strokeDasharray="4 3"
                 />
                 <text
                   x={width - MARGIN.right}
-                  y={y(goal) - 4}
+                  y={y(lastTarget) - 4}
                   textAnchor="end"
                   fontSize={10}
                   fill="var(--muted)"
                   className="font-mono tabular-nums"
                 >
-                  goal {goal}
+                  goal {Math.round(lastTarget)}
                   {unit !== "kcal" ? ` ${unit}` : ""}
                 </text>
               </g>
@@ -392,7 +417,8 @@ export function DailyBars({
                   <span className="text-muted">
                     {" "}
                     {unit}
-                    {goal !== null && ` · ${signed(current.value - goal)} vs goal`}
+                    {current.target !== null &&
+                      ` · ${signed(current.value - current.target)} vs goal`}
                   </span>
                 </>
               )}
@@ -415,7 +441,7 @@ export function DailyBars({
                   {mode === "day" ? "Day" : "Week"}
                 </th>
                 <th className="px-2 py-2 text-right font-semibold">{unit}</th>
-                {goal !== null && (
+                {lastTarget !== null && (
                   <th className="py-2 pl-2 pr-4 text-right font-semibold">vs goal</th>
                 )}
               </tr>
@@ -430,9 +456,9 @@ export function DailyBars({
                   <td className="px-2 py-1.5 text-right">
                     {d.value === null ? "—" : Math.round(d.value)}
                   </td>
-                  {goal !== null && (
+                  {lastTarget !== null && (
                     <td className="py-1.5 pl-2 pr-4 text-right">
-                      {d.value === null ? "" : signed(d.value - goal)}
+                      {d.value === null || d.target === null ? "" : signed(d.value - d.target)}
                     </td>
                   )}
                 </tr>

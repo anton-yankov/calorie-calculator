@@ -1,3 +1,4 @@
+import type { Goal } from "@/lib/plan";
 import type { StoredPlan } from "@/lib/plan-history";
 
 /**
@@ -6,6 +7,8 @@ import type { StoredPlan } from "@/lib/plan-history";
  */
 
 export interface DayTargets {
+  /** Decides how the day's numbers are judged (see goal-status.ts) */
+  goal: Goal;
   calorieTarget: number;
   proteinTarget: number;
   /** Water goal in ml, or null when none is set */
@@ -37,6 +40,7 @@ export function targetsForDay(
   const plan = planForDay(plans, day);
   if (!plan) return null;
   return {
+    goal: plan.goal,
     calorieTarget: plan.calorieTarget,
     proteinTarget: plan.proteinTarget,
     waterGoalMl,

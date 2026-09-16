@@ -1,4 +1,5 @@
 import { addDays, dayKey, dayLabel, shortDate, weekStart } from "@/lib/day";
+import { goalStatus } from "@/lib/goal-status";
 import type { MealTotalRow } from "@/lib/meals";
 import type { StoredPlan } from "@/lib/plan-history";
 import { targetsForDay } from "@/lib/plan-targets";
@@ -54,14 +55,15 @@ export interface Summary {
   completeDays: number;
   avgCalories: number | null;
   avgProtein: number | null;
+  avgCarbs: number | null;
+  avgFat: number | null;
   avgWater: number | null;
   waterGoalDays: number | null;
   waterCompleteDays: number;
-  /** Complete days whose calories reached that day's target; null without any plan */
-  calorieGoalDays: number | null;
-  proteinGoalDays: number | null;
-  /** Highest-calorie complete day, for when no goal is set */
-  best: { day: string; calories: number } | null;
+  /** Complete days whose calories were on track for that day's goal (see goal-status.ts) */
+  onTrackDays: number;
+  /** Complete days whose protein reached that day's target */
+  proteinDays: number;
 }
 
 export interface RangeStats {
@@ -169,6 +171,27 @@ function mean(values: number[]): number | null {
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
 }
 
+/** Energy per gram (Atwater factors): 4 kcal for protein and carbs, 9 for fat. */
+const KCAL_PER_GRAM = { protein: 4, carbs: 4, fat: 9 } as const;
+
+type Macro = keyof typeof KCAL_PER_GRAM;
+
+/**
+ * Each macro's share of the calories they add up to, as fractions summing to 1.
+ * Shares come from the grams rather than the logged calories, which rarely
+ * match them exactly (fibre, alcohol, rounding). null when there are no grams.
+ */
+export function macroSplit(grams: Record<Macro, number>): Record<Macro, number> | null {
+  const kcal = {
+    protein: grams.protein * KCAL_PER_GRAM.protein,
+    carbs: grams.carbs * KCAL_PER_GRAM.carbs,
+    fat: grams.fat * KCAL_PER_GRAM.fat,
+  };
+  const total = kcal.protein + kcal.carbs + kcal.fat;
+  if (total <= 0) return null;
+  return { protein: kcal.protein / total, carbs: kcal.carbs / total, fat: kcal.fat / total };
+}
+
 export function computeRange(
   days: Map<string, DayStat>,
   range: RangeId,
@@ -192,12 +215,14 @@ export function computeRange(
   const logged = keys.flatMap((k) => days.get(k) ?? []);
   const complete = logged.filter((d) => d.day !== today && d.nutritionMeals > 0);
   const waterComplete = logged.filter((d) => d.day !== today && d.totals.water_ml !== undefined);
-  const calories = complete.map((d) => d.totals.calories);
-  const best = complete.reduce<Summary["best"]>(
-    (acc, d) =>
-      acc && acc.calories >= d.totals.calories ? acc : { day: d.day, calories: d.totals.calories },
-    null,
-  );
+  // Complete days are finished, so each is judged as a whole day against its own plan
+  const statusOf = (d: DayStat, metric: "calories" | "protein") => {
+    const targets = targetsForDay(plans, d.day, waterGoalMl);
+    if (!targets) return null;
+    return metric === "calories"
+      ? goalStatus(targets.goal, metric, d.totals.calories, targets.calorieTarget, false)
+      : goalStatus(targets.goal, metric, d.totals.protein_g, targets.proteinTarget, false);
+  };
 
   return {
     start,
@@ -209,29 +234,18 @@ export function computeRange(
       calendarDays: keys.length,
       loggedDays: logged.length,
       completeDays: complete.length,
-      avgCalories: mean(calories),
+      avgCalories: mean(complete.map((d) => d.totals.calories)),
       avgProtein: mean(complete.map((d) => d.totals.protein_g)),
+      avgCarbs: mean(complete.map((d) => d.totals.carbs_g)),
+      avgFat: mean(complete.map((d) => d.totals.fat_g)),
       avgWater: mean(waterComplete.map((d) => d.totals.water_ml!)),
       waterCompleteDays: waterComplete.length,
       waterGoalDays:
         waterGoalMl != null
           ? waterComplete.filter((d) => d.totals.water_ml! >= waterGoalMl).length
           : null,
-      // Each day counts against its own plan's targets. Targets are floors here,
-      // matching GoalBars: reaching the number is the win (goal-aware in Phase 3)
-      calorieGoalDays: plans.length
-        ? complete.filter((d) => {
-            const target = targetsForDay(plans, d.day, waterGoalMl);
-            return target !== null && d.totals.calories >= target.calorieTarget;
-          }).length
-        : null,
-      proteinGoalDays: plans.length
-        ? complete.filter((d) => {
-            const target = targetsForDay(plans, d.day, waterGoalMl);
-            return target !== null && d.totals.protein_g >= target.proteinTarget;
-          }).length
-        : null,
-      best,
+      onTrackDays: complete.filter((d) => statusOf(d, "calories") === "met").length,
+      proteinDays: complete.filter((d) => statusOf(d, "protein") === "met").length,
     },
   };
 }

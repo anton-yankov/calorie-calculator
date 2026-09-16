@@ -19,6 +19,7 @@ import { dayKey, dayLabel, timeLabel } from "@/lib/day";
 import type { LoggedMeal } from "@/lib/log";
 import type { StoredPlan } from "@/lib/plan-history";
 import { targetsForDay } from "@/lib/plan-targets";
+import { QuickEntry } from "./QuickEntry";
 import { scaleFood, sumTotals } from "@/lib/scale";
 import type { FoodItem, MealTotals } from "@/lib/schema";
 
@@ -72,6 +73,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
   const foods = draftFoods ?? meal.analysis.foods;
   const totals: MealTotals = draftFoods ? sumTotals(draftFoods) : meal.analysis.totals;
   const names = meal.analysis.foods.map((f) => f.name).join(", ");
+  const quickEntry = foods.length > 0 && foods.every((food) => food.quickEntry);
   const time = timeLabel(meal.loggedAt);
 
   function startEdit() {
@@ -197,12 +199,15 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-panel border border-line bg-background text-lg"
               aria-hidden
             >
-              {foods.every((food) => food.drink_type) ? "💧" : "🍽"}
+              {quickEntry ? "✍" : foods.every((food) => food.drink_type) ? "💧" : "🍽"}
             </span>
           )}
           <span className="min-w-0 flex-1">
             <span className="line-clamp-2 text-sm font-medium">{names || "Meal"}</span>
-            <span className="font-mono text-xs text-muted">{time}</span>
+            <span className="font-mono text-xs text-muted">
+              {time}
+              {quickEntry && " · manual"}
+            </span>
           </span>
           <span className="shrink-0 font-mono tabular-nums">
             <span className="text-[15px] font-bold">{Math.round(totals.calories)}</span>
@@ -255,7 +260,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
                     )}
                     {food.name}
                   </span>
-                  {editing && waterTracking && (
+                  {editing && waterTracking && !food.quickEntry && (
                     <div className="mt-2">
                       <DrinkTypeSelect
                         name={food.name}
@@ -267,7 +272,10 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
                   )}
                 </td>
                 <td className="px-2 py-1.5 text-right">
-                  {editing ? (
+                  {/* Typed-in foods have no portion to show or scale */}
+                  {food.quickEntry ? (
+                    "—"
+                  ) : editing ? (
                     <GramsInput
                       food={food}
                       disabled={pending}
@@ -286,7 +294,7 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
             <tr className="border-t border-line font-semibold text-foreground">
               <td className="px-4 py-2 font-sans text-[13px]">Total</td>
               <td className="px-2 py-2 text-right">
-                {foods.every((food) => food.volume_ml == null)
+                {foods.every((food) => food.volume_ml == null && !food.quickEntry)
                   ? `${Math.round(foods.reduce((sum, food) => sum + food.grams, 0))} g`
                   : "—"}
               </td>
@@ -382,6 +390,11 @@ function MealEntry({ meal }: { meal: LoggedMeal }) {
   );
 }
 
+/**
+ * The Log's two columns: a rail with today's bars (desktop only) and the quick
+ * entry, then the days. On desktop the rail sticks while the days scroll, and
+ * today's bars live in the rail instead of above today's meals.
+ */
 export function LogList({
   meals,
   plans,
@@ -392,56 +405,75 @@ export function LogList({
   waterGoalMl: number | null;
 }) {
   const waterTracking = useWaterTracking();
-  if (meals.length === 0) {
-    return (
-      <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted">
-        <p className="font-serif text-xl font-semibold text-foreground">No meals logged yet</p>
-        <p className="mt-1 text-sm">
-          Analyze a photo, then tap “Log meal” to start tracking your day.
-        </p>
-      </div>
-    );
-  }
-
+  const todayKey = dayKey(new Date());
   const days = new Map<string, LoggedMeal[]>();
   for (const meal of meals) {
     const key = dayKey(meal.loggedAt);
     days.set(key, [...(days.get(key) ?? []), meal]);
   }
+  const todayTargets = targetsForDay(plans, todayKey, waterGoalMl);
+  const todayTotals = sumTotals((days.get(todayKey) ?? []).map((m) => m.analysis.totals));
 
   return (
     <>
-      {[...days.entries()].map(([key, dayMeals]) => {
-        const totals = sumTotals(dayMeals.map((m) => m.analysis.totals));
-        // Each day is judged by the plan that applied on it, not today's plan
-        const targets = targetsForDay(plans, key, waterGoalMl);
-        return (
-          <section key={key} className="flex flex-col gap-2">
-            <header className="flex flex-col gap-1.5 px-1 pt-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                <h2 className="font-serif text-xl font-semibold text-foreground">
-                  {dayLabel(key)}
-                </h2>
-                <span className="font-mono text-sm tabular-nums">
-                  <span className="font-bold">{Math.round(totals.calories)}</span>
-                  <span className="text-xs text-muted">
-                    {" "}
-                    kcal · P {fmt(totals.protein_g)} · C {fmt(totals.carbs_g)} · F{" "}
-                    {fmt(totals.fat_g)}
-                    {waterTracking &&
-                      totals.water_ml !== undefined &&
-                      ` · Water ${formatWater(totals.water_ml)}`}
-                  </span>
-                </span>
-              </div>
-              {targets && <GoalBars totals={totals} targets={targets} />}
-            </header>
-            {dayMeals.map((meal) => (
-              <MealEntry key={meal.id} meal={meal} />
-            ))}
-          </section>
-        );
-      })}
+      <div className="flex flex-col gap-4 lg:sticky lg:top-24">
+        {todayTargets && (
+          <div className="hidden flex-col gap-2 rounded-panel border border-line bg-surface px-4 py-3 lg:flex">
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Today</span>
+            <GoalBars totals={todayTotals} targets={todayTargets} isToday />
+          </div>
+        )}
+        <QuickEntry />
+      </div>
+
+      <div className="flex flex-col gap-5">
+        {meals.length === 0 ? (
+          <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted">
+            <p className="font-serif text-xl font-semibold text-foreground">No meals logged yet</p>
+            <p className="mt-1 text-sm">
+              Analyze a photo and tap “Log meal”, or add a food manually, to start tracking your
+              day.
+            </p>
+          </div>
+        ) : (
+          [...days.entries()].map(([key, dayMeals]) => {
+            const totals = sumTotals(dayMeals.map((m) => m.analysis.totals));
+            // Each day is judged by the plan that applied on it, not today's plan
+            const targets = targetsForDay(plans, key, waterGoalMl);
+            return (
+              <section key={key} className="flex flex-col gap-2">
+                <header className="flex flex-col gap-1.5 px-1 pt-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                    <h2 className="font-serif text-xl font-semibold text-foreground">
+                      {dayLabel(key)}
+                    </h2>
+                    <span className="font-mono text-sm tabular-nums">
+                      <span className="font-bold">{Math.round(totals.calories)}</span>
+                      <span className="text-xs text-muted">
+                        {" "}
+                        kcal · P {fmt(totals.protein_g)} · C {fmt(totals.carbs_g)} · F{" "}
+                        {fmt(totals.fat_g)}
+                        {waterTracking &&
+                          totals.water_ml !== undefined &&
+                          ` · Water ${formatWater(totals.water_ml)}`}
+                      </span>
+                    </span>
+                  </div>
+                  {targets && (
+                    // On desktop, today's bars are already in the rail
+                    <div className={key === todayKey ? "lg:hidden" : undefined}>
+                      <GoalBars totals={totals} targets={targets} isToday={key === todayKey} />
+                    </div>
+                  )}
+                </header>
+                {dayMeals.map((meal) => (
+                  <MealEntry key={meal.id} meal={meal} />
+                ))}
+              </section>
+            );
+          })
+        )}
+      </div>
     </>
   );
 }

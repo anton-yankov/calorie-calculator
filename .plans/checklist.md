@@ -41,11 +41,12 @@ Decisions: maintain skips goal weight; your first plan also covers all earlier d
 
 ## Phase 3 — Tracking experience
 
-- [ ] 3.1 HTML mockups: goal colours + Log/Stats changes → you choose.
-- [ ] 3.2 Goal status logic: lose = calorie ceiling, maintain = ±10%, gain = floor; protein always a floor. Tests.
-- [ ] 3.3 Apply goal colours to the goal bars, Today strip and charts.
-- [ ] 3.4 Manual quick entry on Log (name, kcal, protein; carbs/fat optional; no AI).
-- [ ] 3.5 Stats: calories/protein first, goal-aware "days on track", carbs/fat breakdown, water last and only if enabled.
+- [x] 3.1 Mockups ([postplan](https://fgo2gciwdace.postplan.dev), `.plans/tracking-experience-mockups.html`). Chosen: style B (goal-tinted progress: lose blue, maintain stone, gain terracotta; green met, amber near/short, red over); track to 120% with a target tick; amber from 90% of the ceiling when losing (today only); quick entry = name, kcal, protein, optional carbs/fat, day; Log desktop gets a sticky left rail; Stats goal line steps with plan history; macro split as share of calories.
+- [x] 3.2 `src/lib/goal-status.ts`: `goalStatus` (progress / near / met / short / over; lose = ceiling with amber from 90% today, maintain = ±10%, gain = floor, protein = floor; only finished days fall short) and `statusMessage` (maintain distances measured to the range edges). 7 tests incl. a rounding sweep over every target 1,200–5,000.
+- [x] 3.3 Goal colours applied (style B via `src/components/goal-colors.ts` + tokens in `globals.css`): `GoalBars` has the 120% track, target tick, shaded maintain range and a status line, judged per day (`isToday` from the Log and Today strip); water is a floor. Charts colour each bar by that day's status and draw a dashed target line that steps with plan changes. `DayTargets.goal` is back now that bars read it.
+- [x] 3.4 Quick entry on Log (`QuickEntry.tsx`, parsing in `src/lib/quick-entry.ts`): name, kcal, protein, optional carbs/fat, day picker; no AI. Foods carry `quickEntry: true` (✍ icon, "manual" tag, no grams to scale). Desktop Log is now a sticky rail (today's bars + open form) beside the days; Analyze's Today strip shows a skeleton while loading.
+- [x] 3.5 Stats: calorie/protein tiles and charts first; "Days on track" counts finished days whose calories were `met` for that day's goal (same `goalStatus` as the bars), "Protein reached" likewise; "Where the calories come from" split (4/4/9 kcal per g, `macroSplit` in `stats.ts`); water tiles, chart and drinks last, only when tracking is on. The no-plan "Biggest day" tile is gone, and days logged moved into the range line.
+- [x] 3.6 Phase 3 dead-code scan clean (no orphan files, unused CSS variables or stale notes; removed a dead "weekly" legend branch in `DailyBars`). Only the pre-existing exports listed in 5.3 remain. Commit and push when you ask.
 
 ## Phase 4 — Weight, AI cap & admin
 
@@ -87,11 +88,6 @@ Small chores that nothing waits on — do them whenever convenient.
   ```
 
   Check: `select indexname from pg_indexes where tablename = 'meals' order by indexname;` → only `meals_pkey` and `meals_user_logged_at_idx`. Best done before the 1.17 deploy if the dashboard is back.
-- [ ] **1.16 SQL** — let the future admin (secret key) delete goals rows too, matching `supabase/schema.sql`:
-
-  ```sql
-  grant delete on public.settings to service_role;
-  ```
 - [ ] Remove the unused `SITE_PASSWORD` line from your local `.env.local`.
 
 ## Deferred on purpose
