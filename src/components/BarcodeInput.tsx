@@ -1,5 +1,6 @@
 "use client";
 
+import { useWaterTracking } from "@/components/WaterTracking";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
@@ -47,6 +48,7 @@ function ManualNutrition({
   onAdd: (food: FoodItem) => void;
   onCancel: () => void;
 }) {
+  const waterTracking = useWaterTracking();
   const [name, setName] = useState(initialName);
   const [drinkOverride, setDrinkOverride] = useState<DrinkType | null | undefined>(undefined);
   const drinkType = drinkOverride === undefined ? detectDrinkType(name) : drinkOverride;
@@ -149,12 +151,14 @@ function ManualNutrition({
         />
       </label>
       <div className="mb-3 space-y-2">
-        <DrinkTypeSelect
-          value={drinkType}
-          name={name || "product"}
-          onChange={setDrinkOverride}
-          disabled={saving}
-        />
+        {waterTracking && (
+          <DrinkTypeSelect
+            value={drinkType}
+            name={name || "product"}
+            onChange={setDrinkOverride}
+            disabled={saving}
+          />
+        )}
         <label className="flex items-center gap-2 text-xs text-muted">
           Nutrition basis
           <select
@@ -237,6 +241,7 @@ function ProductConfirmation({
   onAdd: (food: FoodItem) => void;
   onCancel: () => void;
 }) {
+  const waterTracking = useWaterTracking();
   const [grams, setGrams] = useState(String(product.servingGrams ?? 100));
   const [drinkType, setDrinkType] = useState<DrinkType | null>(
     product.drinkType !== undefined ? product.drinkType : detectDrinkType(product.name),
@@ -289,14 +294,16 @@ function ProductConfirmation({
         </div>
       </div>
       <div className="border-t border-line px-4 py-3">
-        <div className="mb-3">
-          <DrinkTypeSelect
-            value={drinkType}
-            name={product.name}
-            onChange={setDrinkType}
-            disabled={adding}
-          />
-        </div>
+        {waterTracking && (
+          <div className="mb-3">
+            <DrinkTypeSelect
+              value={drinkType}
+              name={product.name}
+              onChange={setDrinkType}
+              disabled={adding}
+            />
+          </div>
+        )}
         <label className="flex items-center justify-between gap-3 text-sm font-semibold">
           Amount consumed
           <span className="flex items-center rounded-md border border-line bg-background focus-within:border-accent">
@@ -314,7 +321,8 @@ function ProductConfirmation({
         </label>
         <p className="mt-2 text-right font-mono text-xs text-muted">
           {Math.round(product.per100g.calories * ratio)} kcal for this amount
-          {drinkType &&
+          {waterTracking &&
+            drinkType &&
             ratio > 0 &&
             ` · ${formatWater(portion)} toward Water${unit === "g" ? " (estimated)" : ""}`}
         </p>

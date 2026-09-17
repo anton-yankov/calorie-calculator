@@ -1,13 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
-import { AUTH_COOKIE, authTokenFor } from "@/lib/auth";
 import {
   deleteSavedBarcodeProduct,
   saveBarcodeProduct,
   saveLoggedBarcodeProducts,
 } from "@/lib/barcode-products";
+import { getAiAllowance, type AiAllowance } from "@/lib/ai-usage";
 import type { LoggedMeal } from "@/lib/log";
 import {
   deleteMealById,
@@ -18,6 +17,8 @@ import {
   sumTotalsBetween,
   updateMealById,
 } from "@/lib/meals";
+import { listPlans } from "@/lib/plan-history";
+import { targetsForDay, type DayTargets } from "@/lib/plan-targets";
 import {
   BARCODE_PATTERN,
   isJpegDataUrl,
@@ -31,20 +32,13 @@ import {
 import type { FoodItem, MealAnalysis, MealTotals } from "@/lib/schema";
 import { sumTotals } from "@/lib/scale";
 import { isDrinkType, type DrinkType } from "@/lib/water";
-import { getGoals, saveGoals, type Goals } from "@/lib/settings";
+import { activeWaterGoal, getProfile } from "@/lib/profiles";
+// Server Actions are reachable via direct POST, not just through the UI, so
+// each one re-checks the session with getUserId() — same rule as the proxy.
+import { getUserId, getViewer } from "@/lib/supabase-session";
+import { latestWeighInDay } from "@/lib/weights";
 
-/**
- * Server Actions are reachable via direct POST, not just through the UI, so
- * each one re-checks the site password cookie — same rule as the proxy.
- */
-async function isAuthed(): Promise<boolean> {
-  const password = process.env.SITE_PASSWORD;
-  if (!password) return true;
-  const store = await cookies();
-  return store.get(AUTH_COOKIE)?.value === (await authTokenFor(password));
-}
-
-export interface ActionResult {
+interface ActionResult {
   error?: string;
   warning?: string;
 }
@@ -71,6 +65,7 @@ function isValidFood(food: FoodItem): boolean {
     )
       return false;
   }
+  if (food.quickEntry !== undefined && food.quickEntry !== true) return false;
   if (food.barcode !== undefined && !BARCODE_PATTERN.test(String(food.barcode))) return false;
   if (food.imageUrl !== undefined && !isJpegDataUrl(food.imageUrl, MAX_FOOD_IMAGE_LENGTH)) {
     return false;
@@ -138,7 +133,8 @@ export async function logMealAction(
   meal: LoggedMeal,
   backdate?: { startIso: string; endIso: string },
 ): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (!isValidMeal(meal)) return { error: "Invalid meal data" };
   if (backdate) {
     const start = Date.parse(backdate.startIso);
@@ -154,7 +150,7 @@ export async function logMealAction(
       return { error: "Invalid backdate" };
     }
     try {
-      const latestIso = await latestLoggedAtBetween(backdate.startIso, backdate.endIso);
+      const latestIso = await latestLoggedAtBetween(userId, backdate.startIso, backdate.endIso);
       const last = latestIso === null ? null : Date.parse(latestIso);
       // A minute after the day's latest meal, halving toward midnight when
       // there's less than that left so the timestamp never leaves the day
@@ -169,13 +165,13 @@ export async function logMealAction(
   }
   meal = { ...meal, analysis: { ...meal.analysis, totals: sumTotals(meal.analysis.foods) } };
   try {
-    await insertMeals([meal]);
+    await insertMeals(userId, [meal]);
   } catch (err) {
     return { error: message(err, "Couldn't save the meal") };
   }
   let warning: string | undefined;
   try {
-    await saveLoggedBarcodeProducts(meal.analysis.foods);
+    await saveLoggedBarcodeProducts(userId, meal.analysis.foods);
   } catch (err) {
     console.error("Saving logged barcode products failed:", err);
     warning =
@@ -191,7 +187,8 @@ export async function updateMealAction(
   id: string,
   patch: { analysis: MealAnalysis; loggedAt: string },
 ): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   if (
     typeof patch !== "object" ||
@@ -203,7 +200,7 @@ export async function updateMealAction(
     return { error: "Invalid meal data" };
   }
   try {
-    await updateMealById(id, {
+    await updateMealById(userId, id, {
       ...patch,
       analysis: { ...patch.analysis, totals: sumTotals(patch.analysis.foods) },
     });
@@ -217,13 +214,14 @@ export async function updateMealAction(
 
 /** Duplicate a logged meal as a fresh entry stamped now — repeat meals cost no API call. */
 export async function relogMealAction(id: string): Promise<ActionResult & { newId?: string }> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   try {
-    const meal = await getMealById(id);
+    const meal = await getMealById(userId, id);
     if (!meal) return { error: "That meal no longer exists" };
     const newId = crypto.randomUUID();
-    await insertMeals([{ ...meal, id: newId, loggedAt: new Date().toISOString() }]);
+    await insertMeals(userId, [{ ...meal, id: newId, loggedAt: new Date().toISOString() }]);
     revalidatePath("/log");
     revalidatePath("/stats");
     return { newId };
@@ -237,11 +235,12 @@ export async function relogMealAction(id: string): Promise<ActionResult & { newI
  * client's Undo can re-insert exactly what was removed.
  */
 export async function deleteMealAction(id: string): Promise<ActionResult & { meal?: LoggedMeal }> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   let meal: LoggedMeal | null;
   try {
-    meal = await deleteMealById(id);
+    meal = await deleteMealById(userId, id);
   } catch (err) {
     return { error: message(err, "Couldn't delete the meal") };
   }
@@ -254,57 +253,36 @@ export async function deleteMealAction(id: string): Promise<ActionResult & { mea
 export async function getMealPhotoAction(
   id: string,
 ): Promise<ActionResult & { photo?: string | null }> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof id !== "string" || id.length === 0) return { error: "Invalid id" };
   try {
-    return { photo: await getMealPhotoById(id) };
+    return { photo: await getMealPhotoById(userId, id) };
   } catch (err) {
     return { error: message(err, "Couldn't load the photo") };
   }
 }
 
-export async function saveGoalsAction(goals: Goals): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
-  const calorieOk =
-    typeof goals === "object" &&
-    goals !== null &&
-    Number.isFinite(goals.calorieGoal) &&
-    goals.calorieGoal > 0;
-  const proteinOk =
-    goals?.proteinGoal === null || (Number.isFinite(goals?.proteinGoal) && goals.proteinGoal! > 0);
-  const waterOk =
-    goals?.waterGoal === null || (Number.isFinite(goals?.waterGoal) && goals.waterGoal! >= 1);
-  if (!calorieOk || !proteinOk || !waterOk) return { error: "Invalid goals" };
-  try {
-    await saveGoals({
-      calorieGoal: Math.round(goals.calorieGoal),
-      waterGoal: goals.waterGoal === null ? null : Math.round(goals.waterGoal),
-      proteinGoal: goals.proteinGoal === null ? null : Math.round(goals.proteinGoal),
-    });
-  } catch (err) {
-    return { error: message(err, "Couldn't save the goals") };
-  }
-  revalidatePath("/log");
-  revalidatePath("/stats");
-  revalidatePath("/");
-  return {};
-}
-
 export interface TodayProgress {
   totals: MealTotals;
-  goals: Goals | null;
+  /** null until the user has a plan */
+  targets: DayTargets | null;
 }
 
 /**
- * Totals for [startIso, endIso) plus the current goals, for the Analyze page's
- * "today so far" strip. The client supplies the bounds because "today" depends
- * on the viewer's timezone, which the server doesn't know (Vercel runs in UTC).
+ * Totals for [startIso, endIso) plus that day's targets, for the Analyze page's
+ * "today so far" strip. The client supplies the day and bounds because "today"
+ * depends on the viewer's timezone, which the server doesn't know (Vercel runs
+ * in UTC).
  */
 export async function todayProgressAction(
+  day: string,
   startIso: string,
   endIso: string,
 ): Promise<ActionResult & { progress?: TodayProgress }> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
+  if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return { error: "Invalid day" };
   const start = Date.parse(startIso);
   const end = Date.parse(endIso);
   const twoDays = 48 * 60 * 60 * 1000;
@@ -312,14 +290,40 @@ export async function todayProgressAction(
     return { error: "Invalid range" };
   }
   try {
-    const [totals, goals] = await Promise.all([sumTotalsBetween(startIso, endIso), getGoals()]);
-    return { progress: { totals, goals } };
+    const [totals, plans, profile] = await Promise.all([
+      sumTotalsBetween(userId, startIso, endIso),
+      listPlans(userId),
+      getProfile(userId),
+    ]);
+    return { progress: { totals, targets: targetsForDay(plans, day, activeWaterGoal(profile)) } };
   } catch (err) {
     return { error: message(err, "Couldn't load today's progress") };
   }
 }
 
-export interface ProductFields {
+/** Today's AI analyses used and the cap, for the counter under the nav. */
+export async function aiAllowanceAction(): Promise<ActionResult & { allowance?: AiAllowance }> {
+  const viewer = await getViewer();
+  if (!viewer) return { error: "Authentication required" };
+  try {
+    return { allowance: await getAiAllowance(viewer) };
+  } catch (err) {
+    return { error: message(err, "Couldn't load your analyses left") };
+  }
+}
+
+/** The day of the latest weigh-in, for the Analyze page's weigh-in nudge. */
+export async function latestWeighInAction(): Promise<ActionResult & { day?: string | null }> {
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
+  try {
+    return { day: await latestWeighInDay(userId) };
+  } catch (err) {
+    return { error: message(err, "Couldn't load the latest weigh-in") };
+  }
+}
+
+interface ProductFields {
   portionUnit?: "g" | "ml";
   drinkType?: DrinkType | null;
   name: string;
@@ -338,7 +342,8 @@ export async function saveProductAction(
   barcode: string,
   fields: ProductFields,
 ): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof barcode !== "string" || !BARCODE_PATTERN.test(barcode)) {
     return { error: "Invalid barcode" };
   }
@@ -360,6 +365,7 @@ export async function saveProductAction(
   }
   try {
     await saveBarcodeProduct(
+      userId,
       barcode,
       name,
       per100g,
@@ -376,12 +382,13 @@ export async function saveProductAction(
 }
 
 export async function deleteProductAction(barcode: string): Promise<ActionResult> {
-  if (!(await isAuthed())) return { error: "Authentication required" };
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
   if (typeof barcode !== "string" || !BARCODE_PATTERN.test(barcode)) {
     return { error: "Invalid barcode" };
   }
   try {
-    await deleteSavedBarcodeProduct(barcode);
+    await deleteSavedBarcodeProduct(userId, barcode);
   } catch (err) {
     return { error: message(err, "Couldn't delete the product") };
   }

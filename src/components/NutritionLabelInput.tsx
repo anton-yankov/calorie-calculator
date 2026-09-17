@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAiAllowance } from "@/components/AiAllowance";
 import { Spinner } from "@/components/loaders";
 import type { NutritionLabelAnalysis } from "@/lib/nutrition-label";
 import { resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
 
 function basisMessage(result: NutritionLabelAnalysis): string {
   if (result.basis === "per_100_ml") return "Filled from values per 100 ml (treated as 100 g).";
-  if (result.basis === "calculated_per_100") return "Filled after converting serving values to 100 g/ml.";
+  if (result.basis === "calculated_per_100")
+    return "Filled after converting serving values to 100 g/ml.";
   if (result.basis === "per_100_g") return "Filled from values per 100 g.";
   return "Filled the values that were readable. Check the label carefully.";
 }
@@ -19,6 +21,7 @@ export function NutritionLabelInput({
   disabled: boolean;
   onExtracted: (result: NutritionLabelAnalysis) => void;
 }) {
+  const { capReached, refresh: refreshAllowance } = useAiAllowance();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -54,10 +57,12 @@ export function NutritionLabelInput({
       setError(err instanceof Error ? err.message : "Couldn't read the nutrition label.");
     } finally {
       setAnalyzing(false);
+      refreshAllowance();
     }
   }
 
-  const unavailable = disabled || analyzing;
+  // Out of analyses: the label scan pauses, typing the values below still works
+  const unavailable = disabled || analyzing || capReached;
 
   return (
     <section className="rounded-panel border border-accent/40 bg-accent-soft/45 p-3">
@@ -93,7 +98,9 @@ export function NutritionLabelInput({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Scan the nutrition label</p>
           <p className="mt-0.5 text-xs text-muted">
-            Photograph the full table, straight-on and in good light.
+            {capReached
+              ? "Paused: no analyses left for today. Type the values below instead."
+              : "Photograph the full table, straight-on and in good light."}
           </p>
           <button
             type="button"

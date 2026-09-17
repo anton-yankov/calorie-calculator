@@ -13,6 +13,13 @@
   --line: #38352c;
   --danger: #e58b82;
   --danger-soft: #3b2421;
+  --amber: #e0b25c;
+  /* Progress colour per goal: cool when losing, stone when maintaining, warm when gaining */
+  --tint-lose: #7fa8bf;
+  --tint-maintain: #a5a195;
+  --tint-gain: #e08a5c;
+  /* Macro split: protein and carbs reuse --green and --accent */
+  --macro-fat: #c9a96e;
 }
 
 @theme inline {
@@ -28,6 +35,7 @@
   --color-line: var(--line);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-amber: var(--amber);
   --font-sans: var(--font-inter);
   --font-serif: var(--font-fraunces);
   --font-mono: var(--font-jetbrains-mono);

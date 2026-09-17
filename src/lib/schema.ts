@@ -21,6 +21,8 @@ export interface FoodItem {
   productSnapshot?: ProductSnapshot;
   /** Small JPEG data URL copied from the product at add time; absent if none */
   imageUrl?: string;
+  /** Typed in on the Log's quick entry: numbers as given, grams is 0 and never scaled */
+  quickEntry?: true;
 }
 
 export interface MealTotals {

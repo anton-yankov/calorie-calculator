@@ -1,11 +1,12 @@
 import OpenAI from "openai";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
-import {
-  NUTRITION_LABEL_SCHEMA,
-  type NutritionLabelAnalysis,
-} from "@/lib/nutrition-label";
+import { NUTRITION_LABEL_SCHEMA, type NutritionLabelAnalysis } from "@/lib/nutrition-label";
+import { claimAnalysis, OPENAI_OPTIONS, refundAnalysis } from "@/lib/ai-usage";
+import { getUserId } from "@/lib/supabase-session";
 
 export const runtime = "nodejs";
+// Room for OPENAI_OPTIONS (two 40 s attempts) plus the refund afterwards
+export const maxDuration = 90;
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
@@ -34,15 +35,20 @@ function validAnalysis(value: unknown): value is NutritionLabelAnalysis {
     isNullableNonNegativeNumber(result.protein_g) &&
     isNullableNonNegativeNumber(result.carbs_g) &&
     isNullableNonNegativeNumber(result.fat_g) &&
-    ["per_100_g", "per_100_ml", "calculated_per_100", "unknown"].includes(
-      result.basis ?? "",
-    ) &&
+    ["per_100_g", "per_100_ml", "calculated_per_100", "unknown"].includes(result.basis ?? "") &&
     Array.isArray(result.warnings) &&
     result.warnings.every((warning) => typeof warning === "string")
   );
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // Checked here too, not only in the proxy: a proxy matcher change could
+  // silently expose the OpenAI key behind this route
+  const userId = await getUserId();
+  if (!userId) {
+    return Response.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     return Response.json({ error: "Nutrition scanning is not configured." }, { status: 500 });
   }
@@ -78,8 +84,15 @@ export async function POST(request: Request): Promise<Response> {
     },
   ];
 
+  // Every free rejection is above; from here the request uses an analysis
+  const refused = await claimAnalysis();
+  if (refused) return refused;
+
+  // Only a request OpenAI never answered gives the analysis back: an unreadable
+  // photo was still paid for, so it counts
+  let answered = false;
   try {
-    const client = new OpenAI();
+    const client = new OpenAI(OPENAI_OPTIONS);
     const response = await client.responses.create({
       model: process.env.VISION_MODEL ?? "gpt-5.6-luna",
       input: [
@@ -99,10 +112,14 @@ export async function POST(request: Request): Promise<Response> {
     if (!response.output_text) {
       return Response.json({ error: "No nutrition values could be read." }, { status: 502 });
     }
+    answered = true;
 
     const analysis: unknown = JSON.parse(response.output_text);
     if (!validAnalysis(analysis)) {
-      return Response.json({ error: "The nutrition values could not be validated." }, { status: 502 });
+      return Response.json(
+        { error: "The nutrition values could not be validated." },
+        { status: 502 },
+      );
     }
 
     const foundValues = [
@@ -125,5 +142,7 @@ export async function POST(request: Request): Promise<Response> {
       { error: "Couldn't read the nutrition label. Retake the photo and try again." },
       { status: 502 },
     );
+  } finally {
+    if (!answered) await refundAnalysis(userId);
   }
 }

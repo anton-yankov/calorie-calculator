@@ -3,10 +3,17 @@ import { sumTotals } from "@/lib/scale";
 import OpenAI from "openai";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
 import { MEAL_ANALYSIS_SCHEMA, type MealAnalysis } from "@/lib/schema";
+import { claimAnalysis, OPENAI_OPTIONS, refundAnalysis } from "@/lib/ai-usage";
+import { getUserId } from "@/lib/supabase-session";
 
 export const runtime = "nodejs";
+// Room for OPENAI_OPTIONS (two 40 s attempts) plus the refund afterwards
+export const maxDuration = 90;
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // client resizes to ~200KB; this is a hard backstop
+// The cap counts requests, not their size, so the text sent along is bounded too
+const MAX_TEXT_CHARS = 2_000;
+const MAX_PREVIOUS_RESULT_CHARS = 64_000;
 
 const SYSTEM_PROMPT = `You are a nutrition estimation assistant.
 Given a photo of food, a text description, or both, identify each
@@ -44,7 +51,19 @@ Rules:
 - totals must be the sums of the per-food values.`;
 
 export async function POST(req: Request): Promise<Response> {
-  const form = await req.formData();
+  // Checked here too, not only in the proxy: a proxy matcher change could
+  // silently expose the OpenAI key behind this route
+  const userId = await getUserId();
+  if (!userId) {
+    return Response.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return Response.json({ error: "Invalid upload." }, { status: 400 });
+  }
   const image = form.get("image");
   let description = form.get("description");
   const previousResult = form.get("previousResult");
@@ -58,6 +77,21 @@ export async function POST(req: Request): Promise<Response> {
   // Text-only and correction-only analysis are allowed — but there must be something to analyze
   if (!(image instanceof File) && !hasDescription && !hasCorrection) {
     return Response.json({ error: "Provide a photo or a description." }, { status: 400 });
+  }
+  if (
+    (typeof description === "string" && description.length > MAX_TEXT_CHARS) ||
+    (typeof correction === "string" && correction.length > MAX_TEXT_CHARS)
+  ) {
+    return Response.json(
+      { error: `Keep the description under ${MAX_TEXT_CHARS} characters.` },
+      { status: 400 },
+    );
+  }
+  if (typeof previousResult === "string" && previousResult.length > MAX_PREVIOUS_RESULT_CHARS) {
+    return Response.json({ error: "That estimate is too large to correct." }, { status: 400 });
+  }
+  if (image instanceof File && image.type && !image.type.startsWith("image/")) {
+    return Response.json({ error: "Choose an image file." }, { status: 415 });
   }
 
   if (!(image instanceof File) && !hasCorrection && typeof description === "string") {
@@ -106,7 +140,14 @@ export async function POST(req: Request): Promise<Response> {
     });
   }
 
-  const client = new OpenAI();
+  // Water shorthand and bad input have returned by now, so they never use an analysis
+  const refused = await claimAnalysis();
+  if (refused) return refused;
+
+  const client = new OpenAI(OPENAI_OPTIONS);
+  // Only a request OpenAI never answered gives the analysis back: an answer is
+  // paid for whether or not it turns out usable
+  let answered = false;
   try {
     const response = await client.responses.create({
       model: process.env.VISION_MODEL ?? "gpt-5.6-luna",
@@ -127,12 +168,17 @@ export async function POST(req: Request): Promise<Response> {
     if (!response.output_text) {
       return Response.json({ error: "Model returned no output." }, { status: 502 });
     }
+    answered = true;
     const analysis: MealAnalysis = JSON.parse(response.output_text);
     analysis.totals = sumTotals(analysis.foods);
     return Response.json(analysis);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
     console.error("analyze failed:", err);
-    return Response.json({ error: `Analysis failed: ${message}` }, { status: 502 });
+    return Response.json(
+      { error: "Couldn't analyze the meal. Please try again." },
+      { status: 502 },
+    );
+  } finally {
+    if (!answered) await refundAnalysis(userId);
   }
 }

@@ -14,9 +14,12 @@ export function loadModule(path, mocks = {}, globals = {}) {
     (name) =>
       name in mocks
         ? mocks[name]
-        : name.startsWith("@/")
-          ? loadModule(`src/${name.slice(2)}.ts`, mocks, globals)
-          : require(name),
+        : // Next.js provides this marker module in its own builds; here it's a no-op
+          name === "server-only"
+          ? {}
+          : name.startsWith("@/")
+            ? loadModule(`src/${name.slice(2)}.ts`, mocks, globals)
+            : require(name),
     loaded,
     loaded.exports,
     ...Object.values(globals),

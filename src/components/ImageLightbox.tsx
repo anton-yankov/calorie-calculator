@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/loaders";
 
-export interface LightboxImage {
+interface LightboxImage {
   /** What to show right away — a thumbnail, data URL, or object URL */
   src: string;
   alt: string;

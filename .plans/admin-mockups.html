@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Users &amp; User Detail Mockups — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16; --surface: #24221C; --surface-raised: #2A281F; --ink: #EDEAE0; --ink-soft: #A5A195;
+    --accent: #E08A5C; --accent-soft: #3A2A20; --green: #7FBF92; --green-soft: #22312A;
+    --danger: #E58B82; --danger-soft: #3B2421; --amber: #E0B25C; --amber-soft: #3A3120;
+    --line: #38352C; --radius: 10px;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink); font-family: 'Inter', system-ui, sans-serif; font-size: 16px; line-height: 1.65; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 660px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px; }
+  th { text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px; }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; border: 1px solid var(--line); }
+
+  /* Controls on the document side */
+  .controls { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin: 18px 0; }
+  .controls label { font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 8px; }
+  .pills { display: flex; gap: 6px; }
+  .pills button { font: 600 13px 'Inter', system-ui, sans-serif; padding: 5px 12px; border-radius: 999px; cursor: pointer; background: var(--bg); border: 1px solid var(--line); color: var(--ink); }
+  .pills button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  input[type=range] { accent-color: var(--accent); width: 180px; }
+  .readout { font-family: var(--mono); font-size: 13px; color: var(--ink); min-width: 110px; }
+
+  /* Goal bars (mirrors GoalBars) */
+  .styles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 18px 0; }
+  .style-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+  .style-card h4 { margin: 0 0 12px; font-size: 14px; }
+  .style-card h4 small { font-weight: 400; color: var(--ink-soft); }
+  .cells { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .cell-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .cell-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .cell-nums { font: 12px var(--mono); color: var(--ink-soft); }
+  .cell-nums b { color: var(--ink); }
+  .track { position: relative; height: 8px; border-radius: 99px; background: rgba(56, 53, 44, 0.6); margin-top: 5px; overflow: hidden; }
+  .band { position: absolute; top: 0; bottom: 0; background: rgba(127, 191, 146, 0.18); }
+  .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; transition: width 0.15s, background 0.15s; }
+  .tick { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); opacity: 0.55; }
+  .status { font-size: 11.5px; margin-top: 4px; font-weight: 600; }
+
+  .matrix { display: grid; grid-template-columns: 110px repeat(4, 1fr); gap: 8px; align-items: center; margin: 18px 0; font-size: 12.5px; }
+  .matrix .h { color: var(--ink-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .matrix .rowlabel { font-weight: 600; }
+  .mini { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+
+  /* Phone + desktop frames */
+  .phones { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; justify-items: center; margin: 24px 0; }
+  .phone-wrap { width: 100%; max-width: 360px; }
+  .phone-label { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 10px; }
+  .phone, .desk { border: 1px solid var(--line); border-radius: 28px; overflow: hidden; background: radial-gradient(circle at 50% -10%, rgba(224,138,92,0.08), transparent 22rem), var(--bg); box-shadow: 0 18px 50px rgba(0,0,0,0.35); font-size: 15px; line-height: 1.5; }
+  .desk { border-radius: 14px; margin: 24px 0; }
+  .app-nav { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; border-bottom: 1px solid rgba(56,53,44,0.8); }
+  .wordmark { font-family: var(--serif); font-weight: 600; font-size: 17px; }
+  .navtabs { display: flex; gap: 4px; align-items: center; }
+  .navtabs span { font-size: 10px; font-weight: 600; color: var(--ink-soft); padding: 4px 6px; border-radius: 99px; border: 1px solid transparent; }
+  .navtabs span.on { background: var(--accent); color: var(--bg); }
+  .app-body { padding: 18px 16px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .app-head { border-bottom: 2px solid var(--ink); padding-bottom: 12px; }
+  .eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  .app-h1 { font-family: var(--serif); font-size: 27px; font-weight: 600; line-height: 1.1; margin: 4px 0 0; }
+  .day-h { display: flex; justify-content: space-between; align-items: baseline; }
+  .day-h b { font-family: var(--serif); font-size: 19px; }
+  .day-h span { font: 12px var(--mono); color: var(--ink-soft); }
+  .meal { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 10px 12px; display: flex; gap: 10px; align-items: center; }
+  .meal .ico { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; background: var(--bg); flex: none; }
+  .meal .name { font-size: 13.5px; font-weight: 600; }
+  .meal .time { font: 11px var(--mono); color: var(--ink-soft); }
+  .meal .kcal { margin-left: auto; font: 700 14px var(--mono); }
+  .tag { font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid var(--line); color: var(--ink-soft); border-radius: 99px; padding: 1px 6px; margin-left: 6px; }
+  .btn { border: 0; border-radius: var(--radius); background: var(--accent); color: var(--bg); font: 600 14px 'Inter', system-ui, sans-serif; padding: 10px 12px; width: 100%; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .form { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .field-label { font-size: 11.5px; font-weight: 600; color: var(--ink-soft); display: block; margin-bottom: 5px; }
+  .input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 10px; font: 14px var(--mono); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .hint { font-size: 11.5px; color: var(--ink-soft); margin: 0; }
+  .hidden { display: none !important; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tile { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 10px 12px; }
+  .tile .tl { font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .tile .tv { font: 700 21px var(--mono); margin-top: 2px; }
+  .tile .tv small { font-size: 11px; color: var(--ink-soft); font-weight: 400; margin-left: 3px; }
+  .tile .tc { font-size: 11px; color: var(--ink-soft); }
+  .macro-bar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; margin: 8px 0 6px; }
+  .macro-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--ink-soft); }
+  .chart { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 10px 12px; }
+  .chart-title { font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .desk-grid { display: grid; grid-template-columns: 2fr 3fr; gap: 22px; padding: 20px 26px 26px; align-items: start; }
+  .desk-grid > .rail { display: flex; flex-direction: column; gap: 12px; }
+  .desk-grid > .main { display: flex; flex-direction: column; gap: 12px; }
+
+  /* Phase 4 additions */
+  .nav-row { display: flex; align-items: center; gap: 6px; }
+  .gear { width: 24px; height: 24px; border-radius: 99px; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--ink-soft); flex: none; }
+  .ai-pill { font: 600 10.5px var(--mono); border-radius: 99px; padding: 3px 8px; border: 1px solid var(--line); color: var(--ink); background: var(--surface); white-space: nowrap; }
+  .ai-pill.low { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+  .ai-pill.out { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+  .ai-strip { display: flex; justify-content: space-between; align-items: center; padding: 4px 16px; border-bottom: 1px solid rgba(56,53,44,0.8); font-size: 11px; color: var(--ink-soft); }
+  .ai-strip b { font-family: var(--mono); color: var(--ink); }
+  .ai-strip.low b { color: var(--amber); }
+  .ai-strip.out b { color: var(--danger); }
+  .gear-wrap { position: relative; }
+  .badge { position: absolute; top: -6px; right: -8px; min-width: 16px; height: 16px; border-radius: 99px; background: var(--surface-raised); border: 1px solid var(--line); font: 700 9px var(--mono); color: var(--ink); display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+  .badge.low { color: var(--bg); background: var(--amber); border-color: var(--amber); }
+  .badge.out { color: var(--bg); background: var(--danger); border-color: var(--danger); }
+  .banner { border: 1px solid var(--line); border-left: 4px solid var(--accent); background: var(--surface); border-radius: 0 var(--radius) var(--radius) 0; padding: 10px 12px; display: flex; gap: 10px; align-items: center; font-size: 13px; }
+  .banner .x { margin-left: auto; color: var(--ink-soft); cursor: pointer; background: none; border: 0; font-size: 16px; }
+  .banner a { color: var(--accent); font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 18px 12px; text-align: center; color: var(--ink-soft); font-size: 13px; }
+  .drop b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 2px; }
+  .drop.off { opacity: 0.45; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .input.fake { color: var(--ink-soft); font-family: Inter, system-ui, sans-serif; }
+  .capnote { border-left: 4px solid var(--danger); background: var(--danger-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 10px 12px; font-size: 13px; }
+  .capnote b { display: block; }
+  .muted { color: var(--ink-soft); }
+  .entries { font: 12px var(--mono); }
+  .entries div { display: flex; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--line); }
+  .entries div span:last-child { color: var(--accent); font-family: Inter, system-ui, sans-serif; font-weight: 600; font-size: 11.5px; }
+  .legend { display: flex; gap: 12px; font-size: 10.5px; color: var(--ink-soft); margin-bottom: 4px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 2px; vertical-align: 3px; margin-right: 4px; }
+  .legend i.dot { width: 6px; height: 6px; border-radius: 99px; vertical-align: 0; }
+  .desk .app-nav .navtabs span { font-size: 11px; padding: 4px 10px; }
+
+  .utable { width: 100%; border-collapse: collapse; margin: 0; font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .utable th { font-size: 10.5px; }
+  .utable td { padding: 9px 12px; vertical-align: middle; }
+  .utable td:first-child { white-space: normal; }
+  .capin { width: 56px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 6px; padding: 3px 6px; font: 12px var(--mono); text-align: right; }
+  .mini-btn { border: 1px solid var(--line); background: transparent; color: var(--accent); border-radius: 6px; padding: 3px 8px; font: 600 11.5px Inter, system-ui, sans-serif; }
+  .ucard { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .ucard .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .ucard .email { font-weight: 600; font-size: 13.5px; }
+  .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 12px; }
+  .kv span:nth-child(odd) { color: var(--ink-soft); }
+  .tabs { display: flex; gap: 4px; border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 3px; width: fit-content; }
+  .tabs span { font-size: 11.5px; font-weight: 600; padding: 4px 12px; border-radius: 99px; color: var(--ink-soft); }
+  .tabs span.on { background: var(--accent); color: var(--bg); }
+  .ro { border-left: 4px solid var(--amber); background: var(--amber-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 8px 12px; font-size: 12.5px; }
+  .usage-bars { display: flex; align-items: flex-end; gap: 3px; height: 60px; margin-top: 6px; }
+  .usage-bars span { flex: 1; background: var(--accent); border-radius: 2px 2px 0 0; opacity: 0.85; }
+</style>
+</head>
+<body>
+<div class="page">
+<header class="doc">
+  <div class="kicker">Mockup · Phase 4 · step 4.9</div>
+  <h1>Admin: Users &amp; User Detail</h1>
+  <p class="subtitle">The admin area only your account can open: a list of everyone with their AI use and an editable daily cap, and a read-only page per user with their plan, log, stats and products.</p>
+  <div class="meta"><span><strong>Access:</strong> admin role only — anyone else gets "page not found"</span><span><strong>Writes:</strong> only the AI cap</span></div>
+</header>
+
+<h2><span class="num">01</span>Getting there</h2>
+<p class="lede">An "Admin" section at the bottom of Settings, visible only to you, links to <code>/admin</code>. The nav stays as it is — it's already full on phones, and you'll visit the admin pages far less often than the tracker.</p>
+
+<h2><span class="num">02</span>Users list</h2>
+<p class="lede">One row per account. "Last active" is the latest logged meal. The cap is edited in place; "Save" writes it at once. Your own row shows "∞" instead of a cap field.</p>
+
+<div class="desk">
+  <div class="app-nav"><span class="wordmark">Calorie Calculator</span><span class="nav-row"><span class="navtabs"><span>Analyze</span><span>Log</span><span>Products</span><span>Stats</span></span><span class="ai-pill">∞ analyses</span><span class="gear">⚙</span></span></div>
+  <div style="padding:20px 26px 26px;display:flex;flex-direction:column;gap:14px">
+    <div class="app-head"><div class="eyebrow">Admin</div><div class="app-h1">Users</div></div>
+    <table class="utable">
+      <tr><th>Account</th><th>Plan</th><th>Last active</th><th>AI today</th><th>Daily cap</th><th></th></tr>
+      <tr><td><b>you@example.com</b> <span class="tag">you · admin</span></td><td>Gain · 3,268 kcal · 140 g</td><td>Today</td><td class="mono">6</td><td>∞</td><td><span class="mini-btn">View</span></td></tr>
+      <tr><td><b>friend@example.com</b></td><td>Lose · 2,310 kcal · 170 g</td><td>Yesterday</td><td>12 / 20</td><td><input class="capin" value="20"> <span class="mini-btn">Save</span></td><td><span class="mini-btn">View</span></td></tr>
+      <tr><td><b>new@example.com</b></td><td class="muted">Not set up yet</td><td class="muted">—</td><td>0 / 20</td><td><input class="capin" value="20"> <span class="mini-btn">Save</span></td><td><span class="mini-btn">View</span></td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="phones">
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="app-nav"><span class="wordmark">Calories</span><span class="navtabs"><span>Analyze</span><span>Log</span><span>Products</span><span>Stats</span><span>⚙</span></span></div>
+      <div class="ai-strip"><span>Analyses today</span><span><b>∞</b> · unlimited</span></div>
+      <div class="app-body">
+        <div class="app-head"><div class="eyebrow">Admin</div><div class="app-h1">Users</div></div>
+        <div class="ucard">
+          <div class="top"><span class="email">friend@example.com</span><span class="mini-btn">View</span></div>
+          <div class="kv"><span>Plan</span><span>Lose · 2,310 kcal</span><span>Last active</span><span>Yesterday</span><span>AI today</span><span>12 / 20</span></div>
+          <div class="row"><span class="muted" style="font-size:12px">Daily cap</span><input class="capin" value="20"><span class="mini-btn">Save</span></div>
+        </div>
+        <div class="ucard">
+          <div class="top"><span class="email">you@example.com <span class="tag">admin</span></span><span class="mini-btn">View</span></div>
+          <div class="kv"><span>Plan</span><span>Gain · 3,268 kcal</span><span>Last active</span><span>Today</span><span>AI today</span><span>6 · no cap</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Phones: the same rows as cards.</div>
+  </div>
+</div>
+
+<h2><span class="num">03</span>User detail (read-only)</h2>
+<p class="lede">Four tabs, each reusing the page you already know, with every edit control removed: <b>Overview</b> (details, plan history, AI use), <b>Log</b>, <b>Stats</b> and <b>Products</b>. A banner keeps it clear whose data this is.</p>
+
+<div class="desk">
+  <div class="app-nav"><span class="wordmark">Calorie Calculator</span><span class="nav-row"><span class="navtabs"><span>Analyze</span><span>Log</span><span>Products</span><span>Stats</span></span><span class="ai-pill">∞ analyses</span><span class="gear">⚙</span></span></div>
+  <div style="padding:20px 26px 0;display:flex;flex-direction:column;gap:12px">
+    <div class="app-head"><div class="eyebrow">Admin · ← Users</div><div class="app-h1">friend@example.com</div></div>
+    <div class="ro">Read-only view of this account. Nothing here can be changed except the AI cap on the Users page.</div>
+    <div class="tabs"><span class="on">Overview</span><span>Log</span><span>Stats</span><span>Products</span></div>
+  </div>
+  <div class="desk-grid">
+    <div class="rail">
+      <div class="tile"><div class="tl">Details</div>
+        <div class="kv" style="margin-top:6px"><span>Sex</span><span>Male</span><span>Born</span><span>1999</span><span>Height</span><span>180 cm</span><span>Weight</span><span>83.4 kg (weigh-in today)</span><span>Activity</span><span>Moderate</span><span>Water</span><span>Off</span><span>Joined</span><span>16 Sep 2026</span><span>Last login</span><span>Today</span></div>
+      </div>
+      <div class="tile"><div class="tl">AI analyses · last 14 days</div>
+        <div class="usage-bars"><span style="height:40%"></span><span style="height:65%"></span><span style="height:20%"></span><span style="height:0"></span><span style="height:55%"></span><span style="height:100%"></span><span style="height:35%"></span><span style="height:60%"></span><span style="height:45%"></span><span style="height:70%"></span><span style="height:25%"></span><span style="height:50%"></span><span style="height:80%"></span><span style="height:60%"></span></div>
+        <div class="tc" style="margin-top:4px">Today 12 of 20 · 14-day total 143</div>
+      </div>
+    </div>
+    <div class="main">
+      <table class="utable">
+        <tr><th>Plan from</th><th>Goal</th><th>Targets</th><th>Built at</th></tr>
+        <tr><td>12 Sep 2026</td><td>Lose → 78 kg · 0.5 kg/wk</td><td>2,310 kcal · 170 g</td><td>85 kg · 2,860 kcal maint.</td></tr>
+        <tr><td>16 Aug 2026</td><td>Maintain</td><td>2,860 kcal · 170 g</td><td>86 kg</td></tr>
+      </table>
+      <p class="hint">Log, Stats and Products tabs show the same pages as the app (bars, charts, meals with photos, weigh-ins, saved products) without Edit, Delete, Log again, quick entry or the weight form.</p>
+    </div>
+  </div>
+</div>
+
+<h2><span class="num">04</span>What you decide</h2>
+<table>
+  <tr><th>Decision</th><th>Shown here</th><th>Alternative</th></tr>
+  <tr><td>Way in</td><td>"Admin" section in Settings (recommended)</td><td>A fifth tab in the nav</td></tr>
+  <tr><td>User detail</td><td>Tabs reusing Log, Stats and Products read-only (recommended)</td><td>One long page</td></tr>
+  <tr><td>Cap range</td><td>0–1000 per day; 0 pauses AI for that user</td><td>—</td></tr>
+</table>
+
+<footer class="doc">Calorie Calculator · Phase 4 · step 4.9 mockups · admin users list and user detail</footer>
+</div>
+</body>
+</html>

@@ -9,7 +9,19 @@ const stats = loadModule("src/lib/stats.ts");
 const macros = { calories: 60, protein_g: 3, carbs_g: 5, fat_g: 3 };
 const milk = products.manualProductToFood("Milk", 250, macros, undefined, null, "ml", "milk");
 const legacy = { name: "Lunch", grams: 200, ...macros, confidence: "high", assumptions: "" };
-const goals = { calorieGoal: 2000, proteinGoal: 100, waterGoal: 2000 };
+// One plan covering every day in these ranges
+const plans = [
+  {
+    effectiveFrom: "2026-01-01",
+    goal: "lose",
+    kgPerWeek: 0.5,
+    goalWeightKg: 78,
+    calorieTarget: 2000,
+    proteinTarget: 100,
+    maintenanceKcal: 2550,
+    weightKg: 85,
+  },
+];
 
 test("water shorthand is deterministic, supports decimals/units and rejects ambiguous amounts", () => {
   for (const [text, ml] of [
@@ -105,7 +117,7 @@ test("water stats exclude legacy days and today from averages, water-only days f
       nutritionLogged: false,
     },
   ];
-  const result = stats.computeRange(stats.groupByDay(rows), "7d", goals, "2026-09-10");
+  const result = stats.computeRange(stats.groupByDay(rows), "7d", plans, 2000, "2026-09-10");
   assert.equal(result.summary.avgWater, 1125);
   assert.equal(result.summary.waterCompleteDays, 2);
   assert.equal(result.summary.waterGoalDays, 1);
@@ -116,7 +128,7 @@ test("water stats exclude legacy days and today from averages, water-only days f
     6250,
   );
   assert.equal(result.buckets.find((b) => b.key === "2026-09-07").value.water_ml, undefined);
-  const weekly = stats.computeRange(stats.groupByDay(rows), "90d", goals, "2026-09-10");
+  const weekly = stats.computeRange(stats.groupByDay(rows), "90d", plans, 2000, "2026-09-10");
   const week = weekly.buckets.find((b) => b.key === "2026-09-07");
   assert.equal(week.value.water_ml, 1125);
   assert.equal(week.value.calories, 105);
@@ -130,7 +142,7 @@ test("water-only weeks have a water average and no calorie observations", () => 
       nutritionLogged: false,
     },
   ];
-  const range = stats.computeRange(stats.groupByDay(rows), "90d", goals, "2026-09-10");
+  const range = stats.computeRange(stats.groupByDay(rows), "90d", plans, 2000, "2026-09-10");
   assert.equal(range.summary.avgCalories, null);
   assert.equal(range.summary.avgWater, 1000);
   assert.equal(range.buckets.find((b) => b.key === "2026-09-07").value.nutrition_logged, false);
@@ -138,6 +150,7 @@ test("water-only weeks have a water average and no calorie observations", () => 
 
 test("plain water works without an AI key; ambiguous mixed input is rejected before AI", async () => {
   const route = loadModule("src/app/api/analyze/route.ts", {
+    "@/lib/supabase-session": { getUserId: async () => "user-1" },
     openai: class {
       constructor() {
         assert.fail("Water must not call AI");
@@ -163,11 +176,12 @@ test("server rejects invalid water fields and recomputes all totals before savin
   const writes = [];
   const actions = loadModule("src/app/actions.ts", {
     "next/cache": { revalidatePath() {} },
-    "next/headers": { cookies: async () => ({ get: () => ({ value: "token" }) }) },
-    "@/lib/auth": { AUTH_COOKIE: "auth", authTokenFor: async () => "token" },
-    "@/lib/meals": { insertMeals: async (meals) => writes.push(...meals) },
+    "@/lib/supabase-session": { getUserId: async () => "user-1" },
+    "@/lib/meals": {
+      insertMeals: async (userId, meals) => writes.push(...meals.map((m) => ({ ...m, userId }))),
+    },
     "@/lib/barcode-products": { saveLoggedBarcodeProducts: async () => {} },
-    "@/lib/settings": {},
+    "@/lib/profiles": {},
   });
   const meal = {
     id: "water",
@@ -190,6 +204,7 @@ test("server rejects invalid water fields and recomputes all totals before savin
   }
   assert.equal(writes.length, 0);
   assert.deepEqual(await actions.logMealAction(meal), {});
+  assert.equal(writes[0].userId, "user-1");
   assert.equal(writes[0].analysis.totals.water_ml, 500);
   assert.equal(writes[0].analysis.totals.calories, 0);
 });
@@ -198,6 +213,7 @@ test("catalog drinks preserve ml basis, category and litre-sized packages", asyn
   const route = loadModule(
     "src/app/api/products/[barcode]/route.ts",
     {
+      "@/lib/supabase-session": { getUserId: async () => "user-1" },
       "@/lib/barcode-products": { getSavedBarcodeProduct: async () => null },
     },
     {
@@ -231,39 +247,4 @@ test("catalog drinks preserve ml basis, category and litre-sized packages", asyn
   assert.equal(food.volume_ml, 250);
   assert.equal(food.calories, 150);
   assert.equal(food.productSnapshot.portionUnit, "ml");
-});
-
-test("water goal persists in ml, can be cleared, and reads old settings without losing goals", async () => {
-  const writes = [];
-  const queries = [];
-  const settings = loadModule("src/lib/settings.ts", {
-    "@/lib/supabase": {
-      supabase: () => ({
-        from: () => ({
-          select: (columns) => ({
-            maybeSingle: async () => {
-              queries.push(columns);
-              return columns.includes("water_goal")
-                ? { data: null, error: { message: "column water_goal does not exist" } }
-                : { data: { calorie_goal: 2000, protein_goal: 100 }, error: null };
-            },
-          }),
-          upsert: async (row) => {
-            writes.push(row);
-            return { error: null };
-          },
-        }),
-      }),
-    },
-  });
-  assert.deepEqual(await settings.getGoals(), {
-    calorieGoal: 2000,
-    proteinGoal: 100,
-    waterGoal: null,
-  });
-  assert.equal(queries.length, 2);
-  await settings.saveGoals(goals);
-  await settings.saveGoals({ ...goals, waterGoal: null });
-  assert.equal(writes[0].water_goal, 2000);
-  assert.equal(writes[1].water_goal, null);
 });
