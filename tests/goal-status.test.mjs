@@ -117,3 +117,24 @@ test("each status maps to one colour: the goal's tint only while in progress", (
     assert.equal(statusColor(goal, "over"), "var(--danger)");
   }
 });
+
+test("fractional totals are judged as the whole numbers the bar shows", () => {
+  // 2,000.4 reads as "2,000 / 2,000": at the limit, not over by 0
+  assert.equal(goalStatus("lose", "calories", 2000.4, 2000, false), "met");
+  assert.equal(statusMessage("lose", "calories", "met", 2000.4, 2000), "Right at your limit");
+  assert.equal(goalStatus("lose", "calories", 2000.4, 2000, true), "near");
+  assert.equal(statusMessage("lose", "calories", "near", 2000.4, 2000), "Right at your limit");
+  // 169.6 g reads as "170 / 170 g": reached, not "0 g to go"
+  assert.equal(goalStatus("gain", "protein", 169.6, 170, true), "met");
+  // Maintain 2316: the range is 2,085–2,547, so 2,548 is 1 kcal above it (not 0)
+  assert.equal(goalStatus("maintain", "calories", 2548, 2316, false), "over");
+  assert.equal(
+    statusMessage("maintain", "calories", "over", 2548, 2316),
+    "Above your range by 1 kcal",
+  );
+  assert.equal(goalStatus("maintain", "calories", 2547, 2316, false), "met");
+  assert.equal(
+    statusMessage("maintain", "calories", "short", 2084, 2316),
+    "Below your range by 1 kcal",
+  );
+});

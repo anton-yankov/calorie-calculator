@@ -49,7 +49,11 @@ function barPath(x: number, top: number, bottom: number, w: number): string {
   return `M${x} ${bottom} V${top + r} a${r} ${r} 0 0 1 ${r} -${r} h${w - 2 * r} a${r} ${r} 0 0 1 ${r} ${r} V${bottom} Z`;
 }
 
-const signed = (n: number) => (n >= 0 ? `+${Math.round(n)}` : `−${Math.round(-n)}`);
+/** "+120", "−45", or "0" when it rounds to nothing (never "−0"). */
+const signed = (n: number) => {
+  const r = Math.round(n);
+  return r > 0 ? `+${r}` : r < 0 ? `−${-r}` : "0";
+};
 
 interface TrendSegment {
   x1: number;

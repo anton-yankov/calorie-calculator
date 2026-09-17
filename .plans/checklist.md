@@ -75,6 +75,7 @@ Decisions: `test@gmail.com` is a test account (use it for the 5.4 run-through, d
 - [x] 5.2 `src/app/error.tsx` (Try again / Go to Analyze, digest shown, inside the normal nav), styled `src/app/not-found.tsx` (unknown URLs and non-admin `/admin`), loading screens for Settings, `/admin` and user detail (`SkeletonPanels`). No `global-error`: the root layout fetches nothing.
 - [x] 5.3 Dead-code scan clean: the listed exports are now file-private, no export is used only in its own file, every dependency is used. README describes the app as it is now; `npm test` runs the suite.
 - [ ] 5.4 Complete every "Pending manual checks" and "Later, non-blocking" item below, then the final run-through (script given in chat on 17.09) with `test@gmail.com`. After your own UI review: ask me to run the independent agent review.
+- [x] 5.4b Independent review (two Fable 5.1 agents: security + AI cap; numbers/dates + handover): no critical/high issues. Fixed: unreadable-label refunds, OpenAI timeout/`maxDuration`, paused-cap wording, text-size limits, Log/admin dates rendered only in the browser, Settings plan preview from saved details, whole-unit goal judging ("Over by 0"), "Yesterday" on DST days, onboarding kg noise, "1,200" in quick entry. Deferred: A3 below.
 - [ ] 5.5 When you ask: I open one PR from `feat/multi-user-rework` into `main`; you review and merge (Vercel deploys); check the live site; then you create his account and send him his credentials.
 
 ## Pending manual checks
@@ -101,4 +102,5 @@ Things we chose not to build yet, and when they'd be worth revisiting.
 - **Password reset by email**: needs email setup; for now you set a new password in the Supabase dashboard. Revisit with in-app user management.
 - **Browser Supabase client**: nothing in the browser talks to Supabase directly; everything goes through Server Actions. Add one only if a feature needs it, e.g. live updates.
 - **De-duplicating `getUserId()` per request**: each call verifies the token locally (under a millisecond, no network), so repeating it is cheap. Revisit when one page render calls it several times (e.g. layout + page + onboarding gate): wrap it in React `cache()`.
+- **AI refund across midnight (review A3)**: a request that starts just before Sofia midnight and fails just after gives its analysis back to the new day. Harmless for two users; fixing it means passing the claimed day to `refund_ai_analysis` (a SQL change). Revisit if caps get tight.
 - **Dynamic weight-loss model**: goal dates use the simple 7,700 kcal/kg rule, which overestimates long-term loss. Revisit if the estimated dates turn out clearly wrong.

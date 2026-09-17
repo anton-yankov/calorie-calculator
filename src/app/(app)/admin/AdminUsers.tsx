@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { useMounted } from "@/components/useMounted";
 import { dayKey, dayLabel } from "@/lib/day";
 import type { AccountSummary } from "@/lib/admin";
 import { setDailyCapAction } from "./actions";
@@ -61,9 +62,6 @@ function aiToday(account: AccountSummary) {
     : `${account.aiUsedToday} / ${account.dailyCap}`;
 }
 
-const lastActive = (account: AccountSummary) =>
-  account.lastMealAt ? dayLabel(dayKey(account.lastMealAt)) : "—";
-
 /**
  * Accounts as a table on desktop and as cards on phones. "Last active" is the
  * newest logged meal, in the viewer's timezone.
@@ -75,6 +73,10 @@ export function AdminUsers({
   accounts: AccountSummary[];
   viewerId: string;
 }) {
+  // "Yesterday" depends on the viewer's timezone, so it waits for the browser
+  const mounted = useMounted();
+  const lastActive = (account: AccountSummary) =>
+    account.lastMealAt && mounted ? dayLabel(dayKey(account.lastMealAt)) : "—";
   const tag = (account: AccountSummary) =>
     [account.userId === viewerId && "you", account.isAdmin && "admin"].filter(Boolean).join(" · ");
 

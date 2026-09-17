@@ -29,36 +29,48 @@ export type GoalStatus =
   /** Past a calorie ceiling, or above the maintain range */
   | "over";
 
-/** Losing turns amber from this share of the calorie ceiling. */
-const NEAR_LIMIT = 0.9;
+// Shares are kept in tenths so the checks below stay in exact whole numbers
+/** Losing turns amber from 9/10 of the calorie ceiling. */
+const NEAR_LIMIT_TENTHS = 9;
+/** Maintaining counts as on track within 1/10 either side of the target. */
+const MAINTAIN_RANGE_TENTHS = 1;
+/** The same range as a fraction, for drawing it on the bar. */
+export const MAINTAIN_RANGE = MAINTAIN_RANGE_TENTHS / 10;
 
-/** Maintaining counts as on track within this share either side of the target. */
-export const MAINTAIN_RANGE = 0.1;
+/**
+ * Everything is judged on whole units — the numbers the bars show — so a bar
+ * reading "2,000 / 2,000" can never say "Over by 0 kcal". The maintain range's
+ * edges are the whole numbers just inside it.
+ */
+const whole = (n: number) => Math.round(n);
+const rangeLow = (target: number) => Math.ceil((target * (10 - MAINTAIN_RANGE_TENTHS)) / 10);
+const rangeHigh = (target: number) => Math.floor((target * (10 + MAINTAIN_RANGE_TENTHS)) / 10);
 
 export function goalStatus(
   goal: Goal,
   metric: Metric,
-  value: number,
-  target: number,
+  rawValue: number,
+  rawTarget: number,
   isToday: boolean,
 ): GoalStatus {
-  const ratio = value / target;
+  const value = whole(rawValue);
+  const target = whole(rawTarget);
   const fellShort = isToday ? "progress" : "short";
 
-  if (metric !== "calories") return ratio >= 1 ? "met" : fellShort;
+  if (metric !== "calories") return value >= target ? "met" : fellShort;
 
   if (goal === "lose") {
-    if (ratio > 1) return "over";
+    if (value > target) return "over";
     if (!isToday) return "met";
-    return ratio >= NEAR_LIMIT ? "near" : "progress";
+    return value * 10 >= target * NEAR_LIMIT_TENTHS ? "near" : "progress";
   }
 
   if (goal === "maintain") {
-    if (ratio > 1 + MAINTAIN_RANGE) return "over";
-    return ratio >= 1 - MAINTAIN_RANGE ? "met" : fellShort;
+    if (value > rangeHigh(target)) return "over";
+    return value >= rangeLow(target) ? "met" : fellShort;
   }
 
-  return ratio >= 1 ? "met" : fellShort;
+  return value >= target ? "met" : fellShort;
 }
 
 const amount = (n: number, metric: Metric) =>
@@ -74,12 +86,14 @@ export function statusMessage(
   goal: Goal,
   metric: Metric,
   status: GoalStatus,
-  value: number,
-  target: number,
+  rawValue: number,
+  rawTarget: number,
 ): string {
+  const value = whole(rawValue);
+  const target = whole(rawTarget);
   if (metric === "calories" && goal === "maintain") {
-    const low = target * (1 - MAINTAIN_RANGE);
-    const high = target * (1 + MAINTAIN_RANGE);
+    const low = rangeLow(target);
+    const high = rangeHigh(target);
     if (status === "over") return `Above your range by ${amount(value - high, metric)}`;
     if (status === "short") return `Below your range by ${amount(low - value, metric)}`;
     if (status === "progress") return `${amount(low - value, metric)} to your range`;
@@ -93,14 +107,14 @@ export function statusMessage(
     case "short":
       return `Short by ${amount(gap, metric)}`;
     case "near":
-      return `${amount(gap, metric)} left · close to your limit`;
+      return gap === 0
+        ? "Right at your limit"
+        : `${amount(gap, metric)} left · close to your limit`;
     case "progress":
       return `${amount(gap, metric)} to go`;
     case "met":
       if (metric === "calories" && goal === "lose") {
-        return Math.round(gap) === 0
-          ? "Right at your limit"
-          : `Under your limit by ${amount(gap, metric)}`;
+        return gap === 0 ? "Right at your limit" : `Under your limit by ${amount(gap, metric)}`;
       }
       return "Reached";
   }

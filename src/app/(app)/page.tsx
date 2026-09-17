@@ -4,6 +4,7 @@ import { useWaterTracking } from "@/components/WaterTracking";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useAiAllowance } from "@/components/AiAllowance";
+import { capReachedMessage } from "@/lib/ai-cap-message";
 import { AnalysisCard, CompactAnalysis } from "@/components/AnalysisCard";
 import { useAnalysis } from "@/components/AnalysisProvider";
 import { BarcodeInput } from "@/components/BarcodeInput";
@@ -107,10 +108,8 @@ export default function Home() {
       <div className="flex flex-col gap-4 lg:sticky lg:top-24">
         {capReached && allowance?.cap != null && (
           <p className="rounded-r-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm">
-            <span className="block font-semibold">
-              You&apos;ve used today&apos;s {allowance.cap} analyses.
-            </span>
-            They&apos;re back at midnight. Barcodes, water and{" "}
+            <span className="block font-semibold">{capReachedMessage(allowance.cap)}</span>
+            Barcodes, water and{" "}
             <Link href="/log" className="font-semibold text-accent hover:underline">
               adding food manually
             </Link>{" "}

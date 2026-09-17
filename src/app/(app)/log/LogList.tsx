@@ -14,6 +14,8 @@ import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
 import { foodAmount, foodUnit, formatWater, withDrinkType, type DrinkType } from "@/lib/water";
 import { DatePicker } from "@/components/DatePicker";
 import { GoalBars } from "@/components/GoalBars";
+import { SkeletonLog, SkeletonLogRail } from "@/components/loaders";
+import { useMounted } from "@/components/useMounted";
 import { ZoomableImage } from "@/components/ImageLightbox";
 import { dayKey, dayLabel, timeLabel } from "@/lib/day";
 import type { LoggedMeal } from "@/lib/log";
@@ -415,6 +417,17 @@ export function LogList({
   readOnly?: boolean;
 }) {
   const waterTracking = useWaterTracking();
+  // Days and times follow the viewer's timezone, so they're rendered only in the browser
+  const mounted = useMounted();
+  if (!mounted) {
+    return (
+      <>
+        <SkeletonLogRail />
+        <SkeletonLog />
+      </>
+    );
+  }
+
   const todayKey = dayKey(new Date());
   const days = new Map<string, LoggedMeal[]>();
   for (const meal of meals) {

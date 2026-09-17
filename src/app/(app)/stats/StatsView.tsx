@@ -4,12 +4,13 @@ import { statusColor } from "@/components/goal-colors";
 import { useWaterTracking } from "@/components/WaterTracking";
 import { goalStatus } from "@/lib/goal-status";
 import { DRINK_TYPES, DRINK_LABELS, formatWater } from "@/lib/water";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import { DailyBars, type BarDatum } from "@/components/charts/DailyBars";
 import { WeightChart } from "@/components/charts/WeightChart";
 import { RangePicker } from "@/components/charts/RangePicker";
 import { StatTile } from "@/components/charts/StatTile";
 import { SkeletonStats } from "@/components/loaders";
+import { useMounted } from "@/components/useMounted";
 import { dayKey, dayLabel, shortDate } from "@/lib/day";
 import type { MealTotalRow } from "@/lib/meals";
 import type { Goal } from "@/lib/plan";
@@ -22,15 +23,6 @@ import type { WeightEntry } from "@/lib/weights";
 import { WeightEntries, WeightForm } from "./WeightLog";
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
-// true only after hydration; the server snapshot is false so SSR shows the skeleton
-const noop = () => () => {};
-const useMounted = () =>
-  useSyncExternalStore(
-    noop,
-    () => true,
-    () => false,
-  );
 
 /**
  * One bar per day (or week) for calories or protein, coloured by how it went

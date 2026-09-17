@@ -77,6 +77,12 @@ test("a claim over the cap is refused with a 429 and the reason", async () => {
   });
 });
 
+test("a cap of 0 says AI is paused, not that it comes back at midnight", async () => {
+  const refused = await usage({ claim: { allowed: false, used: 0, cap: 0 } }).claimAnalysis();
+  assert.equal(refused.status, 429);
+  assert.deepEqual(await refused.json(), { error: "AI analyses are paused for your account." });
+});
+
 test("a count that can't be checked refuses the request", async () => {
   const refused = await usage({ claimError: { message: "function missing" } }).claimAnalysis();
   assert.equal(refused.status, 503);

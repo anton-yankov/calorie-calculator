@@ -24,6 +24,10 @@ function typed(value: string): number | null {
 }
 
 function amount(value: string, label: string, max: number, required: boolean): number | string {
+  // "1,200" is a thousands separator, not 1.2 — ask for plain digits instead of guessing
+  if (/^\s*\d{1,3},\d{3}\s*$/.test(value)) {
+    return `Type the ${label} without a thousands separator, e.g. ${value.replace(",", "").trim()}.`;
+  }
   const n = typed(value);
   if (n === null) return required ? `Enter the ${label}.` : 0;
   if (!Number.isFinite(n) || n < 0 || n > max) return `Enter ${label} between 0 and ${max}.`;

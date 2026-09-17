@@ -22,6 +22,9 @@ const GOAL_CHOICES: { value: Goal; label: string; hint: string }[] = [
   { value: "gain", label: "Gain weight", hint: "Eat a little over maintenance" },
 ];
 
+/** "5.3" rather than float noise like "5.299999999999997". */
+const kgText = (kg: number) => kg.toLocaleString("en-US", { maximumFractionDigits: 1 });
+
 export function OnboardingFlow({ profile }: { profile: BodyDetails | null }) {
   const [step, setStep] = useState(1);
   const [sex, setSex] = useState<Sex>(profile?.sex ?? "male");
@@ -182,7 +185,7 @@ export function OnboardingFlow({ profile }: { profile: BodyDetails | null }) {
               />
               <p className="mt-1.5 text-xs text-muted">
                 {goalReady
-                  ? `${Math.abs(weight - goalWeight)} kg to ${goal} from ${weight} kg`
+                  ? `${kgText(Math.abs(weight - goalWeight))} kg to ${goal} from ${weight} kg`
                   : `Enter a weight ${goal === "lose" ? "below" : "above"} ${weight} kg`}
               </p>
             </div>

@@ -4,10 +4,12 @@ import {
   NUTRITION_LABEL_SCHEMA,
   type NutritionLabelAnalysis,
 } from "@/lib/nutrition-label";
-import { claimAnalysis, refundAnalysis } from "@/lib/ai-usage";
+import { claimAnalysis, OPENAI_OPTIONS, refundAnalysis } from "@/lib/ai-usage";
 import { getUserId } from "@/lib/supabase-session";
 
 export const runtime = "nodejs";
+// Room for OPENAI_OPTIONS (two 40 s attempts) plus the refund afterwards
+export const maxDuration = 90;
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
@@ -91,10 +93,11 @@ export async function POST(request: Request): Promise<Response> {
   const refused = await claimAnalysis();
   if (refused) return refused;
 
-  // Anything but readable label values gives the analysis back
-  let delivered = false;
+  // Only a request OpenAI never answered gives the analysis back: an unreadable
+  // photo was still paid for, so it counts
+  let answered = false;
   try {
-    const client = new OpenAI();
+    const client = new OpenAI(OPENAI_OPTIONS);
     const response = await client.responses.create({
       model: process.env.VISION_MODEL ?? "gpt-5.6-luna",
       input: [
@@ -114,6 +117,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!response.output_text) {
       return Response.json({ error: "No nutrition values could be read." }, { status: 502 });
     }
+    answered = true;
 
     const analysis: unknown = JSON.parse(response.output_text);
     if (!validAnalysis(analysis)) {
@@ -133,7 +137,6 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    delivered = true;
     return Response.json(analysis, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("nutrition label analysis failed:", error);
@@ -142,6 +145,6 @@ export async function POST(request: Request): Promise<Response> {
       { status: 502 },
     );
   } finally {
-    if (!delivered) await refundAnalysis(userId);
+    if (!answered) await refundAnalysis(userId);
   }
 }

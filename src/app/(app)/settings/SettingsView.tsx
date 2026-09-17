@@ -125,9 +125,9 @@ export function SettingsView({
   const [birthYear, setBirthYear] = useState(String(profile.birthYear));
   const [heightCm, setHeightCm] = useState(String(profile.heightCm));
   // The latest weigh-in is the current weight; saving details stores it in the profile
-  const weighInIsNewer = latestWeighIn !== null && latestWeighIn.weightKg !== profile.weightKg;
+  const weighInDiffers = latestWeighIn !== null && latestWeighIn.weightKg !== profile.weightKg;
   const [weightKg, setWeightKg] = useState(
-    String(weighInIsNewer ? latestWeighIn.weightKg : profile.weightKg),
+    String(weighInDiffers ? latestWeighIn.weightKg : profile.weightKg),
   );
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
   const [savingDetails, saveDetails] = useTransition();
@@ -174,14 +174,23 @@ export function SettingsView({
     Number(heightCm) !== profile.heightCm ||
     Number(weightKg) !== profile.weightKg ||
     activityLevel !== profile.activityLevel;
-  const weightMovedFromPlan = active !== undefined && Number(weightKg) !== active.weightKg;
+  // A plan change is built on the saved details, exactly as the server does, so
+  // the preview never shows targets that saving would then change
+  const savedBody: BodyDetails = {
+    sex: profile.sex,
+    birthYear: profile.birthYear,
+    heightCm: profile.heightCm,
+    weightKg: profile.weightKg,
+    activityLevel: profile.activityLevel,
+  };
+  const weightMovedFromPlan = active !== undefined && profile.weightKg !== active.weightKg;
 
   const goalWeight = Number(goalWeightKg);
   const planGoalReady =
     goal === "maintain" ||
     (goalWeight >= 30 &&
       goalWeight <= 300 &&
-      (goal === "lose" ? goalWeight < details.weightKg : goalWeight > details.weightKg));
+      (goal === "lose" ? goalWeight < savedBody.weightKg : goalWeight > savedBody.weightKg));
 
   const summary = active ? planSummary(active) : null;
 
@@ -335,9 +344,15 @@ export function SettingsView({
               <p className="rounded-r-panel border-l-4 border-accent bg-accent-soft px-3 py-2 text-[12.5px]">
                 Starts today. Earlier days keep the plan they were logged under.
               </p>
-              {planGoalReady && detailsReady ? (
+              {detailsDirty && (
+                <p className="rounded-r-panel border-l-4 border-amber bg-surface px-3 py-2 text-[12.5px]">
+                  Your details below have unsaved changes. These plans use your saved details — save
+                  the new ones first to plan with them.
+                </p>
+              )}
+              {planGoalReady ? (
                 <PlanPicker
-                  body={details}
+                  body={savedBody}
                   goal={goal}
                   goalWeightKg={goal === "maintain" ? null : goalWeight}
                   today={today}
@@ -347,8 +362,8 @@ export function SettingsView({
                 />
               ) : (
                 <p className="text-xs text-muted">
-                  Enter a goal weight {goal === "lose" ? "below" : "above"} {details.weightKg} kg to
-                  see the plans.
+                  Enter a goal weight {goal === "lose" ? "below" : "above"} {savedBody.weightKg} kg
+                  to see the plans.
                 </p>
               )}
             </div>
@@ -420,7 +435,7 @@ export function SettingsView({
               ))}
             </select>
           </label>
-          {weighInIsNewer && Number(weightKg) === latestWeighIn.weightKg && (
+          {weighInDiffers && Number(weightKg) === latestWeighIn.weightKg && (
             <p className="text-xs text-muted">
               Weight from your weigh-in on {longDate(latestWeighIn.day)} (saved details say{" "}
               {profile.weightKg} kg). Save details to use it.

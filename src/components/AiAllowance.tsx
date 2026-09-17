@@ -74,13 +74,44 @@ function InfinityIcon() {
   );
 }
 
-/** "17 of 20" and its colour: neutral, amber when running low, red when used up. */
-function describe(allowance: AiAllowance): { count: React.ReactNode; tone: string } {
-  if (allowance.cap === null) return { count: <InfinityIcon />, tone: "text-foreground" };
+/**
+ * What the counter says in each state: the number, its colour (neutral, amber
+ * when running low, red when none are left) and the words around it on the
+ * desktop pill and the phone strip.
+ */
+function describe(allowance: AiAllowance): {
+  count: React.ReactNode;
+  tone: string;
+  pill: string;
+  label: string;
+  note: string;
+} {
+  if (allowance.cap === null) {
+    return {
+      count: <InfinityIcon />,
+      tone: "text-foreground",
+      pill: " analyses",
+      label: "Analyses today",
+      note: " · unlimited",
+    };
+  }
+  // A cap of 0 is the admin pausing AI for this account, not a spent day
+  if (allowance.cap === 0) {
+    return {
+      count: "Paused",
+      tone: "text-danger",
+      pill: " · AI analyses",
+      label: "AI analyses",
+      note: " by the admin",
+    };
+  }
   const left = Math.max(allowance.cap - allowance.used, 0);
   return {
     count: `${left} of ${allowance.cap}`,
     tone: left === 0 ? "text-danger" : left <= LOW_LEFT ? "text-amber" : "text-foreground",
+    pill: " left today",
+    label: "Analyses left today",
+    note: " · resets at midnight",
   };
 }
 
@@ -88,13 +119,13 @@ function describe(allowance: AiAllowance): { count: React.ReactNode; tone: strin
 export function AiCounterPill() {
   const { allowance } = useAiAllowance();
   if (!allowance) return null;
-  const { count, tone } = describe(allowance);
+  const { count, tone, pill } = describe(allowance);
   return (
     <span
       className={`hidden shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-3 py-1.5 font-mono text-[11px] font-semibold lg:inline-flex ${tone}`}
     >
       {count}
-      {allowance.cap === null ? " analyses" : " left today"}
+      {pill}
     </span>
   );
 }
@@ -103,14 +134,14 @@ export function AiCounterPill() {
 export function AiCounterStrip() {
   const { allowance } = useAiAllowance();
   if (!allowance) return null;
-  const { count, tone } = describe(allowance);
+  const { count, tone, label, note } = describe(allowance);
   return (
     <div className="border-t border-line/60 lg:hidden">
       <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-5 py-1 text-[11px] text-muted sm:px-6">
-        <span>{allowance.cap === null ? "Analyses today" : "Analyses left today"}</span>
+        <span>{label}</span>
         <span>
           <span className={`font-mono font-semibold ${tone}`}>{count}</span>
-          {allowance.cap === null ? " · unlimited" : " · resets at midnight"}
+          {note}
         </span>
       </div>
     </div>

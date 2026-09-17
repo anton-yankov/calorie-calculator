@@ -64,7 +64,8 @@ export function shortDate(key: string): string {
 export function dayLabel(key: string): string {
   const now = new Date();
   if (key === dayKey(now)) return "Today";
-  if (key === dayKey(new Date(Date.now() - 86_400_000))) return "Yesterday";
+  // Calendar arithmetic, not "24 hours ago", which misses on clock-change days
+  if (key === addDays(dayKey(now), -1)) return "Yesterday";
   // Reconstruct at noon so DST shifts can't move the label to a neighboring day
   const d = new Date(`${key}T12:00:00`);
   const date = shortDate(key);

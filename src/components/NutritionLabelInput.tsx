@@ -98,7 +98,7 @@ export function NutritionLabelInput({
           <p className="text-sm font-semibold">Scan the nutrition label</p>
           <p className="mt-0.5 text-xs text-muted">
             {capReached
-              ? "Paused until midnight: today's analyses are used up. Type the values below instead."
+              ? "Paused: no analyses left for today. Type the values below instead."
               : "Photograph the full table, straight-on and in good light."}
           </p>
           <button

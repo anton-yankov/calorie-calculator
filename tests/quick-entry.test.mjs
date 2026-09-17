@@ -48,6 +48,16 @@ test("missing or impossible numbers name the field", () => {
   assert.match(quickEntryAnalysis(input({ name: "x".repeat(81) })), /80 characters or fewer/);
 });
 
+test("a thousands comma is refused rather than read as a decimal", () => {
+  // The app shows "2,310 kcal"; typing "1,200" must not log 1.2 kcal
+  assert.equal(
+    quickEntryAnalysis(input({ calories: "1,200" })),
+    "Type the calories without a thousands separator, e.g. 1200.",
+  );
+  assert.equal(quickEntryAnalysis(input({ calories: "1200" })).totals.calories, 1200);
+  assert.equal(quickEntryAnalysis(input({ fat: "1,25" })).foods[0].fat_g, 1.25);
+});
+
 test("a hand-typed food never rescales", () => {
   const [food] = quickEntryAnalysis(input({})).foods;
   // grams is 0, so a portion edit leaves the typed numbers alone

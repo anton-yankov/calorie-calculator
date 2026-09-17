@@ -1,3 +1,4 @@
+import { capReachedMessage } from "@/lib/ai-cap-message";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createSessionClient, type Viewer } from "@/lib/supabase-session";
 
@@ -77,7 +78,10 @@ export async function refundAnalysis(userId: string): Promise<void> {
   if (error) console.error("AI refund failed:", error.message);
 }
 
-/** The message for a request refused by the cap. */
-function capReachedMessage(cap: number): string {
-  return `You've used today's ${cap} ${cap === 1 ? "analysis" : "analyses"}. They're back at midnight.`;
-}
+/**
+ * OpenAI client for the AI routes. The SDK default is a 10-minute timeout with
+ * 2 retries, far past the route's own limit (AI_ROUTE_MAX_SECONDS): the host
+ * would stop the request before the SDK gave up, and the refund in the route's
+ * `finally` would never run. Two 40 s attempts fit inside 90 s.
+ */
+export const OPENAI_OPTIONS = { timeout: 40_000, maxRetries: 1 } as const;
