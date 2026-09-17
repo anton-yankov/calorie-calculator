@@ -76,7 +76,7 @@ Decisions: `test@gmail.com` is a test account (use it for the 5.4 run-through, d
 - [x] 5.3 Dead-code scan clean: the listed exports are now file-private, no export is used only in its own file, every dependency is used. README describes the app as it is now; `npm test` runs the suite.
 - [ ] 5.4 Complete every "Pending manual checks" and "Later, non-blocking" item below, then the final run-through (script given in chat on 17.09) with `test@gmail.com`. After your own UI review: ask me to run the independent agent review.
 - [x] 5.4b Independent review (two Fable 5.1 agents: security + AI cap; numbers/dates + handover): no critical/high issues. Fixed: unreadable-label refunds, OpenAI timeout/`maxDuration`, paused-cap wording, text-size limits, Log/admin dates rendered only in the browser, Settings plan preview from saved details, whole-unit goal judging ("Over by 0"), "Yesterday" on DST days, onboarding kg noise, "1,200" in quick entry. Deferred: A3 below.
-- [ ] 5.5 When you ask: I open one PR from `feat/multi-user-rework` into `main`; you review and merge (Vercel deploys); check the live site; then you create his account and send him his credentials.
+- [ ] 5.5 PR opened: https://github.com/anton-yankov/calorie-calculator/pull/13. When you ask: I open one PR from `feat/multi-user-rework` into `main`; you review and merge (Vercel deploys); check the live site; then you create his account and send him his credentials.
 
 ## Pending manual checks
 

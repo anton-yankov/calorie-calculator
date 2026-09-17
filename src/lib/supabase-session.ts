@@ -49,7 +49,8 @@ export interface Viewer {
    * Set with SQL in the Supabase dashboard (auth.users.raw_app_meta_data).
    * app_metadata is part of the verified token and only the server can write
    * it, unlike user_metadata, which every user can edit for themselves. It
-   * reaches the token at the next login.
+   * reaches the token when the session next refreshes (within about an hour)
+   * or at the next login.
    */
   isAdmin: boolean;
 }

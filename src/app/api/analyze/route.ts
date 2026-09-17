@@ -58,7 +58,12 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const form = await req.formData();
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return Response.json({ error: "Invalid upload." }, { status: 400 });
+  }
   const image = form.get("image");
   let description = form.get("description");
   const previousResult = form.get("previousResult");
@@ -168,9 +173,11 @@ export async function POST(req: Request): Promise<Response> {
     analysis.totals = sumTotals(analysis.foods);
     return Response.json(analysis);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
     console.error("analyze failed:", err);
-    return Response.json({ error: `Analysis failed: ${message}` }, { status: 502 });
+    return Response.json(
+      { error: "Couldn't analyze the meal. Please try again." },
+      { status: 502 },
+    );
   } finally {
     if (!answered) await refundAnalysis(userId);
   }

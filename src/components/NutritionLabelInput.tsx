@@ -8,7 +8,8 @@ import { resizeToJpeg, toDisplayableBlob } from "@/lib/resize";
 
 function basisMessage(result: NutritionLabelAnalysis): string {
   if (result.basis === "per_100_ml") return "Filled from values per 100 ml (treated as 100 g).";
-  if (result.basis === "calculated_per_100") return "Filled after converting serving values to 100 g/ml.";
+  if (result.basis === "calculated_per_100")
+    return "Filled after converting serving values to 100 g/ml.";
   if (result.basis === "per_100_g") return "Filled from values per 100 g.";
   return "Filled the values that were readable. Check the label carefully.";
 }

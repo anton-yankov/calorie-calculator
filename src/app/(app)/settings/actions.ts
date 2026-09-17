@@ -11,7 +11,7 @@ import {
   whole,
   type BodyInput,
 } from "@/lib/profile-input";
-import { getProfile, saveProfile, saveWaterSetting } from "@/lib/profiles";
+import { getProfile, saveProfile, saveWaterSetting, type Profile } from "@/lib/profiles";
 import { createSessionClient, getUserId } from "@/lib/supabase-session";
 
 const failed = (err: unknown, fallback: string) => ({
@@ -80,7 +80,12 @@ export async function changePlanAction(input: PlanChangeInput): Promise<{ error?
   const today = submittedToday(input?.today);
   if (!today) return { error: "Invalid date" };
 
-  const profile = await getProfile(userId);
+  let profile: Profile | null;
+  try {
+    profile = await getProfile(userId);
+  } catch (err) {
+    return failed(err, "Couldn't load your details");
+  }
   if (!profile) return { error: "Add your details before changing your plan." };
   const body = validBody(profile);
   if (typeof body === "string") return { error: body };

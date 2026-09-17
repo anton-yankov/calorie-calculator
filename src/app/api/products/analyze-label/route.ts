@@ -1,9 +1,6 @@
 import OpenAI from "openai";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
-import {
-  NUTRITION_LABEL_SCHEMA,
-  type NutritionLabelAnalysis,
-} from "@/lib/nutrition-label";
+import { NUTRITION_LABEL_SCHEMA, type NutritionLabelAnalysis } from "@/lib/nutrition-label";
 import { claimAnalysis, OPENAI_OPTIONS, refundAnalysis } from "@/lib/ai-usage";
 import { getUserId } from "@/lib/supabase-session";
 
@@ -38,9 +35,7 @@ function validAnalysis(value: unknown): value is NutritionLabelAnalysis {
     isNullableNonNegativeNumber(result.protein_g) &&
     isNullableNonNegativeNumber(result.carbs_g) &&
     isNullableNonNegativeNumber(result.fat_g) &&
-    ["per_100_g", "per_100_ml", "calculated_per_100", "unknown"].includes(
-      result.basis ?? "",
-    ) &&
+    ["per_100_g", "per_100_ml", "calculated_per_100", "unknown"].includes(result.basis ?? "") &&
     Array.isArray(result.warnings) &&
     result.warnings.every((warning) => typeof warning === "string")
   );
@@ -121,7 +116,10 @@ export async function POST(request: Request): Promise<Response> {
 
     const analysis: unknown = JSON.parse(response.output_text);
     if (!validAnalysis(analysis)) {
-      return Response.json({ error: "The nutrition values could not be validated." }, { status: 502 });
+      return Response.json(
+        { error: "The nutrition values could not be validated." },
+        { status: 502 },
+      );
     }
 
     const foundValues = [

@@ -1,8 +1,4 @@
-type NutritionLabelBasis =
-  | "per_100_g"
-  | "per_100_ml"
-  | "calculated_per_100"
-  | "unknown";
+type NutritionLabelBasis = "per_100_g" | "per_100_ml" | "calculated_per_100" | "unknown";
 
 export interface NutritionLabelAnalysis {
   productName: string;
@@ -49,14 +45,6 @@ export const NUTRITION_LABEL_SCHEMA = {
       description: "Short warnings about unreadable, missing, or converted values",
     },
   },
-  required: [
-    "productName",
-    "calories",
-    "protein_g",
-    "carbs_g",
-    "fat_g",
-    "basis",
-    "warnings",
-  ],
+  required: ["productName", "calories", "protein_g", "carbs_g", "fat_g", "basis", "warnings"],
   additionalProperties: false,
 } as const;

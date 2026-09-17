@@ -45,6 +45,18 @@ interface OpenFoodFactsProduct {
   nutriments?: Record<string, unknown>;
 }
 
+function isOpenFoodFactsUrl(url: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return (
+      protocol === "https:" &&
+      (hostname === "openfoodfacts.org" || hostname.endsWith(".openfoodfacts.org"))
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Fetches the catalog image (~400px front shot) and returns it as a JPEG data
  * URL, so the client gets one image shape for saved and catalog products and
@@ -54,7 +66,7 @@ interface OpenFoodFactsProduct {
  */
 async function inlineCatalogImage(product: OpenFoodFactsProduct): Promise<string | null> {
   const url = text(product.image_front_url) || text(product.image_front_small_url);
-  if (!url || !/^https:\/\/[^/]*openfoodfacts\.org\//.test(url)) return null;
+  if (!url || !isOpenFoodFactsUrl(url)) return null;
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(3_000) });
     if (!response.ok) return null;
