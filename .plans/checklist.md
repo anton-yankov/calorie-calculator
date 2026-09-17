@@ -64,38 +64,32 @@ Decisions: every request that reaches OpenAI uses one analysis (photo, descripti
 - [x] 4.10 Admin gate: `requireAdmin()` (`src/lib/admin.ts`) → 404 for everyone else; secret-key client in `src/lib/supabase-admin.ts` (`server-only`); read functions take an optional client (`Db`).
 - [x] 4.11 `/admin`: table on desktop, cards on phones — email (you/admin tag), current plan, last meal, AI today, cap field + Save (`setDailyCapAction`, admin-checked).
 - [x] 4.12 `/admin/users/[userId]`: tabs Overview (details, plan history, 14-day AI use) · Log · Stats · Products, reusing the real views with `readOnly` (no quick entry, weight form, edit/delete/relog; thumbnails only) and the user's own water setting.
-- [x] 4.13 Phase 4 dead-code scan clean (only the pre-existing 5.3 exports). README and `.env.example` document the secret key, new tables and admin setup. Commit and push when you ask.
+- [x] 4.13 Phase 4 dead-code scan clean (only the pre-existing 5.3 exports). README and `.env.example` document the secret key, new tables and admin setup. Committed and pushed (`106c16b`).
 - [x] **Phase 4 SQL** run on 16.09: AI tables + functions; your account is the only admin (the other account has no role). Log out and in once so the token carries it.
 
 ## Phase 5 — Polish & handover
 
-- [ ] 5.1 Helpful empty states on every page.
-- [ ] 5.2 Loading and error states audit.
-- [ ] 5.3 Final dead-code scan (incl. pre-existing exports only used in their own file: `parseDrinkAmount`, `MAX_PRODUCT_IMAGE_LENGTH`, `HistoryEntry`, `LightboxImage`, `NutritionLabelBasis`, `DayStat`/`Bucket`/`Summary`), README refresh, add an `npm test` script.
-- [ ] 5.4 Complete every "Pending manual checks" and "Later, non-blocking" item below, then a final run-through on the branch.
-- [ ] 5.5 Open one PR from `feat/multi-user-rework` into `main`, review, merge (Vercel deploys), check the live site, then create his account and send him his credentials.
+Decisions: `test@gmail.com` is a test account (use it for the 5.4 run-through, delete it afterwards); Stats shows the weight section even without meals; you trigger the independent review yourself once 5.1–5.4 are done; I open the PR only when you ask, and you merge it.
+
+- [x] 5.1 Empty states walked through for a fresh account: Stats now renders fully without meals (a "Nothing to chart yet" banner on top, weight section working); read-only admin views use neutral empty text.
+- [x] 5.2 `src/app/error.tsx` (Try again / Go to Analyze, digest shown, inside the normal nav), styled `src/app/not-found.tsx` (unknown URLs and non-admin `/admin`), loading screens for Settings, `/admin` and user detail (`SkeletonPanels`). No `global-error`: the root layout fetches nothing.
+- [x] 5.3 Dead-code scan clean: the listed exports are now file-private, no export is used only in its own file, every dependency is used. README describes the app as it is now; `npm test` runs the suite.
+- [ ] 5.4 Complete every "Pending manual checks" and "Later, non-blocking" item below, then the final run-through (script given in chat on 17.09) with `test@gmail.com`. After your own UI review: ask me to run the independent agent review.
+- [ ] 5.5 When you ask: I open one PR from `feat/multi-user-rework` into `main`; you review and merge (Vercel deploys); check the live site; then you create his account and send him his credentials.
 
 ## Pending manual checks
 
 Must be done before he gets his account (5.4).
 
-- [ ] Vercel: `SUPABASE_SECRET_KEY` is set (you checked on 16.09); confirm its value matches the current secret key in Supabase before the 5.5 deploy. It stays server-only (no `NEXT_PUBLIC_` prefix).
+- [x] Vercel: `SUPABASE_SECRET_KEY` is set and matches the current secret key (confirmed 17.09).
 - [ ] Tell your friend that the admin view lets you see his meals and photos.
+- [ ] Delete the `test@gmail.com` account after the 5.4 run-through (Authentication → Users; its data goes with it).
 
 ## Later, non-blocking
 
 Small chores that nothing waits on — do them whenever convenient.
 
-- [ ] **1.12 SQL** (the app works without it; it makes the database match `supabase/schema.sql`):
-
-  ```sql
-  begin;
-  drop index if exists public.meals_logged_at_idx;
-  alter table public.barcode_products alter column portion_unit set not null;
-  commit;
-  ```
-
-  Check: `select indexname from pg_indexes where tablename = 'meals' order by indexname;` → only `meals_pkey` and `meals_user_logged_at_idx`. Best done before the 1.17 deploy if the dashboard is back.
+- [x] **1.12 SQL** run on 17.09 (old `meals_logged_at_idx` gone, `portion_unit` not null).
 - [ ] Remove the unused `SITE_PASSWORD` line from your local `.env.local`.
 
 ## Deferred on purpose

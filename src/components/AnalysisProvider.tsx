@@ -11,7 +11,7 @@ import { makeThumbnail, MEAL_PHOTO_EDGE, resizeToJpeg, toDisplayableBlob } from 
 import { scaleFood, sumTotals } from "@/lib/scale";
 import type { FoodItem, MealAnalysis } from "@/lib/schema";
 
-export interface HistoryEntry {
+interface HistoryEntry {
   /** The correction that produced this estimate; null for the first estimate of a photo */
   correction: string | null;
   analysis: MealAnalysis;

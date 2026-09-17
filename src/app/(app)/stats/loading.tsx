@@ -10,7 +10,7 @@ export default function Loading() {
           Stats
         </h1>
         <p className="mt-2 text-[15px] text-muted">
-          Calories and protein, day by day, against your goals.
+          Calories and protein, day by day, against your plan.
         </p>
       </header>
       <SkeletonStats />

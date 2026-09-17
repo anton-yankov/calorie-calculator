@@ -24,7 +24,7 @@ export type RangeId = (typeof RANGES)[number]["id"];
 /** Ranges longer than this switch from one bar per day to one bar per week. */
 const MAX_DAILY_BARS = 31;
 
-export interface DayStat {
+interface DayStat {
   day: string;
   meals: number;
   nutritionMeals: number;
@@ -32,7 +32,7 @@ export interface DayStat {
 }
 
 /** One bar: a calendar day, or a Monday-to-Sunday week averaged per logged day. */
-export interface Bucket {
+interface Bucket {
   /** Day key, or the week's Monday key */
   key: string;
   /** Tooltip heading, e.g. "Thu 28.08 · 3 meals" */
@@ -47,7 +47,7 @@ export interface Bucket {
   partial: boolean;
 }
 
-export interface Summary {
+interface Summary {
   calendarDays: number;
   /** Days with at least one meal, today included */
   loggedDays: number;

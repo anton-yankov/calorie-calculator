@@ -12,7 +12,7 @@ export interface ProductNutrition {
 export const BARCODE_PATTERN = /^\d{7,14}$/;
 
 /** Product images are small locally generated JPEG data URLs (see makeThumbnail). */
-export const MAX_PRODUCT_IMAGE_LENGTH = 300_000;
+const MAX_PRODUCT_IMAGE_LENGTH = 300_000;
 /** A meal's full-size photo (~800px JPEG data URL). */
 export const MAX_MEAL_PHOTO_LENGTH = 400_000;
 /** The image copied onto a scanned food (~320px JPEG data URL). */

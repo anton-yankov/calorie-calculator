@@ -169,25 +169,6 @@ export function StatsView({
     [days, range, plans, waterGoalMl, today],
   );
 
-  if (rows.length === 0) {
-    // Weigh-ins don't need meals, so they stay available on an empty page
-    return (
-      <>
-        <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted lg:col-span-2">
-          <p className="font-serif text-xl font-semibold text-foreground">Nothing to chart yet</p>
-          <p className="mt-1 text-sm">Log a few days of meals and the trends appear here.</p>
-        </div>
-        {today && (
-          <>
-            {/* An empty cell keeps the list in the right-hand column */}
-            {readOnly ? <div /> : <WeightForm weights={weights} today={today} />}
-            <WeightEntries weights={weights} readOnly={readOnly} />
-          </>
-        )}
-      </>
-    );
-  }
-
   if (!stats) return <SkeletonStats />;
 
   const { summary, mode } = stats;
@@ -240,6 +221,17 @@ export function StatsView({
 
   return (
     <>
+      {/* No meals yet: the page still renders, so the weight section works from day one */}
+      {rows.length === 0 && (
+        <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-6 text-center text-muted lg:col-span-2">
+          <p className="font-serif text-xl font-semibold text-foreground">Nothing to chart yet</p>
+          <p className="mt-1 text-sm">
+            {readOnly
+              ? "No meals logged yet."
+              : "Log a few days of meals and the calorie and protein trends appear here."}
+          </p>
+        </div>
+      )}
       <div className="flex flex-col gap-4 lg:sticky lg:top-24">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <RangePicker value={range} onChange={setRange} />

@@ -72,27 +72,31 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * Lights up (accent fill) only when its section has unsaved changes; with
+ * nothing new it stays quiet and can't be pressed.
+ */
 function SaveButton({
   pending,
   label,
   onClick,
-  variant = "ghost",
+  dirty,
 }: {
   pending: boolean;
   label: string;
   onClick: () => void;
-  variant?: "ghost" | "accent";
+  dirty: boolean;
 }) {
   return (
     <button
       type="button"
-      disabled={pending}
+      disabled={pending || !dirty}
       onClick={onClick}
-      className={`flex items-center justify-center gap-2 rounded-panel px-4 py-3 font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
-        variant === "accent"
-          ? "bg-accent text-background"
-          : "border border-line text-foreground hover:border-muted/60"
-      }`}
+      className={`flex items-center justify-center gap-2 rounded-panel border px-4 py-3 font-semibold transition-colors disabled:cursor-not-allowed ${
+        dirty
+          ? "border-accent bg-accent text-background hover:brightness-110"
+          : "border-line text-muted"
+      } ${pending ? "opacity-60" : ""}`}
     >
       {pending && <Spinner />}
       {pending ? "Saving…" : label}
@@ -164,6 +168,12 @@ export function SettingsView({
   const maintenanceNow = detailsReady
     ? maintenanceCalories(details, Number(today.slice(0, 4)))
     : null;
+  const detailsDirty =
+    sex !== profile.sex ||
+    Number(birthYear) !== profile.birthYear ||
+    Number(heightCm) !== profile.heightCm ||
+    Number(weightKg) !== profile.weightKg ||
+    activityLevel !== profile.activityLevel;
   const weightMovedFromPlan = active !== undefined && Number(weightKg) !== active.weightKg;
 
   const goalWeight = Number(goalWeightKg);
@@ -200,10 +210,14 @@ export function SettingsView({
     });
   }
 
+  const waterGoalMl = waterGoal.trim() === "" ? null : Math.round(Number(waterGoal));
+  // Turning tracking off keeps the stored goal, so only the switch counts then
+  const waterDirty =
+    waterOn !== profile.waterTracking || (waterOn && waterGoalMl !== profile.waterGoalMl);
+
   function onSaveWater() {
     saveWater(async () => {
-      const goalMl = waterGoal.trim() === "" ? null : Math.round(Number(waterGoal));
-      const result = await saveWaterAction({ tracking: waterOn, goalMl });
+      const result = await saveWaterAction({ tracking: waterOn, goalMl: waterGoalMl });
       if (result.error) toast.error(result.error);
       else toast.success(waterOn ? "Water tracking on" : "Water tracking off");
     });
@@ -421,7 +435,12 @@ export function SettingsView({
               your targets stay as they are until you do.
             </p>
           )}
-          <SaveButton pending={savingDetails} label="Save details" onClick={onSaveDetails} />
+          <SaveButton
+            pending={savingDetails}
+            label="Save details"
+            dirty={detailsDirty}
+            onClick={onSaveDetails}
+          />
         </section>
 
         <section className="flex flex-col gap-3">
@@ -474,7 +493,12 @@ export function SettingsView({
               </div>
             )}
           </div>
-          <SaveButton pending={savingWater} label="Save water setting" onClick={onSaveWater} />
+          <SaveButton
+            pending={savingWater}
+            label="Save water setting"
+            dirty={waterDirty}
+            onClick={onSaveWater}
+          />
         </section>
 
         <section className="flex flex-col gap-3">
@@ -513,7 +537,7 @@ export function SettingsView({
               <SaveButton
                 pending={savingPassword}
                 label="Update password"
-                variant="accent"
+                dirty={currentPassword !== "" && newPassword !== ""}
                 onClick={onChangePassword}
               />
             </div>

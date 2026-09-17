@@ -66,7 +66,7 @@ export function detectDrinkType(name: string): DrinkType | null {
 }
 
 /** Stable shorthand: (0, 5] = litres, [50, infinity) = ml. The gap needs units. */
-export function parseDrinkAmount(raw: string, unit?: string): { ml: number } | { error: string } {
+function parseDrinkAmount(raw: string, unit?: string): { ml: number } | { error: string } {
   const value = Number(raw.replace(",", "."));
   if (!Number.isFinite(value) || value <= 0) return { error: "Enter a positive drink amount." };
   if (unit) return { ml: value * (/^(l|lit(er|re)s?)$/i.test(unit) ? 1000 : 1) };

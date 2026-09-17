@@ -421,10 +421,12 @@ export function ProductList({
     return (
       <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted">
         <p className="font-serif text-xl font-semibold text-foreground">No saved products yet</p>
-        <p className="mx-auto mt-1 max-w-sm text-sm">
-          Scan a barcode on Analyze and log the meal. The product and its nutrition will be saved
-          here for next time.
-        </p>
+        {!readOnly && (
+          <p className="mx-auto mt-1 max-w-sm text-sm">
+            Scan a barcode on Analyze and log the meal. The product and its nutrition will be saved
+            here for next time.
+          </p>
+        )}
       </div>
     );
   }

@@ -106,6 +106,29 @@ export function SkeletonLogRail() {
   );
 }
 
+/**
+ * A column of ghost panels for pages whose content is mostly forms and tables
+ * (Settings, admin). `heights` sets each panel's height in pixels.
+ */
+export function SkeletonPanels({ label, heights }: { label: string; heights: number[] }) {
+  return (
+    <div role="status" aria-label={`${label} loading`} className="flex flex-col gap-4">
+      {heights.map((height, i) => (
+        <div
+          key={i}
+          aria-hidden
+          className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-4"
+          style={{ height }}
+        >
+          <GhostBar className={`h-3 ${i % 2 ? "w-24" : "w-32"}`} />
+          <GhostBar className="h-3.5 w-3/4" />
+          <GhostBar className="h-3.5 w-1/2" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Ghost version of the product library: a count line + a few product cards. */
 export function SkeletonProducts() {
   return (

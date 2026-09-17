@@ -55,8 +55,18 @@ interface TrendSegment {
   x1: number;
   x2: number;
   y: number;
+  average: number;
   /** A one-day average has too little evidence to present as a settled trend. */
   provisional: boolean;
+}
+
+/** The week-average line's look, for the tooltip to point at: solid, or dashed while provisional. */
+function LineSwatch({ dashed }: { dashed: boolean }) {
+  return dashed ? (
+    <span className="w-3.5 shrink-0 border-t-2 border-dashed border-foreground" aria-hidden />
+  ) : (
+    <span className="h-0.5 w-3.5 shrink-0 rounded-full bg-foreground" aria-hidden />
+  );
 }
 
 /**
@@ -131,6 +141,8 @@ export function DailyBars({
   // A weekly average is a separate summary from the daily bars. Missing days
   // are unknown rather than zero, and today is excluded while still in progress.
   const trendSegments: TrendSegment[] = [];
+  // The week line each slot sits under, for its tooltip
+  const segmentAt: (TrendSegment | undefined)[] = [];
   if (mode === "day") {
     const weeks = new Map<string, number[]>();
     data.forEach((datum, i) => {
@@ -148,12 +160,15 @@ export function DailyBars({
       const average = completeValues.reduce((sum, value) => sum + value, 0) / completeValues.length;
       const first = indexes[0]!;
       const last = indexes[indexes.length - 1]!;
-      trendSegments.push({
+      const segment = {
         x1: MARGIN.left + first * pitch + 2,
         x2: MARGIN.left + (last + 1) * pitch - 2,
         y: y(average),
+        average,
         provisional: completeValues.length === 1,
-      });
+      };
+      trendSegments.push(segment);
+      for (const i of indexes) segmentAt[i] = segment;
     }
   }
 
@@ -176,6 +191,7 @@ export function DailyBars({
   const legendColor = data.find((d) => d.value !== null)?.color;
 
   const current = active !== null ? data[active] : undefined;
+  const activeSegment = active !== null ? segmentAt[active] : undefined;
   const last = data[n - 1];
   const endLabel = last?.partial ? (mode === "day" ? "today" : "this week") : last?.short;
 
@@ -205,7 +221,7 @@ export function DailyBars({
               daily
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-0.5 w-3.5 rounded-full bg-foreground" aria-hidden />
+              <LineSwatch dashed={false} />
               weekly avg · Mon–Sun
             </span>
           </span>
@@ -424,6 +440,17 @@ export function DailyBars({
               )}
             </div>
             {current.value !== null && <div className="font-mono text-muted">{current.detail}</div>}
+            {activeSegment && (
+              <div className="mt-1 flex items-center gap-1.5 border-t border-line pt-1 font-mono text-muted">
+                <LineSwatch dashed={activeSegment.provisional} />
+                <span>
+                  week avg{" "}
+                  <span className="text-foreground">{Math.round(activeSegment.average)}</span>{" "}
+                  {unit}
+                  {activeSegment.provisional && " · 1 day so far"}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

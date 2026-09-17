@@ -440,10 +440,12 @@ export function LogList({
         {meals.length === 0 ? (
           <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted">
             <p className="font-serif text-xl font-semibold text-foreground">No meals logged yet</p>
-            <p className="mt-1 text-sm">
-              Analyze a photo and tap “Log meal”, or add a food manually, to start tracking your
-              day.
-            </p>
+            {!readOnly && (
+              <p className="mt-1 text-sm">
+                Analyze a photo and tap “Log meal”, or add a food manually, to start tracking your
+                day.
+              </p>
+            )}
           </div>
         ) : (
           [...days.entries()].map(([key, dayMeals]) => {

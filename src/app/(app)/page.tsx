@@ -228,7 +228,7 @@ export default function Home() {
                   analysis={entry.analysis}
                   previous={previous}
                   label={label}
-                  disabled={loading}
+                  disabled={loading || logged}
                   onGramsChange={handleGramsChange}
                   onDrinkTypeChange={handleDrinkTypeChange}
                 />
@@ -295,14 +295,19 @@ export default function Home() {
                 </button>
               </div>
             )}
-            <CorrectionBar
-              disabled={loading || capReached}
-              loading={loading}
-              onSubmit={(correction) => analyze(correction)}
-            />
-            <p className="text-center text-xs text-muted">
-              Edit amounts for instant recalculation, or describe what’s wrong to re-analyze.
-            </p>
+            {/* A logged meal is final here (edit it on the Log), so correcting it is hidden */}
+            {!logged && (
+              <>
+                <CorrectionBar
+                  disabled={loading || capReached}
+                  loading={loading}
+                  onSubmit={(correction) => analyze(correction)}
+                />
+                <p className="text-center text-xs text-muted">
+                  Edit amounts for instant recalculation, or describe what’s wrong to re-analyze.
+                </p>
+              </>
+            )}
           </>
         )}
 

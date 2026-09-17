@@ -1,4 +1,4 @@
-export type NutritionLabelBasis =
+type NutritionLabelBasis =
   | "per_100_g"
   | "per_100_ml"
   | "calculated_per_100"
