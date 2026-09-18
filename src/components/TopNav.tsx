@@ -39,8 +39,12 @@ export function TopNav() {
   const onOnboarding = pathname === "/onboarding";
   const onSettings = pathname === "/settings";
 
+  // The installed app draws under the status bar (viewport-fit=cover in the
+  // root layout), so the bar pads itself by the top inset — without it the
+  // tabs sit in the status bar strip, where iOS swallows the taps. The inset
+  // is 0px anywhere the system isn't covering the top, so nothing else moves.
   return (
-    <nav className="sticky top-0 z-30 border-b border-line/80 bg-background/90 backdrop-blur-xl">
+    <nav className="sticky top-0 z-30 border-b border-line/80 bg-background/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-5 py-3 sm:gap-5 sm:px-6 lg:max-w-5xl">
         <Link href="/" className="font-serif text-lg font-semibold tracking-tight text-foreground">
           <span className="sm:hidden">Calories</span>
