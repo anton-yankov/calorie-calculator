@@ -45,6 +45,14 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
     };
   }, []);
 
+  // The parent hands down a fresh onDetected closure on every render. Reading it
+  // through a ref keeps the camera effect on an empty dependency list, so a
+  // re-render can't tear the camera down halfway through starting it.
+  const onDetectedRef = useRef(onDetected);
+  useEffect(() => {
+    onDetectedRef.current = onDetected;
+  });
+
   useEffect(() => {
     let cancelled = false;
     const videoElement = videoRef.current;
@@ -60,25 +68,9 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
       }
 
       try {
-        const [{ BarcodeFormat, BrowserMultiFormatOneDReader }, { DecodeHintType }] =
-          await Promise.all([import("@zxing/browser"), import("@zxing/library")]);
+        const { createBarcodeReader, isScanMiss } = await import("@/lib/barcode-reader");
         if (cancelled) return;
-        const hints = new Map();
-        hints.set(DecodeHintType.TRY_HARDER, true);
-        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-          BarcodeFormat.EAN_13,
-          BarcodeFormat.EAN_8,
-          BarcodeFormat.UPC_A,
-          BarcodeFormat.UPC_E,
-          BarcodeFormat.ITF,
-          BarcodeFormat.CODE_128,
-        ]);
-        const reader = new BrowserMultiFormatOneDReader(hints, {
-          delayBetweenScanAttempts: 180,
-          delayBetweenScanSuccess: 750,
-          tryPlayVideoTimeout: 5_000,
-        });
-        const controls = await reader.decodeFromConstraints(
+        const controls = await createBarcodeReader().decodeFromConstraints(
           {
             audio: false,
             video: {
@@ -88,14 +80,20 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
             },
           },
           previewElement,
-          (result) => {
-            if (!result || detectedRef.current) return;
+          (result, error, scan) => {
+            if (detectedRef.current) return;
+            if (error && !isScanMiss(error)) {
+              // zxing ends the scan loop and releases the camera after this
+              setCameraError("The scanner stopped unexpectedly. Enter the barcode below instead.");
+              return;
+            }
+            if (!result) return;
             const barcode = result.getText().trim();
             if (!/^\d{7,14}$/.test(barcode)) return;
             detectedRef.current = true;
-            controlsRef.current?.stop();
+            scan.stop();
             navigator.vibrate?.(60);
-            onDetected(barcode);
+            onDetectedRef.current(barcode);
           },
         );
         if (cancelled) {
@@ -117,7 +115,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
       const stream = previewElement.srcObject;
       if (stream instanceof MediaStream) stream.getTracks().forEach((track) => track.stop());
     };
-  }, [onDetected]);
+  }, []);
 
   async function toggleTorch() {
     const switchTorch = controlsRef.current?.switchTorch;
