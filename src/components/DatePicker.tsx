@@ -124,7 +124,7 @@ export function DatePicker({
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={toggle}
-        className={`flex shrink-0 items-center gap-1.5 border font-mono text-foreground transition-colors hover:border-accent disabled:text-muted disabled:hover:border-line ${className}`}
+        className={`flex shrink-0 items-center gap-1.5 border tabular-nums text-foreground transition-colors hover:border-accent disabled:text-muted disabled:hover:border-line ${className}`}
       >
         {dayLabel(value)}
         <ChevronDown
@@ -154,7 +154,7 @@ export function DatePicker({
               >
                 ‹
               </button>
-              <span className="font-serif text-sm font-semibold">{monthLabel}</span>
+              <span className="text-sm font-extrabold">{monthLabel}</span>
               <button
                 type="button"
                 aria-label="Next month"
@@ -192,7 +192,7 @@ export function DatePicker({
                       onChange(key);
                       setOpen(false);
                     }}
-                    className={`h-8 w-8 rounded-md font-mono text-xs tabular-nums transition-colors ${
+                    className={`h-8 w-8 rounded-md text-xs tabular-nums transition-colors ${
                       isSelected
                         ? "bg-accent font-semibold text-background"
                         : isDisabled

@@ -132,13 +132,15 @@ Decisions and mocks: `.plans/redesign/0-decisions-and-build-plan.html` ([postpla
 
 ### Phase R4 — Admin & finish
 
-- [ ] R4.1 Users: totals, cards / desktop table, cap sheet.
-- [ ] R4.2 Account detail (Read-only chip, key numbers, switch, read-only pages).
-- [ ] R4.3 Dead-code scan (old components, CSS, fonts, comments).
-- [ ] R4.4 README and full manual run-through.
+- [x] R4.1 Users: totals (accounts, active today, AI today), account cards with activity dot, plan and AI bar (amber at ≤3 left), desktop table, `CapButton` sheet (Pause · 10 · 20 · 50 · 100 + 0–1000).
+- [x] R4.2 Account page: Read-only chip, plan / last login / AI today, Overview · Log · Stats · Products switch, restyled Overview with Change AI cap. ("Last login" stands in for the mock's "Last meal": no new data.)
+- [x] R4.3 Dead-code scan clean: last serif/mono classes and their theme entries removed, every file imported, no export used only in its own file, every colour token used, stale comments (quick entry, counter under the nav) updated.
+- [x] R4.4 README describes the redesigned app. **Manual run-through: yours** (see Pending manual checks).
 - [ ] R4.5 PR `feat/redesign` → `main` when asked.
 
 ## Pending manual checks
+
+- [ ] Redesign run-through on a phone and a laptop before merging the redesign PR: setup (protein levels, custom plan), homepage (photo, describe, barcode, manual, correction, log + undo, weigh-in card and snooze), Log (open, edit, log again, delete, calendar jump), Products (search, Log it now, edit), Stats (ranges, calendar tap, log weight), Settings (details, change plan, reminder, water, password), Users and an account page (cap sheet).
 
 Must be done before he gets his account (5.4).
 

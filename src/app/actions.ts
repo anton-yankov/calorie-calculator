@@ -307,7 +307,7 @@ export async function todayProgressAction(
   }
 }
 
-/** Today's AI analyses used and the cap, for the counter under the nav. */
+/** Today's AI analyses used and the cap, for the counter on the photo button and in the sidebar. */
 export async function aiAllowanceAction(): Promise<ActionResult & { allowance?: AiAllowance }> {
   const viewer = await getViewer();
   if (!viewer) return { error: "Authentication required" };

@@ -187,7 +187,7 @@ export function WeightChart({
                     textAnchor="end"
                     fontSize={10}
                     fill="var(--muted)"
-                    className="font-mono tabular-nums"
+                    className="tabular-nums"
                   >
                     {kg(v)}
                   </text>
@@ -211,7 +211,7 @@ export function WeightChart({
                   textAnchor="end"
                   fontSize={10}
                   fill="var(--muted)"
-                  className="font-mono tabular-nums"
+                  className="tabular-nums"
                 >
                   goal {kg(goalKg)} kg
                 </text>
@@ -256,7 +256,7 @@ export function WeightChart({
               y={height - 7}
               fontSize={10}
               fill="var(--muted)"
-              className="font-mono"
+              className="tabular-nums"
             >
               {dayLabel(start)}
             </text>
@@ -266,7 +266,7 @@ export function WeightChart({
               textAnchor="end"
               fontSize={10}
               fill="var(--muted)"
-              className="font-mono"
+              className="tabular-nums"
             >
               {dayLabel(end)}
             </text>
@@ -296,11 +296,11 @@ export function WeightChart({
             }
           >
             <div className="text-muted">{dayLabel(current.day)}</div>
-            <div className="font-mono tabular-nums">
+            <div className="tabular-nums">
               <span className="text-sm font-bold text-foreground">{kg(current.weightKg)}</span>
               <span className="text-muted"> kg</span>
             </div>
-            <div className="font-mono text-muted">trend {kg(current.trendKg)} kg</div>
+            <div className="tabular-nums text-muted">trend {kg(current.trendKg)} kg</div>
           </div>
         )}
       </div>
@@ -320,7 +320,7 @@ export function WeightChart({
                   <th className="py-2 pl-2 pr-4 text-right font-semibold">Trend</th>
                 </tr>
               </thead>
-              <tbody className="font-mono text-xs tabular-nums text-muted">
+              <tbody className="text-xs tabular-nums text-muted">
                 {[...points].reverse().map((p) => (
                   <tr key={p.day} className="border-t border-line">
                     <td className="px-4 py-1.5 font-sans text-[13px] text-foreground">

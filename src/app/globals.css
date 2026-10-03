@@ -42,10 +42,6 @@
   --color-amber: var(--amber);
   --color-tint-lose: var(--tint-lose);
   --font-sans: var(--font-inter);
-  /* Inter is the only typeface now. The serif and mono utilities still used by
-     pages that aren't redesigned yet fall back to it; they go in the R4.3 scan. */
-  --font-serif: var(--font-inter);
-  --font-mono: var(--font-inter);
   --radius-panel: 14px;
 }
 
