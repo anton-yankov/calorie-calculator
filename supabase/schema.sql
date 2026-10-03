@@ -74,7 +74,10 @@ create table public.profiles (
   activity_level text not null check (activity_level in ('sedentary', 'light', 'moderate', 'very', 'extra')),
   -- Water tracking is off until the user turns it on in Settings.
   water_tracking boolean not null default false,
-  water_goal_ml integer check (water_goal_ml > 0)
+  water_goal_ml integer check (water_goal_ml > 0),
+  -- How old the last weigh-in can get before the homepage reminds you; 0 = never.
+  weigh_in_reminder_days smallint not null default 7
+    check (weigh_in_reminder_days in (0, 1, 3, 7, 14))
 );
 
 alter table public.profiles enable row level security;
@@ -99,6 +102,8 @@ create table public.plans (
   goal_weight_kg double precision check (goal_weight_kg > 0),
   calorie_target integer not null check (calorie_target > 0),
   protein_target integer not null check (protein_target > 0),
+  -- The protein level chosen, in g per kg; null for a custom plan or a plan from before levels.
+  protein_per_kg numeric(2,1) check (protein_per_kg in (1.2, 1.6, 2.0)),
   -- Snapshots of what the plan was built from, so old plans still make sense.
   maintenance_kcal integer not null check (maintenance_kcal > 0),
   weight_kg double precision not null check (weight_kg > 0),

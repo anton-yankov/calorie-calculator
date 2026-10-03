@@ -249,3 +249,69 @@ export function computeRange(
     },
   };
 }
+
+/** Finished days in [start, end] whose calories were on track for that day's plan. */
+function onTrackBetween(
+  days: Map<string, DayStat>,
+  plans: StoredPlan[],
+  start: string,
+  end: string,
+): number {
+  let count = 0;
+  for (const key of dayKeysBetween(start, end)) {
+    const d = days.get(key);
+    const targets = targetsForDay(plans, key, null);
+    if (!d || d.nutritionMeals === 0 || !targets) continue;
+    if (
+      goalStatus(targets.goal, "calories", d.totals.calories, targets.calorieTarget, false) ===
+      "met"
+    )
+      count++;
+  }
+  return count;
+}
+
+/**
+ * Days on track in the period of the same length just before this range,
+ * for "▲ 3 more than the 30 days before". null for "All", which has no before.
+ */
+export function onTrackBefore(
+  days: Map<string, DayStat>,
+  range: RangeId,
+  plans: StoredPlan[],
+  start: string,
+): number | null {
+  const preset = RANGES.find((r) => r.id === range);
+  if (!preset || preset.days === null) return null;
+  return onTrackBetween(days, plans, addDays(start, -preset.days), addDays(start, -1));
+}
+
+/** How one calendar day went, for the Stats and Log calendars. */
+type DayOutcome = "met" | "over" | "short" | "near" | "today" | "empty" | "none";
+
+/**
+ * One day's square on the calendar: its calorie outcome against that day's
+ * plan, "today" while it's still open, "empty" when nothing was logged, and
+ * "none" outside the range (or in the future).
+ */
+export function dayOutcome(
+  days: Map<string, DayStat>,
+  plans: StoredPlan[],
+  key: string,
+  today: string,
+  start?: string,
+): DayOutcome {
+  if (key > today || (start !== undefined && key < start)) return "none";
+  const d = days.get(key);
+  if (!d || d.nutritionMeals === 0) return key === today ? "today" : "empty";
+  const targets = targetsForDay(plans, key, null);
+  if (!targets) return key === today ? "today" : "met";
+  const status = goalStatus(
+    targets.goal,
+    "calories",
+    d.totals.calories,
+    targets.calorieTarget,
+    key === today,
+  );
+  return status === "progress" ? "today" : status;
+}

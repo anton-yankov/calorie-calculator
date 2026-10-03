@@ -138,3 +138,29 @@ test("fractional totals are judged as the whole numbers the bar shows", () => {
     "Below your range by 1 kcal",
   );
 });
+
+test("dayChip: the short day phrase for each goal and status", () => {
+  const { dayChip } = loadModule("src/lib/goal-status.ts");
+  const chip = (goal, metric, value, isToday) => {
+    const target = metric === "calories" ? 2150 : 125;
+    return dayChip(goal, metric, goalStatus(goal, metric, value, target, isToday), value, target);
+  };
+  // Losing: room left today, the outcome on finished days
+  assert.equal(chip("lose", "calories", 1240, true), "910 left");
+  assert.equal(chip("lose", "calories", 2000, true), "150 left"); // near the limit
+  assert.equal(chip("lose", "calories", 2290, true), "Over by 140");
+  assert.equal(chip("lose", "calories", 1980, false), "On track");
+  assert.equal(chip("lose", "calories", 2150, false), "On track");
+  assert.equal(chip("lose", "calories", 2290, false), "Over by 140");
+  // Maintaining: distances to the edges of 1,935–2,365
+  assert.equal(chip("maintain", "calories", 1500, true), "435 to go");
+  assert.equal(chip("maintain", "calories", 2000, false), "On track");
+  assert.equal(chip("maintain", "calories", 2400, false), "Over by 35");
+  assert.equal(chip("maintain", "calories", 1900, false), "Short by 35");
+  // Gaining and protein are floors
+  assert.equal(chip("gain", "calories", 1800, true), "350 to go");
+  assert.equal(chip("gain", "calories", 2600, false), "On track");
+  assert.equal(chip("lose", "protein", 88, true), "37 to go");
+  assert.equal(chip("lose", "protein", 131, false), "On track");
+  assert.equal(chip("lose", "protein", 100, false), "Short by 25");
+});

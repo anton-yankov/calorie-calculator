@@ -62,3 +62,19 @@ test("no change without two trend values", () => {
   assert.deepEqual(later, { points: [], change: null });
   assert.deepEqual(trendOverRange([], "2026-09-01", "2026-09-30"), { points: [], change: null });
 });
+
+test("trend pace: kg a week since a day, and when the goal is reached", () => {
+  const { trendPace } = loadModule("src/lib/weight-trend.ts");
+  const points = [
+    { day: "2026-09-01", weightKg: 85, trendKg: 85 },
+    { day: "2026-09-29", weightKg: 84, trendKg: 84 }, // −1 kg in 4 weeks
+  ];
+  const pace = trendPace(points, "2026-09-01", 82);
+  assert.equal(pace.kgPerWeek, -0.25);
+  assert.equal(pace.reachBy, "2026-11-24"); // 2 kg more at 0.25 a week = 8 weeks after the 29th
+  // Moving away from the goal, or no goal: no date
+  assert.equal(trendPace(points, "2026-09-01", 90).reachBy, null);
+  assert.equal(trendPace(points, "2026-09-01", null).reachBy, null);
+  // One weigh-in isn't a pace
+  assert.equal(trendPace(points, "2026-09-10", 82), null);
+});

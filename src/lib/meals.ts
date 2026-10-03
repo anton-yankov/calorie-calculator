@@ -86,6 +86,24 @@ export async function listMeals(userId: string, db?: Db): Promise<LoggedMeal[]> 
   return (data as unknown as MealRow[]).map(toMeal);
 }
 
+/** Meals logged in [startIso, endIso), oldest first: one day's list for the homepage. */
+export async function listMealsBetween(
+  userId: string,
+  startIso: string,
+  endIso: string,
+): Promise<LoggedMeal[]> {
+  const db = await createSessionClient();
+  const { data, error } = await db
+    .from("meals")
+    .select(LIST_COLUMNS)
+    .eq("user_id", userId)
+    .gte("logged_at", startIso)
+    .lt("logged_at", endIso)
+    .order("logged_at", { ascending: true });
+  if (error) throw new Error(`Couldn't load the day's meals: ${error.message}`);
+  return (data as unknown as MealRow[]).map(toMeal);
+}
+
 /** The large photo for one meal, or null if it has none (or doesn't exist). */
 export async function getMealPhotoById(userId: string, id: string): Promise<string | null> {
   const db = await createSessionClient();

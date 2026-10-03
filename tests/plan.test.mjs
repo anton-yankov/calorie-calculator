@@ -64,7 +64,8 @@ test("losing offers three paces below maintenance with goal dates", () => {
     plans.map((p) => p.weeksToGoal),
     [28, 14, 7 / 0.75],
   );
-  assert.ok(plans.every((p) => p.proteinTarget === 170)); // 2.0 g × 85 kg
+  // Moderate by default, from the goal weight when losing: 1.6 g × 78 kg
+  assert.ok(plans.every((p) => p.proteinTarget === 125));
 });
 
 test("gaining offers two paces above maintenance", () => {
@@ -85,7 +86,7 @@ test("maintaining is one plan at maintenance with no goal date", () => {
       kgPerWeek: 0,
       recommended: true,
       calorieTarget: 2860,
-      proteinTarget: 170,
+      proteinTarget: 136, // 1.6 g × the current 85 kg
       weeksToGoal: null,
       goalDate: null,
     },
@@ -140,4 +141,23 @@ test("typing a suggested plan's calories gives that plan's goal date", () => {
       assert.equal(outlook.goalDate, suggested.goalDate, `${goal} ${suggested.name}`);
     }
   }
+});
+
+test("protein levels: goal weight when losing, current weight otherwise", () => {
+  assert.deepEqual(
+    plan.PROTEIN_LEVELS.map((level) => [level.label, level.perKg]),
+    [
+      ["Light", 1.2],
+      ["Moderate", 1.6],
+      ["High", 2.0],
+    ],
+  );
+  // Losing from 85 to 78 kg: grams follow the 78 kg goal
+  assert.equal(plan.proteinTarget(man, "lose", 78, 1.2), 94);
+  assert.equal(plan.proteinTarget(man, "lose", 78, 2.0), 156);
+  // Maintaining and gaining: the current 85 kg
+  assert.equal(plan.proteinTarget(man, "maintain", null, 1.6), 136);
+  assert.equal(plan.proteinTarget(man, "gain", 90, 2.0), 170);
+  // Every suggested plan carries the chosen level
+  assert.ok(plan.suggestPlans(man, "lose", 78, today, 2.0).every((p) => p.proteinTarget === 156));
 });

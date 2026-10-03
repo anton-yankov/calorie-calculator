@@ -94,3 +94,31 @@ test("the macro split weighs fat at 9 kcal per gram", () => {
   assert.ok(Math.abs(split.fat - 100 / 900) < 1e-9);
   assert.equal(stats.macroSplit({ protein: 0, carbs: 0, fat: 0 }), null);
 });
+
+test("days on track in the period before, and nothing before All", () => {
+  const plans = [plan("2026-01-01", "lose", 2000)];
+  const days = stats.groupByDay([
+    day("2026-09-01", 1500), // in the 7 days before 2026-09-07..13
+    day("2026-09-03", 1800),
+    day("2026-09-05", 2500), // over: not counted
+    day("2026-09-10", 1500),
+  ]);
+  assert.equal(stats.onTrackBefore(days, "7d", plans, "2026-09-07"), 2);
+  assert.equal(stats.onTrackBefore(days, "all", plans, "2026-09-07"), null);
+});
+
+test("calendar outcomes: judged per day, today open, gaps and outside the range", () => {
+  const plans = [plan("2026-01-01", "lose", 2000)];
+  const days = stats.groupByDay([
+    day("2026-09-10", 1500),
+    day("2026-09-11", 2400),
+    day("2026-09-13", 900),
+  ]);
+  const outcome = (key) => stats.dayOutcome(days, plans, key, "2026-09-13", "2026-09-08");
+  assert.equal(outcome("2026-09-10"), "met");
+  assert.equal(outcome("2026-09-11"), "over");
+  assert.equal(outcome("2026-09-12"), "empty");
+  assert.equal(outcome("2026-09-13"), "today"); // still open, far from the limit
+  assert.equal(outcome("2026-09-07"), "none"); // before the range
+  assert.equal(outcome("2026-09-14"), "none"); // the future
+});

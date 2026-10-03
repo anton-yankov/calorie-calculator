@@ -3,12 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { savePlan } from "@/lib/plan-history";
-import { maintenanceCalories, suggestPlans, type Goal } from "@/lib/plan";
+import { maintenanceCalories, suggestPlans, type Goal, type ProteinPerKg } from "@/lib/plan";
 import {
   submittedToday,
   validBody,
   validCustomTargets,
   validGoalWeight,
+  validProteinPerKg,
   type BodyInput,
 } from "@/lib/profile-input";
 import { saveProfile } from "@/lib/profiles";
@@ -28,6 +29,8 @@ interface OnboardingInput extends BodyInput {
   kgPerWeek: number | null;
   /** Used only when kgPerWeek is null */
   custom: { calorieTarget: number; proteinTarget: number } | null;
+  /** The protein level for a suggested pace (g per kg); ignored for custom targets */
+  proteinPerKg: number | null;
   /** The user's own YYYY-MM-DD today — only the browser knows their timezone */
   today: string;
 }
@@ -54,6 +57,7 @@ export async function saveOnboardingAction(input: OnboardingInput): Promise<{ er
   const maintenanceKcal = maintenanceCalories(body, Number(today.slice(0, 4)));
   let calorieTarget: number;
   let proteinTarget: number;
+  let proteinPerKg: ProteinPerKg | null = null;
 
   if (input.kgPerWeek === null) {
     // Custom targets: the user's own numbers, within believable bounds. A target
@@ -64,7 +68,10 @@ export async function saveOnboardingAction(input: OnboardingInput): Promise<{ er
     ({ calorieTarget, proteinTarget } = custom);
   } else {
     // A suggested plan: take the targets from the pace, never from the client
-    const suggested = suggestPlans(body, input.goal, goalWeightKg, today).find(
+    const level = validProteinPerKg(input.proteinPerKg);
+    if (typeof level === "string") return { error: level };
+    proteinPerKg = level;
+    const suggested = suggestPlans(body, input.goal, goalWeightKg, today, level).find(
       (plan) => plan.kgPerWeek === input.kgPerWeek,
     );
     if (!suggested) return { error: "Choose one of the suggested plans." };
@@ -81,6 +88,7 @@ export async function saveOnboardingAction(input: OnboardingInput): Promise<{ er
       goalWeightKg,
       calorieTarget,
       proteinTarget,
+      proteinPerKg,
       maintenanceKcal,
       weightKg: body.weightKg,
     });

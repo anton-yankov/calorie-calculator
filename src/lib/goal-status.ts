@@ -119,3 +119,32 @@ export function statusMessage(
       return "Reached";
   }
 }
+
+const n = (value: number) => Math.round(value).toLocaleString("en-US");
+
+/**
+ * The short phrase for a day's headline number or status chip, e.g. "910 left",
+ * "Over by 140", "On track". Finished days say how they went; today says
+ * what's still open. Units are left to the caller (kcal or g next to it).
+ * Maintaining measures to the edges of the ±10% range, like statusMessage.
+ */
+export function dayChip(
+  goal: Goal,
+  metric: Metric,
+  status: GoalStatus,
+  rawValue: number,
+  rawTarget: number,
+): string {
+  const value = whole(rawValue);
+  const target = whole(rawTarget);
+  const caloriesInRange = metric === "calories" && goal === "maintain";
+  const low = caloriesInRange ? rangeLow(target) : target;
+  const high = caloriesInRange ? rangeHigh(target) : target;
+
+  if (status === "over") return `Over by ${n(value - high)}`;
+  if (status === "short") return `Short by ${n(low - value)}`;
+  if (status === "met") return "On track";
+  // Today, still open: room under a ceiling, or the distance to a floor or range
+  if (metric === "calories" && goal === "lose") return `${n(Math.max(target - value, 0))} left`;
+  return `${n(Math.max(low - value, 0))} to go`;
+}

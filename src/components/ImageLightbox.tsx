@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/loaders";
 
@@ -130,7 +131,7 @@ export function LightboxProvider({ children }: { children: React.ReactNode }) {
                 top: "max(16px, env(safe-area-inset-top))",
               }}
             >
-              ✕
+              <X className="h-[1.1em] w-[1.1em]" strokeWidth={2.25} aria-hidden />
             </button>
           </div>
         )}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ChevronDown } from "lucide-react";
 import { dayKey, dayLabel } from "@/lib/day";
 
 // Estimated popover footprint, used to pick a side before it renders
@@ -47,6 +48,9 @@ export function DatePicker({
     return [d.getFullYear(), d.getMonth()];
   });
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
+  // Where the calendar renders: inside a sheet (a modal <dialog>) everything
+  // outside it is inert, so there it has to open inside the dialog
+  const [container, setContainer] = useState<Element | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
@@ -70,6 +74,7 @@ export function DatePicker({
     const d = new Date(`${value}T12:00:00`);
     setView([d.getFullYear(), d.getMonth()]);
     place();
+    setContainer(triggerRef.current?.closest("dialog") ?? document.body);
     setOpen(true);
   }
 
@@ -119,27 +124,19 @@ export function DatePicker({
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={toggle}
-        className={`flex shrink-0 items-center gap-1.5 border font-mono text-foreground transition-colors hover:border-accent disabled:text-muted disabled:hover:border-line ${className}`}
+        className={`flex shrink-0 items-center gap-1.5 border tabular-nums text-foreground transition-colors hover:border-accent disabled:text-muted disabled:hover:border-line ${className}`}
       >
         {dayLabel(value)}
-        <svg
+        <ChevronDown
           aria-hidden
-          viewBox="0 0 12 12"
-          className={`h-3 w-3 text-muted transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          <path
-            d="M2.5 4.5 6 8l3.5-3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+          strokeWidth={2}
+          className={`h-3.5 w-3.5 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open &&
         pos &&
+        container &&
         createPortal(
           <div
             ref={popRef}
@@ -157,7 +154,7 @@ export function DatePicker({
               >
                 ‹
               </button>
-              <span className="font-serif text-sm font-semibold">{monthLabel}</span>
+              <span className="text-sm font-extrabold">{monthLabel}</span>
               <button
                 type="button"
                 aria-label="Next month"
@@ -195,7 +192,7 @@ export function DatePicker({
                       onChange(key);
                       setOpen(false);
                     }}
-                    className={`h-8 w-8 rounded-md font-mono text-xs tabular-nums transition-colors ${
+                    className={`h-8 w-8 rounded-md text-xs tabular-nums transition-colors ${
                       isSelected
                         ? "bg-accent font-semibold text-background"
                         : isDisabled
@@ -209,7 +206,7 @@ export function DatePicker({
               })}
             </div>
           </div>,
-          document.body,
+          container,
         )}
     </>
   );

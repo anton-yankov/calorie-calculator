@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { Ellipsis, PencilLine, Trash2 } from "lucide-react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/Button";
 import { DatePicker } from "@/components/DatePicker";
 import { Field } from "@/components/fields";
-import { Spinner } from "@/components/loaders";
+import { Sheet } from "@/components/Sheet";
 import { dayLabel } from "@/lib/day";
 import type { WeightEntry } from "@/lib/weights";
 import { deleteWeightAction, saveWeightAction } from "./actions";
 
-/** "83.4", "70" — one decimal at most, no trailing zero. */
+/** "83.4", "70": one decimal at most, no trailing zero. */
 const formatKg = (kg: number) =>
   kg.toLocaleString("en-US", { maximumFractionDigits: 1, useGrouping: false });
 
@@ -19,28 +21,30 @@ const typedKg = (text: string) => {
   return text.trim() === "" || !Number.isFinite(n) ? null : n;
 };
 
+/** How many weigh-ins the list shows before "Show all". */
+const SHOWN = 4;
+
 /**
  * Log a weigh-in for today or an earlier day. A day holds one weigh-in, so
  * picking a day that already has one says it will be replaced.
  */
-export function WeightForm({ weights, today }: { weights: WeightEntry[]; today: string }) {
+function WeightForm({
+  weights,
+  today,
+  onDone,
+}: {
+  weights: WeightEntry[];
+  today: string;
+  onDone: () => void;
+}) {
   const [value, setValue] = useState("");
   const [day, setDay] = useState(today);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const sectionRef = useRef<HTMLElement>(null);
   const existing = weights.find((w) => w.day === day);
   const dayName = day === today ? "today" : dayLabel(day);
 
-  // The weigh-in nudge links to /stats#weight. Stats renders after mounting, so
-  // the browser's own jump to the anchor finds nothing; scroll here instead.
-  useEffect(() => {
-    if (window.location.hash === "#weight") {
-      sectionRef.current?.scrollIntoView({ block: "center" });
-    }
-  }, []);
-
-  function handleSave() {
+  function save() {
     const weightKg = typedKg(value);
     if (weightKg === null) {
       setError("Enter your weight in kg.");
@@ -53,59 +57,73 @@ export function WeightForm({ weights, today }: { weights: WeightEntry[]; today: 
         setError(result.error);
         return;
       }
-      setValue("");
       toast.success(`${formatKg(weightKg)} kg logged for ${dayName}`);
+      onDone();
     });
   }
 
   return (
-    <section
-      ref={sectionRef}
-      id="weight"
-      aria-label="Log weight"
-      className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-4"
-    >
-      <span className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Log weight</span>
+    <>
       <Field label="Weight" unit="kg" value={value} onChange={setValue} inputMode="decimal" />
-      <div className="flex items-center gap-2">
+      {existing && (
+        <p className="-mt-1.5 text-[12.5px] text-muted">
+          Replaces the {formatKg(existing.weightKg)} kg already logged for {dayName}.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-sm font-semibold text-danger">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
         <DatePicker
           value={day}
           max={today}
           disabled={pending}
           onChange={setDay}
           ariaLabel="Day of this weigh-in"
+          className="h-12 rounded-panel border-[1.5px] border-line-strong bg-transparent px-3.5 text-sm font-bold"
         />
-        <button
-          type="button"
-          disabled={pending}
-          onClick={handleSave}
-          className="flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-panel bg-accent px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110 disabled:opacity-40"
-        >
-          {pending && <Spinner className="h-3.5 w-3.5" />}
+        <Button className="flex-1" pending={pending} onClick={save}>
           {pending ? "Saving…" : "Save weight"}
-        </button>
+        </Button>
       </div>
-      {existing && (
-        <p className="text-xs text-muted">
-          Replaces the {formatKg(existing.weightKg)} kg already logged for {dayName}.
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-xs font-semibold text-danger">
-          {error}
-        </p>
-      )}
-    </section>
+    </>
   );
 }
 
-/** One weigh-in row: its weight can be edited in place or the entry deleted. */
-function WeightRow({ entry, readOnly }: { entry: WeightEntry; readOnly: boolean }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [pending, startTransition] = useTransition();
+/** The Log weight button and the sheet it opens. */
+export function LogWeightButton({ weights, today }: { weights: WeightEntry[]; today: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button className="w-full" onClick={() => setOpen(true)}>
+        Log weight
+      </Button>
+      <Sheet open={open} onClose={() => setOpen(false)} title="Log weight">
+        {open && <WeightForm weights={weights} today={today} onDone={() => setOpen(false)} />}
+      </Sheet>
+    </>
+  );
+}
 
-  function handleSave() {
+/** One weigh-in: its day, weight and the change from the one before; ⋯ to edit or delete. */
+function WeightRow({
+  entry,
+  previous,
+  readOnly,
+}: {
+  entry: WeightEntry;
+  previous: WeightEntry | null;
+  readOnly: boolean;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(formatKg(entry.weightKg));
+  const [pending, startTransition] = useTransition();
+  const change = previous ? Math.round((entry.weightKg - previous.weightKg) * 10) / 10 : null;
+
+  function save() {
     const weightKg = typedKg(draft);
     if (weightKg === null) {
       toast.error("Enter your weight in kg.");
@@ -114,18 +132,21 @@ function WeightRow({ entry, readOnly }: { entry: WeightEntry; readOnly: boolean 
     startTransition(async () => {
       const result = await saveWeightAction({ day: entry.day, weightKg });
       if (result.error) toast.error(result.error);
-      else setEditing(false);
+      else {
+        toast.success("Weigh-in updated");
+        setEditing(false);
+      }
     });
   }
 
-  function handleDelete() {
+  function remove() {
     startTransition(async () => {
       const result = await deleteWeightAction(entry.day);
       if (result.error) {
         toast.error(result.error);
         return;
       }
-      toast("Weigh-in deleted", {
+      toast.success("Weigh-in deleted", {
         action: {
           label: "Undo",
           onClick: () =>
@@ -139,77 +160,78 @@ function WeightRow({ entry, readOnly }: { entry: WeightEntry; readOnly: boolean 
 
   return (
     <li
-      className={`flex items-center gap-3 border-t border-line/60 px-4 py-2 ${pending ? "opacity-50" : ""}`}
+      className={`flex min-h-14 items-center gap-3 border-t border-line py-1.5 first:border-t-0 ${pending ? "opacity-50" : ""}`}
     >
-      <span className="min-w-0 flex-1 font-mono text-[13px] tabular-nums">
-        {dayLabel(entry.day)}
+      <span className="min-w-0 flex-1 text-[14.5px] text-muted">{dayLabel(entry.day)}</span>
+      <b className="text-[15px] font-extrabold tabular-nums">{formatKg(entry.weightKg)} kg</b>
+      <span className="w-12 text-right text-[12.5px] text-muted tabular-nums">
+        {change === null
+          ? ""
+          : change === 0
+            ? "±0"
+            : `${change > 0 ? "+" : "−"}${formatKg(Math.abs(change))}`}
       </span>
-      {readOnly ? (
-        <span className="font-mono text-[13px] font-semibold tabular-nums">
-          {formatKg(entry.weightKg)} kg
-        </span>
-      ) : editing ? (
+      {!readOnly && (
         <>
-          <label className="inline-flex items-center gap-1 font-mono text-xs text-muted">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={draft}
-              disabled={pending}
-              aria-label={`Weight for ${dayLabel(entry.day)}`}
-              onChange={(e) => setDraft(e.target.value)}
-              className="w-16 rounded-md border border-line bg-background px-1.5 py-0.5 text-right tabular-nums text-foreground focus:border-accent focus:outline-none"
-            />
-            kg
-          </label>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={handleSave}
-            className="text-xs font-semibold text-success hover:underline disabled:text-muted"
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={`More for the weigh-in on ${dayLabel(entry.day)}`}
+            onClick={() => setMenuOpen(true)}
           >
-            Save
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => setEditing(false)}
-            className="text-xs font-semibold text-muted hover:underline"
+            <Ellipsis className="h-5 w-5" strokeWidth={2} aria-hidden />
+          </Button>
+          <Sheet
+            open={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            title={`Weigh-in · ${dayLabel(entry.day)}`}
           >
-            Cancel
-          </button>
-        </>
-      ) : (
-        <>
-          <span className="font-mono text-[13px] font-semibold tabular-nums">
-            {formatKg(entry.weightKg)} kg
-          </span>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => {
-              setDraft(formatKg(entry.weightKg));
-              setEditing(true);
-            }}
-            className="text-xs font-semibold text-accent hover:underline disabled:text-muted"
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => {
+                setMenuOpen(false);
+                setDraft(formatKg(entry.weightKg));
+                setEditing(true);
+              }}
+            >
+              <PencilLine className="h-[19px] w-[19px]" strokeWidth={2} aria-hidden />
+              Edit weight
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full justify-start"
+              onClick={() => {
+                setMenuOpen(false);
+                remove();
+              }}
+            >
+              <Trash2 className="h-[19px] w-[19px]" strokeWidth={2} aria-hidden />
+              Delete weigh-in
+            </Button>
+          </Sheet>
+          <Sheet
+            open={editing}
+            onClose={() => setEditing(false)}
+            title={`Edit · ${dayLabel(entry.day)}`}
           >
-            Edit
-          </button>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={handleDelete}
-            className="text-xs font-semibold text-danger hover:underline disabled:text-muted"
-          >
-            Delete
-          </button>
+            <Field label="Weight" unit="kg" value={draft} onChange={setDraft} inputMode="decimal" />
+            <div className="flex gap-2">
+              <Button variant="outline" disabled={pending} onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+              <Button className="flex-1" pending={pending} onClick={save}>
+                {pending ? "Saving…" : "Save weight"}
+              </Button>
+            </div>
+          </Sheet>
         </>
       )}
     </li>
   );
 }
 
-/** Every weigh-in, newest first, folded away until opened. */
+/** Every weigh-in, newest first: the latest few, then the rest on request. */
 export function WeightEntries({
   weights,
   readOnly,
@@ -217,22 +239,36 @@ export function WeightEntries({
   weights: WeightEntry[];
   readOnly: boolean;
 }) {
+  const [all, setAll] = useState(false);
+  const newestFirst = [...weights].reverse();
+  const shown = all ? newestFirst : newestFirst.slice(0, SHOWN);
   return (
-    <details className="overflow-hidden rounded-panel border border-line bg-surface">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">
-        All weigh-ins <span className="font-normal text-muted">({weights.length})</span>
-      </summary>
+    <section aria-label="Weigh-ins" className="flex flex-col gap-2">
+      <div className="mt-1.5 flex items-baseline justify-between gap-3">
+        <h2 className="text-[17px] font-extrabold tracking-tight">Weigh-ins</h2>
+        <span className="text-[13px] text-muted">{weights.length} in total</span>
+      </div>
       {weights.length === 0 ? (
-        <p className="border-t border-line/60 px-4 py-3 text-sm text-muted">
+        <p className="rounded-[20px] bg-surface px-5 py-6 text-center text-sm text-muted">
           {readOnly ? "No weigh-ins yet." : "No weigh-ins yet. Log one to start your weight chart."}
         </p>
       ) : (
-        <ul>
-          {[...weights].reverse().map((entry) => (
-            <WeightRow key={entry.day} entry={entry} readOnly={readOnly} />
+        <ul className="rounded-[22px] bg-surface px-3.5">
+          {shown.map((entry, i) => (
+            <WeightRow
+              key={entry.day}
+              entry={entry}
+              previous={newestFirst[i + 1] ?? null}
+              readOnly={readOnly}
+            />
           ))}
         </ul>
       )}
-    </details>
+      {!all && weights.length > SHOWN && (
+        <Button variant="outline" className="w-full" onClick={() => setAll(true)}>
+          Show all {weights.length}
+        </Button>
+      )}
+    </section>
   );
 }

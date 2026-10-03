@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redesign — Decisions &amp; build plan — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16; --surface: #24221C; --surface-raised: #2A281F; --ink: #EDEAE0; --ink-soft: #A5A195;
+    --accent: #E08A5C; --accent-soft: #3A2A20; --green: #7FBF92; --green-soft: #22312A; --line: #38352C;
+    --code-bg: #2d2d2d; --radius: 10px;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.65; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  .page.cont { padding-top: 0; padding-bottom: 0; }
+  .wide { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  ul.tight { margin: 8px 0; padding-left: 20px; } ul.tight li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px; }
+  th { text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px; }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill { font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 16px 46px; }
+  ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--bg); font-family: var(--mono); font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  ol.steps > li:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 34px; bottom: 2px; width: 2px; background: var(--line); }
+  ol.steps strong { display: block; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+    .phase { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 22px; margin: 16px 0; }
+  .phase h3 { margin: 0 0 4px; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .phase h3 span { font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); font-weight: 600; }
+  .phase p { margin: 4px 0 10px; color: var(--ink-soft); font-size: 15px; }
+  .phase ol { margin: 0; padding-left: 22px; font-size: 15px; }
+  .phase li { margin: 5px 0; }
+  .phase li code { font-size: 12.5px; }
+  pre { background: var(--code-bg); border-radius: var(--radius); padding: 16px 18px; font-size: 13px; line-height: 1.55; overflow-x: auto; margin: 14px 0; }
+  pre code { font-family: var(--mono); }
+  .swatch { display: inline-block; width: 18px; height: 18px; border-radius: 5px; border: 1px solid var(--line); vertical-align: -4px; margin-right: 6px; }
+  .pill.new { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Redesign · decisions &amp; build plan</div>
+  <h1>Redesign: what we decided and how we build it</h1>
+  <p class="subtitle">Every decision from the eight mocks in one place, then the build split into phases and steps, done one step at a time like the multi-user rework. Nothing is built until you approve this.</p>
+  <div class="meta">
+    <span><strong>Mocks:</strong> 8, all decided</span>
+    <span><strong>Phases:</strong> 4</span>
+    <span><strong>SQL:</strong> 2 new columns</span>
+    <span><strong>New dependency:</strong> lucide-react</span>
+  </div>
+</header>
+
+<h2><span class="num">01</span>The look</h2>
+<table>
+  <tr><th>Part</th><th>Decision</th></tr>
+  <tr><td>Style</td><td>C · Plate, dark only. <span class="swatch" style="background:#1A1720"></span>background #1A1720 · <span class="swatch" style="background:#24202C"></span>cards #24202C · <span class="swatch" style="background:#F4A77A"></span>peach #F4A77A · <span class="swatch" style="background:#86D3B0"></span>mint #86D3B0 · <span class="swatch" style="background:#F08A8A"></span>red #F08A8A · goal tints kept (lose blue #8DB4E8)</td></tr>
+  <tr><td>Type</td><td>Inter only, 700–800 for headings and numbers, tabular figures for numbers. Fraunces and JetBrains Mono are removed.</td></tr>
+  <tr><td>Shapes</td><td>Filled cards without borders, large rounded corners (20–26px cards, 14px buttons), sentence-case labels.</td></tr>
+  <tr><td>Buttons</td><td>Primary (filled peach, one per screen) · secondary (tinted) · outline · destructive (red tint) · ⋯ opens a sheet when a row has 3+ actions. Every tap target ≥ 44px. Text links only inside sentences.</td></tr>
+  <tr><td>Navigation</td><td>Phone: title row + underlined tabs at the top (Home · Log · Stats · Products), profile button top right opens Settings. No bottom bar. Desktop: left sidebar with the pages, AI counter and Settings.</td></tr>
+  <tr><td>Icons</td><td>lucide-react (no icon library is installed today).</td></tr>
+  <tr><td>App icon</td><td>I2 · plum with a peach gauge; theme colour plum.</td></tr>
+  <tr><td>Toasts</td><td>One style: circular mark, plain words, Undo/Retry when there's an action.</td></tr>
+</table>
+
+<h2><span class="num">02</span>Page by page</h2>
+<table>
+  <tr><th>Page</th><th>Decided</th></tr>
+  <tr><td>Homepage</td><td>Calories-left and protein-to-go cards → Snap your meal (with AI count) + Describe · Barcode · Manual → weigh-in card (only when due) → Eaten today with ⋯. Describe opens in place. <b>Live seconds counter</b> while AI works ("Taking longer than usual" after 30 s). Estimate card with tappable weights and an "After this meal" line; corrections and Start over in their own card. Logged → toast with Undo. Manual and barcode open as sheets. Out-of-AI and water-on states. Desktop: sticky add column + wide right column.</td></tr>
+  <tr><td>Weigh-in reminder</td><td>Save the weight right in the card (shows change since last time). ✕ = snooze sheet: tomorrow / in 3 days / change how often. Interval in Settings: daily · 3 · 7 (default) · 14 days · off, saved on the account.</td></tr>
+  <tr><td>Setup</td><td>Three steps, Back as a button top left, main button pinned to the bottom. Protein P1 segmented bar: Light 1.2 · Moderate 1.6 (recommended) · High 2.0 g/kg, from the <b>goal weight when losing</b>, current weight otherwise. Custom plan card right under the maintenance number. "How we got this" is a button. Clearer "can't work" message.</td></tr>
+  <tr><td>Stats</td><td>Sections Nutrition · Weight · Water (water only when tracking). Days on track + change vs the period before. Calendar with large bold dates; one full-size month per calendar on 90d / All. Two average tiles, then the charts. Insight card from five fixed checks (no AI). Weight journey with "at your pace so far" estimate, Log weight sheet, smooth trend curve, weigh-ins with ⋯.</td></tr>
+  <tr><td>Log</td><td>Day cards with status chip and two slim bars, meals underneath, tap to expand (photo, foods, macros, Edit / Log again / Delete), edit in a sheet with the new total, ⋯ sheet. Manual entry removed (it's on Home). Desktop: month calendars as a sticky rail.</td></tr>
+  <tr><td>Products</td><td>Rows with default amount, search (once there are ~6+), edit sheet without a g/ml switch (unit follows the product), ⋯ with <b>Log it now</b>. Desktop grid.</td></tr>
+  <tr><td>Settings</td><td>Plan card on top, grouped rows (You · Tracking · Account · Admin). Body details and Change plan as screens; reminder, password, plan history as sheets; water toggle in the list with an autosaving goal. Desktop: list + detail.</td></tr>
+  <tr><td>Users (admin)</td><td>Totals, one card per account, cap button → sheet with Pause · 10 · 20 · 50 · 100 + custom. Detail: Read-only chip, three key numbers, the Stats-style switch, read-only versions of the new pages. No new actions.</td></tr>
+  <tr><td>Login &amp; states</td><td>Branded login with errors above the fields, desktop split screen. New error, 404, AI-failed card, skeleton loading screens, empty states with buttons.</td></tr>
+</table>
+
+<h2><span class="num">03</span>Database changes</h2>
+<p class="lede">Two new columns: one may stay empty, the other has a default, and today's code never reads either, so the live site on <code>main</code> keeps working while the redesign is on its branch. I'll give you each one in the chat at the step that needs it.</p>
+<pre><code>-- Phase 3: which protein level a plan used (null = custom plan or older plans)
+alter table public.plans
+  add column protein_per_kg numeric(2,1)
+  check (protein_per_kg in (1.2, 1.6, 2.0));
+
+-- Phase 6: how often the weigh-in card appears (0 = off)
+alter table public.profiles
+  add column weigh_in_reminder_days smallint not null default 7
+  check (weigh_in_reminder_days in (0, 1, 3, 7, 14));</code></pre>
+<p>The snooze from the homepage card stays in the browser (as today's "hide until tomorrow" does); only the interval is saved on the account.</p>
+
+<h2><span class="num">04</span>Build plan</h2>
+<p class="lede">Four phases, built one step at a time: I explain the why, build exactly one step, then stop for you to check it. Each step is checked at 375px and 1280px. All work goes on <code>feat/redesign</code>, with one PR into <code>main</code> at the end.</p>
+<div class="phase">
+  <h3>Phase 1 · Foundations, shell &amp; states </h3>
+  <p>The pieces every page uses, the new navigation, and the screens around the pages.</p>
+  <ol><li>Design tokens in <code>globals.css</code> (style C colours, radii); Inter only.</li><li>Install <code>lucide-react</code>; replace the hand-made icons.</li><li><code>Button</code> component with the five variants.</li><li><code>Sheet</code> component: bottom sheet on phones, dialog on desktop.</li><li>Form pieces (field, segmented, choice card) and the toast style.</li><li>Top bar: title row, underlined tabs, profile button; AI strip removed.</li><li>Desktop sidebar with the pages, AI counter and Settings.</li><li>Page layout on every page: no big header, phone column, desktop grid.</li><li>App icon I2, favicon, manifest theme colour.</li><li>Login, error page, 404, skeleton loading screens.</li></ol>
+</div>
+<div class="phase">
+  <h3>Phase 2 · Homepage, Log &amp; Products </h3>
+  <p>The pages used every day. They share the meal rows and sheets, so they go together.</p>
+  <ol><li>Today cards (calories left, protein to go).</li><li>Add food block with the AI count; out-of-AI state.</li><li>Describe card in place of Add food.</li><li>Analyzing card with the live seconds counter.</li><li>Estimate card ("After this meal", day + Log) and the corrections card.</li><li>Logged state: toast with Undo, new meal highlighted.</li><li>Manual add sheet (moves from the Log) and the barcode product sheet.</li><li>Eaten today list and the ⋯ meal sheet.</li><li>Weigh-in card: save in place, snooze sheet.</li><li>Water row, empty day, desktop homepage.</li><li>Log: day cards, meals that expand, edit sheet, desktop calendar rail, empty state.</li><li>Products: rows, search, edit sheet without the g/ml switch, Log it now, desktop grid, empty state.</li></ol>
+</div>
+<div class="phase">
+  <h3>Phase 3 · Setup, Stats &amp; Settings <span>SQL: 2 columns</span></h3>
+  <p>Everything about your plan and progress.</p>
+  <ol><li><code>plan.ts</code>: protein levels, goal-weight basis when losing, with tests.</li><li>SQL <code>plans.protein_per_kg</code>; save and validate the level.</li><li>Plan step UI: maintenance + How we got this, Custom plan card, P1 bar, paces.</li><li>Setup steps 1–2 and desktop step 3.</li><li>Stats: section switch, range, days on track with the change vs before (tests).</li><li>Calendar component: month grids, large dates, tap to open the day.</li><li>Average tiles, restyled charts, insight checks (tests) and card.</li><li>Weight section: journey + pace estimate (tests), Log weight sheet, smooth trend (tests), weigh-ins.</li><li>Water section, Stats empty state, desktop Stats.</li><li>Settings list with the plan card and grouped rows.</li><li>Body details and Change plan screens (real URLs).</li><li>SQL <code>profiles.weigh_in_reminder_days</code>; reminder sheet, wired to the homepage card.</li><li>Water toggle with autosave, password and plan-history sheets, desktop Settings.</li></ol>
+</div>
+<div class="phase">
+  <h3>Phase 4 · Admin &amp; finish </h3>
+  <p>The admin pages, then cleaning up and handing over.</p>
+  <ol><li>Users: totals, account cards / desktop table, cap sheet.</li><li>Account detail: Read-only chip, key numbers, switch, read-only reuse of the new pages.</li><li>Dead-code scan: old components, unused CSS and fonts, stale comments.</li><li>README and the full manual run-through on a phone and a laptop.</li><li>PR from <code>feat/redesign</code> into <code>main</code> when you ask.</li></ol>
+</div>
+
+<div class="callout"><b>Choices I made without asking</b> (say if you disagree): Settings sub-pages are real URLs, so back works; the snooze stays per device; sheets become small dialogs on desktop; old components are deleted only in Phase 9, after nothing uses them.</div>
+
+<div class="callout good"><b>Approved</b> on 3 Oct 2026: four phases, SQL given in chat at the step that needs it, branch <code>feat/redesign</code> with one PR into <code>main</code> at the end.</div>
+
+<footer class="doc">
+  Calorie Calculator · redesign decisions &amp; build plan · mocks in .plans/redesign/1–8
+</footer>
+</div>
+</body>
+</html>

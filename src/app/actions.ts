@@ -14,6 +14,7 @@ import {
   getMealPhotoById,
   insertMeals,
   latestLoggedAtBetween,
+  listMealsBetween,
   sumTotalsBetween,
   updateMealById,
 } from "@/lib/meals";
@@ -36,7 +37,8 @@ import { activeWaterGoal, getProfile } from "@/lib/profiles";
 // Server Actions are reachable via direct POST, not just through the UI, so
 // each one re-checks the session with getUserId() — same rule as the proxy.
 import { getUserId, getViewer } from "@/lib/supabase-session";
-import { latestWeighInDay } from "@/lib/weights";
+import { DEFAULT_REMINDER_DAYS, type WeighInReminderDays } from "@/lib/reminder";
+import { latestWeighIn, type WeightEntry } from "@/lib/weights";
 
 interface ActionResult {
   error?: string;
@@ -267,13 +269,14 @@ export interface TodayProgress {
   totals: MealTotals;
   /** null until the user has a plan */
   targets: DayTargets | null;
+  /** The day's meals, oldest first (no large photos) */
+  meals: LoggedMeal[];
 }
 
 /**
- * Totals for [startIso, endIso) plus that day's targets, for the Analyze page's
- * "today so far" strip. The client supplies the day and bounds because "today"
- * depends on the viewer's timezone, which the server doesn't know (Vercel runs
- * in UTC).
+ * One day on the homepage: its totals, its targets and its meals. The client
+ * supplies the day and its bounds because "today" depends on the viewer's
+ * timezone, which the server doesn't know (Vercel runs in UTC).
  */
 export async function todayProgressAction(
   day: string,
@@ -290,18 +293,21 @@ export async function todayProgressAction(
     return { error: "Invalid range" };
   }
   try {
-    const [totals, plans, profile] = await Promise.all([
+    const [totals, meals, plans, profile] = await Promise.all([
       sumTotalsBetween(userId, startIso, endIso),
+      listMealsBetween(userId, startIso, endIso),
       listPlans(userId),
       getProfile(userId),
     ]);
-    return { progress: { totals, targets: targetsForDay(plans, day, activeWaterGoal(profile)) } };
+    return {
+      progress: { totals, meals, targets: targetsForDay(plans, day, activeWaterGoal(profile)) },
+    };
   } catch (err) {
     return { error: message(err, "Couldn't load today's progress") };
   }
 }
 
-/** Today's AI analyses used and the cap, for the counter under the nav. */
+/** Today's AI analyses used and the cap, for the counter on the photo button and in the sidebar. */
 export async function aiAllowanceAction(): Promise<ActionResult & { allowance?: AiAllowance }> {
   const viewer = await getViewer();
   if (!viewer) return { error: "Authentication required" };
@@ -312,12 +318,15 @@ export async function aiAllowanceAction(): Promise<ActionResult & { allowance?: 
   }
 }
 
-/** The day of the latest weigh-in, for the Analyze page's weigh-in nudge. */
-export async function latestWeighInAction(): Promise<ActionResult & { day?: string | null }> {
+/** The latest weigh-in and how often to remind, for the homepage's weigh-in card. */
+export async function latestWeighInAction(): Promise<
+  ActionResult & { latest?: WeightEntry | null; reminderDays?: WeighInReminderDays }
+> {
   const userId = await getUserId();
   if (!userId) return { error: "Authentication required" };
   try {
-    return { day: await latestWeighInDay(userId) };
+    const [latest, profile] = await Promise.all([latestWeighIn(userId), getProfile(userId)]);
+    return { latest, reminderDays: profile?.weighInReminderDays ?? DEFAULT_REMINDER_DAYS };
   } catch (err) {
     return { error: message(err, "Couldn't load the latest weigh-in") };
   }

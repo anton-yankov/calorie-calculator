@@ -19,6 +19,8 @@ export interface StoredPlan {
   goalWeightKg: number | null;
   calorieTarget: number;
   proteinTarget: number;
+  /** The protein level chosen (g per kg); null for a custom plan or a plan from before levels */
+  proteinPerKg: number | null;
   /** Snapshots of the numbers the plan was built from, so old plans still make sense */
   maintenanceKcal: number;
   weightKg: number;
@@ -31,12 +33,13 @@ interface PlanRow {
   goal_weight_kg: number | null;
   calorie_target: number;
   protein_target: number;
+  protein_per_kg: number | null;
   maintenance_kcal: number;
   weight_kg: number;
 }
 
 const PLAN_COLUMNS =
-  "effective_from, goal, kg_per_week, goal_weight_kg, calorie_target, protein_target, maintenance_kcal, weight_kg";
+  "effective_from, goal, kg_per_week, goal_weight_kg, calorie_target, protein_target, protein_per_kg, maintenance_kcal, weight_kg";
 
 /**
  * Whether the user has finished onboarding. Asks for one row instead of the
@@ -70,6 +73,8 @@ export async function listPlans(userId: string, db?: Db): Promise<StoredPlan[]> 
     goalWeightKg: row.goal_weight_kg,
     calorieTarget: row.calorie_target,
     proteinTarget: row.protein_target,
+    // numeric can come back as a string from PostgREST
+    proteinPerKg: row.protein_per_kg === null ? null : Number(row.protein_per_kg),
     maintenanceKcal: row.maintenance_kcal,
     weightKg: row.weight_kg,
   }));
@@ -87,6 +92,7 @@ export async function savePlan(userId: string, plan: StoredPlan): Promise<void> 
     goal_weight_kg: plan.goalWeightKg,
     calorie_target: plan.calorieTarget,
     protein_target: plan.proteinTarget,
+    protein_per_kg: plan.proteinPerKg,
     maintenance_kcal: plan.maintenanceKcal,
     weight_kg: plan.weightKg,
   };

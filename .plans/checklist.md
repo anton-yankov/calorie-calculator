@@ -78,7 +78,69 @@ Decisions: `test@gmail.com` is a test account (use it for the 5.4 run-through, d
 - [x] 5.4b Independent review (two Fable 5.1 agents: security + AI cap; numbers/dates + handover): no critical/high issues. Fixed: unreadable-label refunds, OpenAI timeout/`maxDuration`, paused-cap wording, text-size limits, Log/admin dates rendered only in the browser, Settings plan preview from saved details, whole-unit goal judging ("Over by 0"), "Yesterday" on DST days, onboarding kg noise, "1,200" in quick entry. Deferred: A3 below.
 - [ ] 5.5 PR opened: https://github.com/anton-yankov/calorie-calculator/pull/13. When you ask: I open one PR from `feat/multi-user-rework` into `main`; you review and merge (Vercel deploys); check the live site; then you create his account and send him his credentials.
 
+## Redesign (branch `feat/redesign`, one PR into `main` at the end)
+
+Decisions and mocks: `.plans/redesign/0-decisions-and-build-plan.html` ([postplan](https://9va32v4ynyap.postplan.dev)), mocks 1–8 in the same folder. SQL is given in chat at the step that needs it.
+
+### Phase R1 — Foundations, shell & states
+
+- [x] R1.1 Design tokens: style C colours on the existing token names, `--radius-panel` 14px, Inter only (serif/mono utilities point at Inter until the R4.3 scan).
+- [x] R1.2 `lucide-react` installed; gear, ∞, date-picker chevron, spinner, product barcode placeholder and the ✕ close buttons now use its icons.
+- [x] R1.3 `Button` / `ButtonLink` (`src/components/Button.tsx`): primary, secondary, outline, destructive; sizes md 48px, sm 44px, icon 44px square; `pending` shows the spinner. New `--line-strong` token for outline borders.
+- [-] R1.4 Moved to R2.7, where the first sheet is needed, so Phase R1 leaves no unused code.
+- [x] R1.5 `fields.tsx` restyled (48px fields, equal-width segmented buttons, choice cards with a visible radio); toasts: filled circular marks (`ToastMark`, "!" for errors), rounded raised background, tinted Undo button. Also fixed: the global `font: inherit` on buttons/inputs moved into `@layer base`, so weight and size utilities on buttons work again.
+- [x] R1.6 `TopNav`: page title row (`pageTitle` in `src/components/nav.ts`), underlined Home · Log · Stats · Products tabs on phones, profile button to Settings (peach in Settings/admin); onboarding keeps Log out; no nav on /login. AI strip and desktop pill removed (phone count returns on the homepage in R2.2).
+- [x] R1.7 `Sidebar` (lg only, sticky full height): pages with lucide icons, `AiCounterCard` (left of cap with amber/red bar, ∞ for admin, Paused), Settings. Root layout is now sidebar + page column.
+- [x] R1.8 Big serif headers removed from every page and loading screen; padding px-4 (lg px-8); desktop sticky columns now `lg:top-6`; admin account page gets a back button + email line. "Analyze page" wording → homepage.
+- [x] R1.9 App icon I2 (`src/app/icon.svg`), PNGs regenerated with `scripts/generate-icons.mjs`, manifest colours #1a1720.
+- [x] R1.10 Login redesigned (phone: icon, name, tagline, form with error box above the fields; desktop: split with a decorative preview), error page and 404 with icon tiles and real buttons, skeleton cards restyled (shapes follow each page as it's redesigned).
+
+### Phase R2 — Homepage, Log & Products
+
+- [x] R2.1 Today cards (`home/TodayCards.tsx`): calories and protein, headline from the new `dayChip` ("910 left", "Over by 140", "On track"; tests), 120% track with tick, maintain range shaded. Replaces the Today strip and `GoalBars`.
+- [x] R2.2 `AddFood`: Snap your meal with the AI count, Describe · Barcode · Manual; used-up and paused states grey out Photo/Describe only.
+- [x] R2.3 `ComposeCard`: description and/or photo (Change, Add photo), Enter analyzes, ✕ starts over.
+- [x] R2.4 `AnalyzingCard`: live seconds from `loadingSince` (kept in the provider, so it survives navigation), "Taking longer than usual" after 30 s, sliding bar. Failed analyses show in `FailedCard` with Try again.
+- [x] R2.5 `EstimateCard`: weights as fields, confidence chips, ▲/▼ vs the previous estimate, "Done in N s", totals, "After this meal", day picker + Log; earlier estimates fold into one line; `CorrectionCard` with Re-analyze / Start over.
+- [x] R2.6 Logging resets the page (`handleLog` returns the new meal), toast with Undo, the new meal tinted in the list. `loggedAtLength` and the old View log / New meal buttons are gone.
+- [x] R2.7 `Sheet` (native `<dialog>`: bottom sheet on phones, dialog on desktop, Escape/backdrop close; the date picker now opens inside it). `ManualSheet` (quick entry moved from Log), `BarcodeFlow` (scanner → `ProductSheet` or the new-product form with label scan; joins the meal being made, otherwise logs on its own).
+- [x] R2.8 `EatenToday` (from `todayProgressAction`, which now also returns the day's meals) with shared `MealRow`, `MealMenu` (Edit / Log again / Delete, Undo toasts) and `EditMealSheet`.
+- [x] R2.9 `WeighInCard`: save in place, "Saved · −0.4 kg since…", ✕ = snooze sheet (tomorrow / in 3 days, this browser). "Change how often" comes with R3.12.
+- [x] R2.10 `WaterRow` (only with water tracking), empty-day card, desktop: sticky add column + wide right column (same elements, reordered with `contents`/`order`).
+- [x] R2.11 Log rebuilt: day cards with status chip + slim bars, meals in eating order that open in place (photo, foods, macros, Edit / Log again / Delete), shared edit sheet, desktop `MonthCalendar` rail that jumps to a day, `/log#day-…` anchors for Stats, empty state with a button. Quick entry removed from the Log.
+- [x] R2.12 Products rebuilt: rows with the default amount, search (> 5 products), ⋯ sheet with Log it now (`ProductSheet`) / Edit / Delete, edit sheet without the g/ml switch (unit follows the product) and with the macro split, 2–3 column grid on desktop, empty state linking to `/?scan=1`.
+
+### Phase R3 — Setup, Stats & Settings
+
+- [x] R3.1 `PROTEIN_LEVELS` (Light 1.2 / Moderate 1.6 default / High 2.0 g/kg) and `proteinTarget` in `plan.ts`: goal weight when losing, current weight otherwise; `suggestPlans` takes the level. Tests.
+- [x] R3.2 `plans.protein_per_kg` (in `schema.sql`; **SQL to run**, see below): `validProteinPerKg`, stored by setup and Change plan (null for custom). Tests.
+- [x] R3.3 `PlanPicker` rebuilt: maintenance with How we got this, Custom plan card under it (clearer can't-work message), P1 protein bar, pace cards, `PinnedAction` button at the bottom; maintain preselects its one plan.
+- [x] R3.4 Setup rebuilt: Back / Step N of 3 / Log out row, progress bar, choice cards (goal icons), pinned Continue; desktop step 3 in two columns. The top bar is hidden during setup.
+- [x] R3.5 Stats: Nutrition · Weight · Water switch, range pills, days on track with ▲/▼ vs the period before (`onTrackBefore`, tests).
+- [x] R3.6 `WeeksCalendar` (7d/30d) and `MonthCalendar` (90d/All, one full month each with its score), large dates, `dayOutcome` (tests), tap opens `/log#day-…`.
+- [x] R3.7 Two average tiles with plain captions, restyled charts, macro split, insight card from `pickInsight` (five fixed checks, no AI; tests).
+- [x] R3.8 Weight: journey card (plan start → now → goal, "at your pace so far" from `trendPace`, tests), Log weight sheet, tiles, chart with a smooth monotone trend (`curve.ts`, tests; goal line only when near the data), weigh-ins with ⋯ edit/delete and Show all.
+- [x] R3.9 Water section (tiles, chart, by drink), empty state with Add a meal / Go to Weight, desktop columns. `StatTile`/`RangePicker` removed.
+- [x] R3.10 Settings list (`SettingsMenu`): plan card, You / Tracking / Account / Admin rows with their current values; `SettingsShell` (list + section on desktop).
+- [x] R3.11 `/settings/details` and `/settings/plan` as their own screens (real URLs, back button on phones), shared `loadSettings`; `SettingsView` removed.
+- [x] R3.12 `profiles.weigh_in_reminder_days` (in `schema.sql`; **SQL to run**): reminder sheet (daily / 3 / 7 / 14 days / off, `saveReminderAction`, test), the homepage card follows it and its snooze sheet links to it.
+- [x] R3.13 Water switch with an autosaving goal, password and plan-history sheets, Log out row, desktop list + detail.
+
+- [ ] **Phase R3 SQL** (run before using this branch: every page reads both columns):
+  `alter table public.plans add column protein_per_kg numeric(2,1) check (protein_per_kg in (1.2, 1.6, 2.0));`
+  `alter table public.profiles add column weigh_in_reminder_days smallint not null default 7 check (weigh_in_reminder_days in (0, 1, 3, 7, 14));`
+
+### Phase R4 — Admin & finish
+
+- [x] R4.1 Users: totals (accounts, active today, AI today), account cards with activity dot, plan and AI bar (amber at ≤3 left), desktop table, `CapButton` sheet (Pause · 10 · 20 · 50 · 100 + 0–1000).
+- [x] R4.2 Account page: Read-only chip, plan / last login / AI today, Overview · Log · Stats · Products switch, restyled Overview with Change AI cap. ("Last login" stands in for the mock's "Last meal": no new data.)
+- [x] R4.3 Dead-code scan clean: last serif/mono classes and their theme entries removed, every file imported, no export used only in its own file, every colour token used, stale comments (quick entry, counter under the nav) updated.
+- [x] R4.4 README describes the redesigned app. **Manual run-through: yours** (see Pending manual checks).
+- [ ] R4.5 PR `feat/redesign` → `main` when asked.
+
 ## Pending manual checks
+
+- [ ] Redesign run-through on a phone and a laptop before merging the redesign PR: setup (protein levels, custom plan), homepage (photo, describe, barcode, manual, correction, log + undo, weigh-in card and snooze), Log (open, edit, log again, delete, calendar jump), Products (search, Log it now, edit), Stats (ranges, calendar tap, log weight), Settings (details, change plan, reminder, water, password), Users and an account page (cap sheet).
 
 Must be done before he gets his account (5.4).
 

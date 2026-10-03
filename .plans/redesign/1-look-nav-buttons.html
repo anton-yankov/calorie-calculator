@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redesign 1 — Look, navigation &amp; buttons — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --surface-raised: #2A281F;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --danger: #E58B82;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-size: 16px; line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  .wide { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  ul.tight { margin: 8px 0; padding-left: 20px; }
+  ul.tight li { margin: 3px 0; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill { font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------- Shared mock scaffolding ---------- */
+  .phones { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; margin: 28px 0 8px; }
+  .phone-col { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 375px; max-width: 100%; }
+  .phone-label { font-family: var(--serif); font-size: 21px; font-weight: 650; }
+  .phone-label span { font-family: var(--mono); font-size: 13px; color: var(--accent); margin-right: 8px; }
+  .phone {
+    position: relative; width: 375px; height: 812px; max-width: 100%;
+    border-radius: 46px; overflow: hidden; border: 10px solid #0c0b09;
+    box-shadow: 0 0 0 1px #3a372e, 0 30px 60px -20px rgba(0,0,0,.7);
+  }
+  .phone .screen { position: absolute; inset: 0; overflow: hidden; }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 14px; font-weight: 600; }
+  .status .dots { display: flex; gap: 5px; align-items: center; }
+  .status .dots i { display: block; width: 16px; height: 9px; border-radius: 2px; background: currentColor; opacity: .9; }
+  .status .dots i:first-child { width: 14px; opacity: .6; }
+  .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 110px; height: 30px; border-radius: 20px; background: #000; z-index: 5; }
+  .home-ind { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; border-radius: 4px; background: currentColor; opacity: .5; z-index: 6; }
+  .fold { position: absolute; left: 0; right: 0; top: 728px; border-top: 1px dashed rgba(255,255,255,.0); }
+  .notes { width: 100%; font-size: 14px; color: var(--ink-soft); }
+  .notes b { color: var(--ink); }
+  .notes ul { margin: 6px 0 0; padding-left: 18px; }
+  .notes li { margin: 4px 0; }
+  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .scroll-x { overflow-x: auto; padding-bottom: 12px; }
+
+  /* =========================================================
+     Direction A — Warm, refined (today's palette, cleaned up)
+     ========================================================= */
+  .dA {
+    --b: #1B1A16; --s1: #25221C; --s2: #2F2B23; --tx: #EDEAE0; --mu: #A5A195;
+    --ac: #E08A5C; --acs: #3A2A20; --gr: #7FBF92; --lose: #7FA8BF; --ln: #36332A;
+    background: radial-gradient(circle at 50% -10%, rgba(224,138,92,.10), transparent 22rem), var(--b);
+    color: var(--tx); font-family: var(--sans);
+  }
+  .dA .body { padding: 6px 18px 120px; display: flex; flex-direction: column; gap: 14px; }
+  .dA .top { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; }
+  .dA .date { font-size: 13px; color: var(--mu); }
+  .dA .title { font-family: var(--serif); font-size: 30px; font-weight: 650; line-height: 1.1; letter-spacing: -.01em; }
+  .dA .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .dA .today { background: var(--s1); border-radius: 22px; padding: 18px 18px 16px; }
+  .dA .left-row { display: flex; align-items: baseline; gap: 8px; }
+  .dA .big { font-family: var(--serif); font-size: 52px; font-weight: 650; line-height: 1; letter-spacing: -.02em; }
+  .dA .big-unit { font-size: 15px; color: var(--mu); }
+  .dA .sub { font-size: 13px; color: var(--mu); margin-top: 4px; }
+  .dA .bars { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+  .dA .bar-l { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--mu); }
+  .dA .bar-l b { color: var(--tx); font-weight: 650; font-variant-numeric: tabular-nums; }
+  .dA .track { height: 8px; border-radius: 8px; background: var(--s2); margin-top: 6px; position: relative; overflow: hidden; }
+  .dA .track i { position: absolute; inset: 0 auto 0 0; border-radius: 8px; }
+  .dA .track u { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(237,234,224,.55); }
+  .dA .bar-msg { font-size: 12px; margin-top: 5px; color: var(--mu); }
+  .dA .sec { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; }
+  .dA .sec h4 { margin: 0; font-size: 17px; font-weight: 650; }
+  .dA .sec span { font-size: 12.5px; color: var(--mu); }
+  .dA .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dA .tile { border-radius: 18px; padding: 14px; background: var(--s1); display: flex; flex-direction: column; gap: 10px; min-height: 104px; }
+  .dA .tile .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--ac); }
+  .dA .tile b { font-size: 15.5px; font-weight: 650; display: block; line-height: 1.2; }
+  .dA .tile small { font-size: 12px; color: var(--mu); }
+  .dA .tile.primary { background: var(--ac); color: #1B1A16; }
+  .dA .tile.primary .ic { background: rgba(27,26,22,.14); color: #1B1A16; }
+  .dA .tile.primary small { color: rgba(27,26,22,.7); }
+  .dA .weigh { background: var(--s1); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .dA .weigh-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+  .dA .weigh-h b { font-weight: 650; }
+  .dA .x { width: 32px; height: 32px; border-radius: 50%; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--mu); font-size: 15px; }
+  .dA .weigh-row { display: flex; gap: 8px; }
+  .dA .field { flex: 1; height: 46px; border-radius: 14px; background: var(--b); border: 1px solid var(--ln); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: var(--mu); font-size: 15px; }
+  .dA .btn { height: 46px; border-radius: 14px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 650; font-size: 15px; }
+  .dA .btn-p { background: var(--ac); color: #1B1A16; }
+  .dA .btn-t { background: var(--acs); color: var(--ac); }
+  .dA .btn-o { border: 1.5px solid var(--ln); color: var(--tx); }
+  .dA .btn-d { background: #3B2421; color: #E58B82; }
+  .dA .meal { display: flex; gap: 12px; align-items: center; background: var(--s1); border-radius: 16px; padding: 10px; }
+  .dA .thumb { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; }
+  .dA .meal-t { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.25; }
+  .dA .meal-t small { display: block; font-weight: 400; font-size: 12.5px; color: var(--mu); }
+  .dA .kc { font-variant-numeric: tabular-nums; font-weight: 650; font-size: 14.5px; }
+  .dA .nav { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 10px 26px; background: rgba(27,26,22,.92); backdrop-filter: blur(16px); border-top: 1px solid var(--ln); display: grid; grid-template-columns: repeat(4, 1fr); }
+  .dA .nav a { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--mu); text-decoration: none; padding: 4px 0; }
+  .dA .nav a.on { color: var(--ac); }
+  .dA .nav a.on .pip { background: var(--acs); }
+  .dA .nav .pip { width: 54px; height: 30px; border-radius: 15px; display: flex; align-items: center; justify-content: center; }
+
+  /* =========================================================
+     Direction B — Instrument (ring dial + composer)
+     ========================================================= */
+  .dB {
+    --b: #141513; --s1: #1D1F1B; --s2: #272A24; --tx: #ECEDE6; --mu: #9A9D92;
+    --ac: #E9B44C; --acs: #33291A; --gr: #8CCB8A; --lose: #84B3D1; --ln: #2E312A;
+    background: var(--b); color: var(--tx); font-family: var(--sans);
+  }
+  .dB .body { padding: 4px 18px 120px; display: flex; flex-direction: column; gap: 14px; }
+  .dB .top { display: flex; align-items: center; justify-content: space-between; }
+  .dB .date { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+  .dB .date small { display: block; font-size: 12.5px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .dB .avatar { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--ln); display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .dB .dial { display: flex; align-items: center; gap: 18px; padding: 6px 0 2px; }
+  .dB .dial svg { width: 168px; height: 168px; flex-shrink: 0; }
+  .dB .dial-num { font-size: 40px; font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .dB .legend { display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: var(--mu); }
+  .dB .legend b { display: block; color: var(--tx); font-size: 19px; font-weight: 750; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .dB .legend .dotl { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .dB .composer { background: var(--s1); border: 1px solid var(--ln); border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .dB .composer-in { font-size: 16px; color: var(--mu); min-height: 46px; }
+  .dB .composer-meta { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--mu); }
+  .dB .chips { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; }
+  .dB .chip { height: 48px; border-radius: 14px; background: var(--s2); display: flex; align-items: center; justify-content: center; gap: 7px; font-weight: 650; font-size: 14px; }
+  .dB .chip.p { background: var(--ac); color: #141513; }
+  .dB .ai-chip { border-radius: 999px; padding: 3px 10px; background: var(--s2); font-weight: 650; color: var(--tx); font-variant-numeric: tabular-nums; }
+  .dB .weigh { display: flex; align-items: center; gap: 12px; border-radius: 18px; padding: 12px 14px; background: var(--acs); }
+  .dB .weigh .t { flex: 1; font-size: 13.5px; line-height: 1.35; }
+  .dB .weigh .t b { display: block; font-size: 14.5px; }
+  .dB .btn { height: 42px; border-radius: 12px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+  .dB .btn-p { background: var(--ac); color: #141513; }
+  .dB .sec { font-size: 15px; font-weight: 750; margin-top: 4px; display: flex; justify-content: space-between; }
+  .dB .sec span { font-weight: 500; font-size: 13px; color: var(--mu); }
+  .dB .meals { background: var(--s1); border-radius: 18px; overflow: hidden; }
+  .dB .meal { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--ln); }
+  .dB .meal:first-child { border-top: 0; }
+  .dB .time { font-size: 12px; color: var(--mu); width: 38px; font-variant-numeric: tabular-nums; }
+  .dB .meal-t { flex: 1; font-size: 14.5px; font-weight: 600; line-height: 1.25; }
+  .dB .meal-t small { display: block; color: var(--mu); font-weight: 400; font-size: 12.5px; }
+  .dB .kc { font-weight: 750; font-variant-numeric: tabular-nums; }
+  .dB .nav { position: absolute; left: 12px; right: 12px; bottom: 22px; height: 64px; border-radius: 22px; background: rgba(29,31,27,.94); border: 1px solid var(--ln); backdrop-filter: blur(16px); display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; }
+  .dB .nav a { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; font-weight: 650; color: var(--mu); text-decoration: none; }
+  .dB .nav a.on { color: var(--ac); }
+
+  /* =========================================================
+     Direction C — Plate (big photo button, bold tiles)
+     ========================================================= */
+  .dC {
+    --b: #1A1720; --s1: #24202C; --s2: #2F2A39; --tx: #F1ECF4; --mu: #A8A0B2;
+    --ac: #F4A77A; --acs: #3B2A2A; --gr: #86D3B0; --lose: #8DB4E8; --ln: #352F40;
+    background: var(--b); color: var(--tx); font-family: var(--sans);
+  }
+  .dC .body { padding: 6px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
+  .dC .top { display: flex; justify-content: space-between; align-items: center; }
+  .dC .title { font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+  .dC .title small { display: block; font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .dC .avatar { width: 40px; height: 40px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .dC .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dC .stat { background: var(--s1); border-radius: 20px; padding: 14px; }
+  .dC .stat small { font-size: 12.5px; color: var(--mu); }
+  .dC .stat b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .dC .stat b span { font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .dC .stat .track { height: 6px; border-radius: 6px; background: var(--s2); margin-top: 10px; overflow: hidden; }
+  .dC .stat .track i { display: block; height: 100%; border-radius: 6px; }
+  .dC .stat .msg { font-size: 12px; margin-top: 6px; }
+  .dC .hero { background: var(--ac); color: #241a15; border-radius: 26px; padding: 18px; height: 150px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+  .dC .hero .ic { width: 52px; height: 52px; border-radius: 18px; background: rgba(36,26,21,.12); display: flex; align-items: center; justify-content: center; }
+  .dC .hero .ic svg { width: 28px; height: 28px; }
+  .dC .hero b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; display: block; }
+  .dC .hero small { font-size: 13px; opacity: .75; }
+  .dC .hero .ai { position: absolute; top: 18px; right: 18px; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: rgba(36,26,21,.12); }
+  .dC .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .dC .sq { background: var(--s1); border-radius: 20px; height: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; font-weight: 700; font-size: 13.5px; }
+  .dC .sq svg { color: var(--ac); }
+  .dC .weigh { background: var(--s1); border-radius: 20px; padding: 12px 12px 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .dC .weigh .t { flex: 1; font-size: 13.5px; line-height: 1.35; }
+  .dC .weigh .t b { display: block; font-size: 14.5px; }
+  .dC .btn { height: 44px; border-radius: 14px; padding: 0 16px; display: inline-flex; align-items: center; font-weight: 750; font-size: 14px; }
+  .dC .btn-t { background: var(--s2); color: var(--ac); }
+  .dC .sec { font-size: 17px; font-weight: 800; letter-spacing: -.02em; margin-top: 4px; }
+  .dC .meal { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+  .dC .thumb { width: 48px; height: 48px; border-radius: 16px; }
+  .dC .meal-t { flex: 1; font-size: 14.5px; font-weight: 650; line-height: 1.25; }
+  .dC .meal-t small { display: block; color: var(--mu); font-weight: 400; font-size: 12.5px; }
+  .dC .kc { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .dC .nav { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 14px 28px; background: rgba(26,23,32,.94); backdrop-filter: blur(16px); display: grid; grid-template-columns: repeat(4, 1fr); }
+  .dC .nav a { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--mu); text-decoration: none; }
+  .dC .nav a.on { color: var(--tx); }
+  .dC .nav a.on svg { color: var(--ac); }
+
+
+  /* ---------- Top navigation variants (use each direction's variables) ---------- */
+  .topnav { position: relative; z-index: 3; padding: 2px 18px 12px; display: flex; flex-direction: column; gap: 12px; background: var(--b); }
+  .topnav .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .tabs-pill { flex: 1; display: flex; gap: 2px; background: var(--s1); border-radius: 16px; padding: 4px; }
+  .tabs-pill a { flex: 1; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: 650; color: var(--mu); text-decoration: none; }
+  .tabs-pill a.on { background: var(--acs); color: var(--ac); }
+  .tabs-line { display: flex; margin: 0 -18px -12px; padding: 0 8px; border-bottom: 1px solid var(--ln); }
+  .tabs-line a { flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 650; color: var(--mu); text-decoration: none; position: relative; }
+  .tabs-line a.on { color: var(--tx); }
+  .tabs-line a.on::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 3px; border-radius: 3px; background: var(--ac); }
+  .tabs-icon { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .tabs-icon a { height: 58px; border-radius: 16px; background: var(--s1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12.5px; font-weight: 700; color: var(--mu); text-decoration: none; }
+  .tabs-icon a svg { width: 21px; height: 21px; }
+  .tabs-icon a.on { background: var(--ac); color: var(--b); }
+  .dA .topnav .avatar, .dB .topnav .avatar, .dC .topnav .avatar { flex-shrink: 0; width: 44px; height: 44px; }
+  .tabs-pill a { letter-spacing: -.01em; }
+  .navstack { grid-template-columns: 1fr !important; }
+  .navstack .navopt { display: grid; grid-template-columns: 1fr 375px; gap: 24px; align-items: start; }
+  .navstack .tstrip { width: 375px; }
+  @media (max-width: 860px) { .navstack .navopt { grid-template-columns: 1fr; } .navstack .tstrip { width: 100%; max-width: 375px; } }
+  .tstrip { position: relative; height: 290px; border-radius: 30px 30px 0 0; overflow: hidden; border: 8px solid #0c0b09; border-bottom: 0; }
+  .tstrip .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; background: linear-gradient(transparent, var(--b)); }
+  .tstrip .ghost { margin: 4px 18px; height: 70px; border-radius: 20px; background: var(--s1); }
+
+  /* ---------- Nav option strips ---------- */
+  .navopts { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 24px; margin: 22px 0; }
+  .navopt { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .navopt h4 { margin: 0 0 4px; font-size: 16px; }
+  .navopt p { font-size: 14px; color: var(--ink-soft); margin: 0 0 14px; }
+  .strip { position: relative; height: 88px; border-radius: 0 0 30px 30px; overflow: hidden; }
+  .strip .nav { position: absolute; }
+  .dA .nav.five { grid-template-columns: repeat(5, 1fr); align-items: end; }
+  .dA .plus { width: 54px; height: 54px; border-radius: 18px; background: var(--ac); color: #1B1A16; display: flex; align-items: center; justify-content: center; margin: -14px auto 0; box-shadow: 0 8px 20px -6px rgba(224,138,92,.55); }
+  .dA .plus svg { width: 26px; height: 26px; stroke-width: 2.4; }
+
+  /* ---------- Desktop frame (Direction A styling) ---------- */
+  .desk { width: 1180px; height: 760px; border-radius: 14px; overflow: hidden; border: 1px solid #3a372e; box-shadow: 0 30px 60px -24px rgba(0,0,0,.7); margin: 22px auto 0; display: flex; flex-direction: column; }
+  .desk .chrome { height: 34px; background: #11100d; display: flex; align-items: center; gap: 7px; padding: 0 14px; flex-shrink: 0; }
+  .desk .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #3a372e; }
+  .desk .chrome span { margin-left: 16px; font-size: 12px; color: #6f6b60; font-family: var(--mono); }
+  .desk .app { flex: 1; display: grid; grid-template-columns: 232px 1fr; min-height: 0; }
+  .dA .side { background: #191813; border-right: 1px solid var(--ln); padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .dA .brand { font-family: var(--serif); font-size: 21px; font-weight: 650; padding: 0 10px 18px; }
+  .dA .side a { display: flex; align-items: center; gap: 12px; padding: 0 12px; height: 44px; border-radius: 12px; font-size: 14.5px; font-weight: 600; color: var(--mu); text-decoration: none; }
+  .dA .side a.on { background: var(--acs); color: var(--ac); }
+  .dA .side .spacer { flex: 1; }
+  .dA .side .ai { background: var(--s1); border-radius: 14px; padding: 12px; font-size: 12.5px; color: var(--mu); margin-bottom: 6px; }
+  .dA .side .ai b { display: block; color: var(--tx); font-size: 18px; font-weight: 650; }
+  .dA .side .ai .track { height: 6px; margin-top: 8px; }
+  .dA .main { padding: 28px 36px; overflow: hidden; display: grid; grid-template-columns: 380px 1fr; gap: 28px; align-content: start; }
+  .dA .main .head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; }
+
+  /* ---------- Buttons section ---------- */
+  .board { background: #1B1A16; border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; margin: 18px 0; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn-spec { display: grid; grid-template-columns: 180px 1fr; gap: 14px 18px; align-items: center; font-size: 14px; color: var(--ink-soft); }
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+  .ba > div { background: #1B1A16; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .ba .tag { font-size: 12.5px; font-weight: 700; margin-bottom: 12px; color: var(--ink-soft); }
+  .ba .tag.after { color: var(--green); }
+  .old-link { color: #E08A5C; font-size: 13.5px; font-weight: 600; }
+  .old-card { border: 1px solid #38352C; background: #24221C; border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 8px; }
+  .old-card b { font-size: 14px; }
+  .old-row { display: flex; gap: 14px; font-size: 12px; font-weight: 600; border-top: 1px solid #38352C; padding-top: 8px; margin-top: 8px; }
+  .custom-card { border: 1.5px dashed #4a463b; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 12px; }
+  .custom-card .ic { width: 40px; height: 40px; border-radius: 12px; background: #3A2A20; color: #E08A5C; display: flex; align-items: center; justify-content: center; }
+  .custom-card b { display: block; font-size: 15px; }
+  .custom-card small { color: #A5A195; font-size: 12.5px; }
+  .sheet { background: #25221C; border-radius: 22px 22px 0 0; padding: 10px 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .sheet .grab { width: 38px; height: 4px; border-radius: 4px; background: #4a463b; margin: 0 auto 6px; }
+  .sheet .btn { width: 100%; justify-content: flex-start; padding: 0 16px; }
+
+  @media (max-width: 760px) { .ba { grid-template-columns: 1fr; } .btn-spec { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M4 8 12 4l8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-text" viewBox="0 0 24 24"><path d="M5 6h14M5 11h14M5 16h8"/><path d="m16 15 2 2 3-4"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/></symbol>
+    <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M4 7V5h3M17 5h3v2M20 17v2h-3M7 19H4v-2M8 9v6M11 9v6M14 9v6M17 9v6"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M5 19h4L19 9l-4-4L5 15z"/><path d="m13 7 4 4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.5"/><path d="M5.5 19c1.2-3.2 3.6-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9.5a4 4 0 0 1 6 0M12 9.5l1.2-1.6"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Redesign · mock 1 of 8 · v3</div>
+  <h1>Look, navigation &amp; buttons</h1>
+  <p class="subtitle">Everything else builds on this: the overall style, how you move between pages, and what a button looks like. All three styles are shown on the same homepage with the same data, so you're only comparing the look.</p>
+  <div class="meta">
+    <span><strong>Phone:</strong> 375 × 812</span>
+    <span><strong>Desktop:</strong> 1180 wide</span>
+    <span><strong>Mode:</strong> dark only</span>
+    <span><strong>Your picks:</strong> 3 questions in section 05</span>
+  </div>
+</header>
+
+<h2><span class="num">01</span>What stays the same in every option</h2>
+<p class="lede">Each of these fixes something from the review, whichever style you pick.</p>
+<ul class="tight">
+  <li><b>Pages stay at the top</b>, but bigger and easier to tap than today: 44px targets and 13–14px labels instead of 11px. Settings sits behind the round icon at the top right. Section 02 has three ways to do it.</li>
+  <li><b>No big page header.</b> The page starts with your numbers, not with a 2.9rem title and a thick rule.</li>
+  <li><b>Calories left</b> as the headline number. Calorie and protein bars keep today's goal colours (blue when losing, green when met, amber when close, red when over).</li>
+  <li><b>Four ways to add food, all as real buttons:</b> Photo, Describe, Barcode, Manual. Manual add moves here from the Log page.</li>
+  <li><b>AI analyses left</b> sit next to the AI buttons. The strip under the nav goes away.</li>
+  <li><b>The weigh-in reminder</b> can save the weight on the spot. (Its details come in mock 2.)</li>
+  <li><b>Filled cards with larger corners</b> instead of thin borders everywhere. Labels are readable sentence case, not 10px capitals.</li>
+</ul>
+<div class="callout">The homepage layout here is a first draft so the styles have something real to show. Order, the analyzing seconds counter and the reminder get their own mock next. Judge the <b>look</b> here.</div>
+
+</div>
+
+<div class="wide">
+<div class="phones">
+
+  <!-- ===================== A ===================== -->
+  <div class="phone-col">
+    <div class="phone-label"><span>A</span>Warm, refined</div>
+    <div class="phone dA">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+        <div class="topnav"><div class="row">
+          <div class="tabs-pill"><a class="on">Home</a><a>Log</a><a>Stats</a><a>Products</a></div>
+          <div class="avatar"><svg class="i"><use href="#i-user"/></svg></div>
+        </div></div>
+        <div class="body">
+          <div class="date">Today · Saturday, 3 October</div>
+
+          <div class="today">
+            <div class="left-row"><span class="big">910</span><span class="big-unit">kcal left</span></div>
+            <div class="sub">1,240 eaten of 2,150 · losing 0.5 kg a week</div>
+            <div class="bars">
+              <div>
+                <div class="bar-l">Calories <span><b>1,240</b> / 2,150</span></div>
+                <div class="track"><i style="width:48%;background:var(--lose)"></i><u style="left:83.3%"></u></div>
+              </div>
+              <div>
+                <div class="bar-l">Protein <span><b>88</b> / 130 g</span></div>
+                <div class="track"><i style="width:56%;background:var(--lose)"></i><u style="left:83.3%"></u></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sec"><h4>Add food</h4><span>14 of 20 AI left today</span></div>
+          <div class="grid">
+            <div class="tile primary"><div class="ic"><svg class="i"><use href="#i-camera"/></svg></div><div><b>Photo</b><small>AI estimates it</small></div></div>
+            <div class="tile"><div class="ic"><svg class="i"><use href="#i-chat"/></svg></div><div><b>Describe</b><small>“2 eggs and toast”</small></div></div>
+            <div class="tile"><div class="ic"><svg class="i"><use href="#i-barcode"/></svg></div><div><b>Barcode</b><small>No AI used</small></div></div>
+            <div class="tile"><div class="ic"><svg class="i"><use href="#i-pencil"/></svg></div><div><b>Manual</b><small>Type kcal &amp; protein</small></div></div>
+          </div>
+
+          <div class="weigh">
+            <div class="weigh-h"><span><b>Time to weigh in</b><br><span style="color:var(--mu);font-size:13px">Last one was 8 days ago · 84.6 kg</span></span><span class="x">✕</span></div>
+            <div class="weigh-row"><div class="field"><span>Weight</span><span>kg</span></div><span class="btn btn-p">Save</span></div>
+          </div>
+
+          <div class="sec"><h4>Eaten today</h4><span>3 meals</span></div>
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#8a6a3e,#c9a96e)"></div><div class="meal-t">Oats, banana &amp; honey<small>08:12 · 31 g protein</small></div><span class="kc">520</span></div>
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#5b7a4e,#a8c48a)"></div><div class="meal-t">Chicken salad wrap<small>13:40 · 46 g protein</small></div><span class="kc">610</span></div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <b>Today's colours and fonts, cleaned up.</b>
+      <ul>
+        <li>Same warm browns and terracotta you have now. The serif is only used for the big number and the page title.</li>
+        <li>Pages are a full-width tab pill at the top, like today's but bigger. Photo is the one filled tile; the other three are equal tinted tiles.</li>
+        <li>Feels like the same app, just grown up. Lowest risk.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===================== B ===================== -->
+  <div class="phone-col">
+    <div class="phone-label"><span>B</span>Instrument</div>
+    <div class="phone dB">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+        <div class="topnav">
+          <div class="row"><div class="date">Today<small>Saturday, 3 October</small></div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+          <div class="tabs-line"><a class="on">Home</a><a>Log</a><a>Stats</a><a>Products</a></div>
+        </div>
+        <div class="body">
+
+          <div class="dial">
+            <svg viewBox="0 0 168 168">
+              <circle cx="84" cy="84" r="74" fill="none" stroke="#272A24" stroke-width="12"/>
+              <circle cx="84" cy="84" r="74" fill="none" stroke="#84B3D1" stroke-width="12" stroke-linecap="round" stroke-dasharray="216 465" transform="rotate(-90 84 84)"/>
+              <circle cx="84" cy="84" r="56" fill="none" stroke="#272A24" stroke-width="10"/>
+              <circle cx="84" cy="84" r="56" fill="none" stroke="#8CCB8A" stroke-width="10" stroke-linecap="round" stroke-dasharray="238 352" transform="rotate(-90 84 84)"/>
+              <text x="84" y="88" text-anchor="middle" font-family="system-ui,sans-serif" font-size="34" font-weight="800" fill="#ECEDE6" letter-spacing="-1.5">910</text>
+              <text x="84" y="108" text-anchor="middle" font-family="system-ui,sans-serif" font-size="12" fill="#9A9D92">kcal left</text>
+            </svg>
+            <div class="legend">
+              <div><span class="dotl" style="background:#84B3D1"></span>Calories<b>1,240 / 2,150</b></div>
+              <div><span class="dotl" style="background:#8CCB8A"></span>Protein<b>88 / 130 g</b></div>
+            </div>
+          </div>
+
+          <div class="composer">
+            <div class="composer-meta"><span>What did you eat?</span><span class="ai-chip">14 AI left</span></div>
+            <div class="composer-in">Describe it, e.g. “2 eggs, toast, coffee with milk”</div>
+            <div class="chips">
+              <span class="chip p"><svg class="i"><use href="#i-camera"/></svg>Photo</span>
+              <span class="chip"><svg class="i"><use href="#i-barcode"/></svg>Barcode</span>
+              <span class="chip"><svg class="i"><use href="#i-pencil"/></svg>Manual</span>
+            </div>
+          </div>
+
+          <div class="weigh">
+            <svg class="i" style="color:var(--ac)"><use href="#i-scale"/></svg>
+            <div class="t"><b>Weigh-in due</b>Last one 8 days ago</div>
+            <span class="btn btn-p">Log weight</span>
+          </div>
+
+          <div class="sec">Eaten today <span>3 meals</span></div>
+          <div class="meals">
+            <div class="meal"><span class="time">08:12</span><div class="meal-t">Oats, banana &amp; honey<small>31 g protein</small></div><span class="kc">520</span></div>
+            <div class="meal"><span class="time">13:40</span><div class="meal-t">Chicken salad wrap<small>46 g protein</small></div><span class="kc">610</span></div>
+            <div class="meal"><span class="time">16:05</span><div class="meal-t">Greek yogurt<small>11 g protein</small></div><span class="kc">110</span></div>
+          </div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <b>Precise and data-forward, like a kitchen scale.</b>
+      <ul>
+        <li>Two rings: calories outside, protein inside. Olive-black background with a saffron accent; heavy sans-serif numbers, no serif.</li>
+        <li>Adding food is one box, like a chat app: type a description, or tap Photo, Barcode or Manual underneath.</li>
+        <li>Underlined tabs under the date, like section tabs in a native app. Fastest if you mostly type descriptions.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ===================== C ===================== -->
+  <div class="phone-col">
+    <div class="phone-label"><span>C</span>Plate</div>
+    <div class="phone dC">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+        <div class="topnav">
+          <div class="row"><div class="title"><small>Saturday, 3 October</small>Today</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+          <div class="tabs-icon"><a class="on"><svg class="i"><use href="#i-home"/></svg>Home</a><a><svg class="i"><use href="#i-log"/></svg>Log</a><a><svg class="i"><use href="#i-stats"/></svg>Stats</a><a><svg class="i"><use href="#i-box"/></svg>Products</a></div>
+        </div>
+        <div class="body">
+
+          <div class="stats">
+            <div class="stat"><small>Calories</small><b>910 <span>left</span></b><div class="track"><i style="width:58%;background:var(--lose)"></i></div><div class="msg" style="color:var(--mu)">1,240 of 2,150</div></div>
+            <div class="stat"><small>Protein</small><b>42 g <span>to go</span></b><div class="track"><i style="width:68%;background:var(--lose)"></i></div><div class="msg" style="color:var(--mu)">88 of 130 g</div></div>
+          </div>
+
+          <div class="hero">
+            <span class="ai">14 AI left</span>
+            <div class="ic"><svg class="i"><use href="#i-camera"/></svg></div>
+            <div><b>Snap your meal</b><small>Take or choose a photo, AI does the maths</small></div>
+          </div>
+          <div class="row3">
+            <div class="sq"><svg class="i"><use href="#i-chat"/></svg>Describe</div>
+            <div class="sq"><svg class="i"><use href="#i-barcode"/></svg>Barcode</div>
+            <div class="sq"><svg class="i"><use href="#i-pencil"/></svg>Manual</div>
+          </div>
+
+          <div class="weigh">
+            <div class="t"><b>Time to weigh in</b><span style="color:var(--mu)">Last one 8 days ago</span></div>
+            <span class="btn btn-t">Log weight</span>
+          </div>
+
+          <div class="sec">Eaten today</div>
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#8a6a3e,#e0b77a)"></div><div class="meal-t">Oats, banana &amp; honey<small>08:12 · 31 g protein</small></div><span class="kc">520</span></div>
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#4e7a5e,#9fd1a8)"></div><div class="meal-t">Chicken salad wrap<small>13:40 · 46 g protein</small></div><span class="kc">610</span></div>
+        </div>
+        <div class="home-ind"></div>
+      </div>
+    </div>
+    <div class="notes">
+      <b>Bold and friendly, photo first.</b>
+      <ul>
+        <li>Deep plum background with a peach accent and mint for success. Chunky rounded shapes and heavy type.</li>
+        <li>One huge "Snap your meal" button. Describe, Barcode and Manual are three big squares under it.</li>
+        <li>Pages are four big tiles with an icon and a label, the open one filled in peach. Impossible to miss. The biggest change from today; best if photos are how you log most meals.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="page" style="padding-top:0">
+
+<h2><span class="num">02</span>Navigation</h2>
+<p class="lede">Pages stay at the top on phones; desktop gets a sidebar on the left. Three ways to do the phone version, all shown in style A so only the navigation differs. Each one sticks to the top while you scroll.</p>
+
+<div class="navopts navstack">
+  <div class="navopt">
+    <div><h4>T1 · Tab pill</h4>
+    <p>Today's pill, grown up: full width, 38px tall segments, 13.5px labels. All four pages always visible.</p></div>
+    <div class="tstrip dA">
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav"><div class="row">
+        <div class="tabs-pill"><a class="on">Home</a><a>Log</a><a>Stats</a><a>Products</a></div>
+        <div class="avatar"><svg class="i"><use href="#i-user"/></svg></div>
+      </div></div>
+      <div class="ghost"></div><div class="fade"></div>
+    </div>
+  </div>
+  <div class="navopt">
+    <div><h4>T2 · Underlined tabs</h4>
+    <p>The page title and date, then a row of tabs underlined in the accent colour. Calm, and looks most like a native app.</p></div>
+    <div class="tstrip dA">
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div><div class="date" style="font-size:12px">Saturday, 3 October</div><div class="title" style="font-size:22px">Today</div></div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs-line"><a class="on">Home</a><a>Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+      <div class="fade"></div>
+    </div>
+  </div>
+  <div class="navopt">
+    <div><h4>T3 · Icon tabs</h4>
+    <p>The date and title on the first row, then four big tiles with an icon above each label. The open page is filled in the accent colour. The most obvious of the three and the biggest tap targets, but it takes the most height.</p></div>
+    <div class="tstrip dA">
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div><div class="date" style="font-size:12px">Saturday, 3 October</div><div class="title" style="font-size:22px">Today</div></div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs-icon"><a class="on"><svg class="i"><use href="#i-home"/></svg>Home</a><a><svg class="i"><use href="#i-log"/></svg>Log</a><a><svg class="i"><use href="#i-stats"/></svg>Stats</a><a><svg class="i"><use href="#i-box"/></svg>Products</a></div>
+      </div>
+      <div class="ghost"></div><div class="fade"></div>
+    </div>
+  </div>
+</div>
+<p>I'd go with <b>T1</b>. It's the closest to what you already know, every page stays one tap away, and on a phone it costs one row. T2 looks calmer but needs a second row for the page title. T3 is the easiest to read at a glance, but it pushes your numbers about 60px further down on every page.</p>
+
+<h3>Desktop: a sidebar, not a stretched phone</h3>
+<p class="lede">Shown in style A; it adapts to whichever style you pick. The sidebar holds the nav, the AI counter and Settings. Adding food gets its own sticky column on the left; today's numbers and meals sit on the right.</p>
+</div>
+
+<div class="wide scroll-x">
+  <div class="desk dA">
+    <div class="chrome"><i></i><i></i><i></i><span>calorie-calculator.app</span></div>
+    <div class="app">
+      <aside class="side">
+        <div class="brand">Calories</div>
+        <a class="on"><svg class="i"><use href="#i-home"/></svg>Home</a>
+        <a><svg class="i"><use href="#i-log"/></svg>Log</a>
+        <a><svg class="i"><use href="#i-stats"/></svg>Stats</a>
+        <a><svg class="i"><use href="#i-box"/></svg>Products</a>
+        <div class="spacer"></div>
+        <div class="ai">AI analyses today<b>14 of 20 left</b><div class="track"><i style="width:70%;background:var(--ac)"></i></div></div>
+        <a><svg class="i"><use href="#i-gear"/></svg>Settings</a>
+      </aside>
+      <div class="main">
+        <div class="head">
+          <div><div class="date">Saturday, 3 October</div><div class="title">Today</div></div>
+        </div>
+        <!-- left: add food -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="sec" style="margin:0"><h4>Add food</h4><span>14 AI left</span></div>
+          <div class="grid">
+            <div class="tile primary"><div class="ic"><svg class="i"><use href="#i-camera"/></svg></div><div><b>Photo</b><small>AI estimates it</small></div></div>
+            <div class="tile"><div class="ic"><svg class="i"><use href="#i-chat"/></svg></div><div><b>Describe</b><small>“2 eggs and toast”</small></div></div>
+            <div class="tile"><div class="ic"><svg class="i"><use href="#i-barcode"/></svg></div><div><b>Barcode</b><small>No AI used</small></div></div>
+            <div class="tile"><div class="ic"><svg class="i"><use href="#i-pencil"/></svg></div><div><b>Manual</b><small>Type kcal &amp; protein</small></div></div>
+          </div>
+          <div class="weigh">
+            <div class="weigh-h"><span><b>Time to weigh in</b><br><span style="color:var(--mu);font-size:13px">Last one was 8 days ago · 84.6 kg</span></span><span class="x">✕</span></div>
+            <div class="weigh-row"><div class="field"><span>Weight</span><span>kg</span></div><span class="btn btn-p">Save</span></div>
+          </div>
+        </div>
+        <!-- right: today + meals -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="today">
+            <div><div class="left-row"><span class="big">910</span><span class="big-unit">kcal left</span></div><div class="sub">1,240 eaten of 2,150</div></div>
+            <div class="bars">
+              <div><div class="bar-l">Calories <span><b>1,240</b> / 2,150</span></div><div class="track"><i style="width:48%;background:var(--lose)"></i><u style="left:83.3%"></u></div><div class="bar-msg">910 left before your limit</div></div>
+              <div><div class="bar-l">Protein <span><b>88</b> / 130 g</span></div><div class="track"><i style="width:56%;background:var(--lose)"></i><u style="left:83.3%"></u></div><div class="bar-msg">42 g to go</div></div>
+            </div>
+          </div>
+          <div class="sec"><h4>Eaten today</h4><span>3 meals · 1,240 kcal</span></div>
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#8a6a3e,#c9a96e)"></div><div class="meal-t">Oats, banana &amp; honey<small>08:12 · 31 g protein</small></div><span class="kc">520</span></div>
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#5b7a4e,#a8c48a)"></div><div class="meal-t">Chicken salad wrap<small>13:40 · 46 g protein</small></div><span class="kc">610</span></div>
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#d8d2c2,#f2efe6)"></div><div class="meal-t">Greek yogurt<small>16:05 · 11 g protein</small></div><span class="kc">110</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" style="padding-top:0">
+
+<h2><span class="num">03</span>Buttons</h2>
+<p class="lede">One set of rules so nothing that does something ever looks like plain text again. Shown in style A; the shapes stay the same in B and C, only the colours change.</p>
+
+<div class="board dA">
+  <div class="btn-spec">
+    <span class="btn btn-p">Start this plan</span><span><b style="color:var(--ink)">Primary</b>: the one main action on a screen. Filled accent. At most one per screen.</span>
+    <span class="btn btn-t">Change plan</span><span><b style="color:var(--ink)">Secondary</b>: important, but not the main thing. Tinted fill.</span>
+    <span class="btn btn-o"><svg class="i" style="width:18px;height:18px"><use href="#i-pencil"/></svg>Edit</span><span><b style="color:var(--ink)">Outline</b>: everyday actions like Edit, Cancel and Back. Always has a visible border.</span>
+    <span class="btn btn-d"><svg class="i" style="width:18px;height:18px"><use href="#i-trash"/></svg>Delete</span><span><b style="color:var(--ink)">Destructive</b>: red tint, and always undoable through the toast.</span>
+    <span class="btn btn-o" style="width:46px;padding:0"><svg class="i"><use href="#i-dots"/></svg></span><span><b style="color:var(--ink)">More (⋯)</b>: opens a sheet when a row has 3+ actions, instead of a row of text links.</span>
+  </div>
+</div>
+<ul class="tight">
+  <li><b>Every tap target is at least 44px tall</b> (46px for main buttons).</li>
+  <li><b>Plain text links only for navigation inside a sentence</b>, never for actions.</li>
+  <li><b>Labels say what happens:</b> "Save weight", not "Submit"; the toast repeats it ("Weight saved").</li>
+</ul>
+
+<h3>Before → after, for the ones that were missed</h3>
+<div class="ba">
+  <div>
+    <div class="tag">Before: setup, plan step</div>
+    <div class="old-card"><b>Lose 0.5 kg/wk</b><br>1,650 kcal · 170 g protein</div>
+    <div class="old-card"><b>Lose 0.75 kg/wk</b><br>1,380 kcal · 170 g protein</div>
+    <div class="old-link">Set my own calories and protein instead</div>
+  </div>
+  <div class="dA" style="background:#1B1A16">
+    <div class="tag after">After</div>
+    <div class="old-card" style="border-radius:16px;border:0;background:#25221C"><b>Lose 0.5 kg/wk</b><br>1,650 kcal · 130 g protein</div>
+    <div class="old-card" style="border-radius:16px;border:0;background:#25221C"><b>Lose 0.75 kg/wk</b><br>1,380 kcal · 130 g protein</div>
+    <div class="custom-card"><div class="ic"><svg class="i"><use href="#i-pencil"/></svg></div><div style="flex:1"><b>Custom plan</b><small>Enter your own calories and protein</small></div><svg class="i" style="color:#A5A195"><use href="#i-chev"/></svg></div>
+  </div>
+</div>
+<div class="ba">
+  <div>
+    <div class="tag">Before: a meal on the Log</div>
+    <div class="old-card" style="margin:0"><b>Chicken salad wrap</b> · 610 kcal
+      <div class="old-row"><span style="color:#E08A5C">Edit</span><span style="color:#7FBF92">Relog</span><span style="color:#E58B82;margin-left:auto">Delete</span></div>
+    </div>
+  </div>
+  <div class="dA" style="background:#1B1A16">
+    <div class="tag after">After: ⋯ opens a sheet</div>
+    <div class="meal" style="margin-bottom:10px"><div class="thumb" style="background:linear-gradient(135deg,#5b7a4e,#a8c48a)"></div><div class="meal-t">Chicken salad wrap<small>13:40 · 46 g protein</small></div><span class="kc">610</span><span class="btn btn-o" style="width:40px;height:40px;padding:0;margin-left:4px"><svg class="i"><use href="#i-dots"/></svg></span></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <span class="btn btn-o"><svg class="i" style="width:18px;height:18px"><use href="#i-pencil"/></svg>Edit amounts</span>
+      <span class="btn btn-o"><svg class="i" style="width:18px;height:18px"><use href="#i-redo"/></svg>Log again today</span>
+      <span class="btn btn-d"><svg class="i" style="width:18px;height:18px"><use href="#i-trash"/></svg>Delete meal</span>
+    </div>
+  </div>
+</div>
+<p>The same treatment applies to "How we got this", "Clear everything" (now an outline <b>Start over</b> button), weigh-in Edit/Delete, product Edit/Delete, and "View" and the cap Save on the Users page.</p>
+<p>The protein numbers in the "after" plan cards hint at mock 3: 130 g instead of a fixed 170 g.</p>
+
+<h2><span class="num">04</span>How the three compare</h2>
+<table>
+  <tr><th></th><th>A · Warm, refined</th><th>B · Instrument</th><th>C · Plate</th></tr>
+  <tr><td>Colours</td><td>Today's browns + terracotta</td><td>Olive-black + saffron</td><td>Plum + peach + mint</td></tr>
+  <tr><td>Type</td><td>Serif for the big number and titles, Inter for the rest</td><td>Heavy sans only, tight numbers</td><td>Heavy rounded sans</td></tr>
+  <tr><td>Today's progress</td><td>Big number + two bars</td><td>Two rings</td><td>Two stat cards</td></tr>
+  <tr><td>Pages (as shown)</td><td>Tab pill at the top</td><td>Underlined tabs</td><td>Icon tabs</td></tr>
+  <tr><td>Adding food</td><td>2 × 2 tiles, Photo filled</td><td>One box, like a chat: type or tap</td><td>One huge Photo button + 3 squares</td></tr>
+  <tr><td>Change from today</td><td>Small: same identity</td><td>Medium</td><td>Large</td></tr>
+</table>
+<div class="callout good"><b>My pick: A with T1</b>. You said you like the current dark look, and A keeps it while fixing every complaint from the review: wasted space, hidden buttons and cramped nav. Worth borrowing from B: its single "describe" box could become A's Describe tile, ready to type in, if most of your meals are typed rather than photographed.</div>
+<p>Mixing is fine, e.g. "A's colours with B's rings".</p>
+
+<h2><span class="num">05</span>What I need from you</h2>
+<ol class="steps" style="list-style:decimal;padding-left:22px">
+  <li><b>Style:</b> A, B, C, or a mix (say which parts).</li>
+  <li><b>Phone nav:</b> T1 (tab pill), T2 (underlined tabs) or T3 (icon tabs). Any of them works with any style.</li>
+  <li><b>Button rules:</b> OK as described in 03, or anything to change?</li>
+</ol>
+<p>Next up after your picks: <b>mock 2: Homepage</b> (final order, the live seconds counter while AI works, the analysis result screen and the weigh-in reminder).</p>
+
+<footer class="doc">
+  Calorie Calculator · redesign mock 1 of 8 · the mock uses system fonts; the real app keeps Fraunces / Inter via next/font
+</footer>
+
+</div>
+</body>
+</html>

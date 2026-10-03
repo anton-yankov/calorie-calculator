@@ -2,7 +2,7 @@ import { sumTotals } from "@/lib/scale";
 import type { FoodItem, MealAnalysis } from "@/lib/schema";
 
 /**
- * The Log's quick entry: a food typed in by hand, no photo and no AI. The
+ * Manual entry on the homepage: a food typed in by hand, no photo and no AI. The
  * numbers are used exactly as typed, so there's no portion to scale.
  */
 

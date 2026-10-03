@@ -2,16 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { savePlan } from "@/lib/plan-history";
-import { maintenanceCalories, suggestPlans, type Goal } from "@/lib/plan";
+import { maintenanceCalories, suggestPlans, type Goal, type ProteinPerKg } from "@/lib/plan";
 import {
   submittedToday,
   validBody,
   validCustomTargets,
   validGoalWeight,
+  validProteinPerKg,
   whole,
   type BodyInput,
 } from "@/lib/profile-input";
-import { getProfile, saveProfile, saveWaterSetting, type Profile } from "@/lib/profiles";
+import {
+  getProfile,
+  saveProfile,
+  saveReminderSetting,
+  saveWaterSetting,
+  type Profile,
+} from "@/lib/profiles";
+import { isReminderDays } from "@/lib/reminder";
 import { createSessionClient, getUserId } from "@/lib/supabase-session";
 
 const failed = (err: unknown, fallback: string) => ({
@@ -33,7 +41,7 @@ export async function saveDetailsAction(input: BodyInput): Promise<{ error?: str
   } catch (err) {
     return failed(err, "Couldn't save your details");
   }
-  revalidatePath("/settings");
+  revalidatePath("/settings", "layout");
   return {};
 }
 
@@ -52,8 +60,22 @@ export async function saveWaterAction(input: {
   } catch (err) {
     return failed(err, "Couldn't save the water setting");
   }
-  // The water bar appears or disappears on the Log, Stats and Analyze pages
+  // The water bar appears or disappears on the Log, Stats and homepage
   revalidatePath("/", "layout");
+  return {};
+}
+
+/** How often the homepage reminds you to weigh in: every 1, 3, 7 or 14 days, or never (0). */
+export async function saveReminderAction(days: number): Promise<{ error?: string }> {
+  const userId = await getUserId();
+  if (!userId) return { error: "Authentication required" };
+  if (!isReminderDays(days)) return { error: "Choose one of the reminder options." };
+  try {
+    await saveReminderSetting(userId, days);
+  } catch (err) {
+    return failed(err, "Couldn't save the reminder setting");
+  }
+  revalidatePath("/settings", "layout");
   return {};
 }
 
@@ -64,6 +86,8 @@ interface PlanChangeInput {
   /** The chosen pace in kg per week; null for custom targets */
   kgPerWeek: number | null;
   custom: { calorieTarget: number; proteinTarget: number } | null;
+  /** The protein level for a suggested pace (g per kg); ignored for custom targets */
+  proteinPerKg: number | null;
   /** The user's own YYYY-MM-DD today */
   today: string;
 }
@@ -96,13 +120,17 @@ export async function changePlanAction(input: PlanChangeInput): Promise<{ error?
   const maintenanceKcal = maintenanceCalories(body, Number(today.slice(0, 4)));
   let calorieTarget: number;
   let proteinTarget: number;
+  let proteinPerKg: ProteinPerKg | null = null;
 
   if (input.kgPerWeek === null) {
     const custom = validCustomTargets(input.custom);
     if (typeof custom === "string") return { error: custom };
     ({ calorieTarget, proteinTarget } = custom);
   } else {
-    const suggested = suggestPlans(body, input.goal, goalWeightKg, today).find(
+    const level = validProteinPerKg(input.proteinPerKg);
+    if (typeof level === "string") return { error: level };
+    proteinPerKg = level;
+    const suggested = suggestPlans(body, input.goal, goalWeightKg, today, level).find(
       (plan) => plan.kgPerWeek === input.kgPerWeek,
     );
     if (!suggested) return { error: "Choose one of the suggested plans." };
@@ -118,6 +146,7 @@ export async function changePlanAction(input: PlanChangeInput): Promise<{ error?
       goalWeightKg,
       calorieTarget,
       proteinTarget,
+      proteinPerKg,
       maintenanceKcal,
       weightKg: body.weightKg,
     });

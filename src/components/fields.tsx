@@ -1,5 +1,7 @@
 "use client";
 
+import { Check } from "lucide-react";
+
 /** The form controls shared by setup and Settings, so both look and behave the same. */
 
 export function Field({
@@ -21,7 +23,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-muted">{label}</span>
+      <span className="mb-1.5 block text-[12.5px] font-semibold text-muted">{label}</span>
       <span className="relative block">
         <input
           type={type}
@@ -29,12 +31,12 @@ export function Field({
           autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full rounded-panel border border-line bg-surface py-2.5 pl-4 font-mono text-[15px] tabular-nums text-foreground focus:border-accent focus:outline-none ${
+          className={`h-12 w-full rounded-panel border-[1.5px] border-line bg-background pl-4 text-[15px] tabular-nums text-foreground transition-colors focus:border-accent focus:outline-none ${
             unit ? "pr-12" : "pr-4"
           }`}
         />
         {unit && (
-          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-muted">
+          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted">
             {unit}
           </span>
         )}
@@ -47,11 +49,14 @@ export function Choice({
   selected,
   label,
   hint,
+  icon,
   onSelect,
 }: {
   selected: boolean;
   label: string;
   hint: string;
+  /** Shown in a tile at the start, e.g. the goal's arrow */
+  icon?: React.ReactNode;
   onSelect: () => void;
 }) {
   return (
@@ -59,25 +64,38 @@ export function Choice({
       type="button"
       aria-pressed={selected}
       onClick={onSelect}
-      className={`flex w-full items-start gap-3 rounded-panel border px-3 py-2.5 text-left transition-colors ${
-        selected ? "border-accent bg-accent-soft" : "border-line bg-surface hover:border-muted/60"
+      className={`flex min-h-15 w-full items-center gap-3 rounded-[18px] border-2 px-4 py-3 text-left transition-colors ${
+        selected
+          ? "border-accent bg-accent-soft"
+          : "border-transparent bg-surface hover:border-line"
       }`}
     >
+      {icon && (
+        <span
+          aria-hidden
+          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[14px] bg-surface-raised text-accent"
+        >
+          {icon}
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-bold leading-snug">{label}</span>
+        <span className="block text-[12.5px] text-muted">{hint}</span>
+      </span>
+      {/* A visible radio, so it's obvious which card is picked */}
       <span
         aria-hidden
-        className={`mt-1 h-4 w-4 shrink-0 rounded-full border-2 ${
-          selected ? "border-accent bg-accent" : "border-line"
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+          selected ? "border-accent bg-accent text-background" : "border-line-strong"
         }`}
-      />
-      <span>
-        <span className="block text-sm font-semibold">{label}</span>
-        <span className="block text-xs text-muted">{hint}</span>
+      >
+        {selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
       </span>
     </button>
   );
 }
 
-/** A pill row where exactly one option is picked, e.g. sex or goal. */
+/** Equal-width buttons where exactly one is picked, e.g. sex or goal. */
 export function Segmented<T extends string>({
   options,
   value,
@@ -88,15 +106,17 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="flex rounded-full border border-line bg-surface p-1">
+    <div className="grid auto-cols-fr grid-flow-col gap-2">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`flex-1 rounded-full py-2 text-[13px] font-semibold transition-colors ${
-            value === option.value ? "bg-accent text-background" : "text-muted"
+          className={`h-12 rounded-panel border-2 text-[15px] font-bold transition-colors ${
+            value === option.value
+              ? "border-accent bg-accent-soft text-foreground"
+              : "border-transparent bg-surface text-muted hover:text-foreground"
           }`}
         >
           {option.label}

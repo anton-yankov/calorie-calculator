@@ -1,61 +1,69 @@
 "use client";
 
+import { TriangleAlert } from "lucide-react";
 import { useActionState } from "react";
-import { Spinner } from "@/components/loaders";
+import { Button } from "@/components/Button";
 import { login } from "./actions";
 
-const inputClass =
-  "rounded-panel border border-line bg-surface px-4 py-3 text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none";
+const fieldClass = (invalid: boolean) =>
+  `h-12 w-full rounded-panel border-[1.5px] bg-background px-4 text-[15px] text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none ${
+    invalid ? "border-danger" : "border-line"
+  }`;
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(login, null);
+  const invalid = Boolean(state?.error);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <label htmlFor="email" className="sr-only">
-        Email
-      </label>
-      <input
-        id="email"
-        name="email"
-        type="email"
-        required
-        autoFocus
-        autoComplete="email"
-        placeholder="Email"
-        // React resets the form after every submit; this keeps the email after a failed attempt
-        defaultValue={state?.email}
-        className={inputClass}
-      />
-
-      <label htmlFor="password" className="sr-only">
-        Password
-      </label>
-      <input
-        id="password"
-        name="password"
-        type="password"
-        required
-        autoComplete="current-password"
-        placeholder="Password"
-        className={inputClass}
-      />
-
-      <button
-        type="submit"
-        disabled={pending}
-        className="flex items-center justify-center gap-2 rounded-panel bg-accent px-4 py-3 font-semibold text-background transition duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {pending && <Spinner />}
-        {pending ? "Logging in…" : "Log in"}
-      </button>
-
-      <p aria-live="polite" className="min-h-5 text-sm text-danger">
+    <form action={formAction} className="mt-3 flex flex-col gap-3.5">
+      {/* Above the fields, where the eye goes first after pressing Log in */}
+      <div aria-live="polite">
         {state?.error && (
-          <span className="block rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3">
+          <p className="flex items-start gap-2.5 rounded-panel bg-danger-soft px-3.5 py-3 text-sm font-semibold text-danger">
+            <TriangleAlert
+              className="mt-px h-[18px] w-[18px] shrink-0"
+              strokeWidth={2}
+              aria-hidden
+            />
             {state.error}
-          </span>
+          </p>
         )}
+      </div>
+
+      <label className="block">
+        <span className="mb-1.5 block text-[12.5px] font-semibold text-muted">Email</span>
+        <input
+          name="email"
+          type="email"
+          required
+          autoFocus
+          autoComplete="email"
+          aria-invalid={invalid || undefined}
+          // React resets the form after every submit; this keeps the email after a failed attempt
+          defaultValue={state?.email}
+          className={fieldClass(invalid)}
+        />
+      </label>
+
+      <label className="block">
+        <span className="mb-1.5 block text-[12.5px] font-semibold text-muted">Password</span>
+        <input
+          name="password"
+          type="password"
+          required
+          autoComplete="current-password"
+          aria-invalid={invalid || undefined}
+          className={fieldClass(invalid)}
+        />
+      </label>
+
+      <Button type="submit" pending={pending} className="mt-1 w-full">
+        {pending ? "Logging in…" : "Log in"}
+      </Button>
+
+      <p className="text-center text-[13px] text-muted lg:text-left">
+        Accounts are invite-only. Ask the person who invited you if you&apos;ve forgotten your
+        password.
       </p>
     </form>
   );

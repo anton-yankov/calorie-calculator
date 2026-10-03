@@ -210,9 +210,9 @@ export function DailyBars({
   }
 
   return (
-    <section className="overflow-hidden rounded-panel border border-line bg-surface">
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 pb-1 pt-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
+    <section className="overflow-hidden rounded-[22px] bg-surface">
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 pb-1 pt-3.5">
+        <h2 className="text-[15.5px] font-extrabold">{title}</h2>
         {/* Legend: needed once there's a second series to tell apart */}
         {mode === "day" && !empty && (
           <span className="flex items-center gap-3 text-[11px] text-muted">
@@ -261,7 +261,7 @@ export function DailyBars({
                   textAnchor="end"
                   fontSize={10}
                   fill="var(--muted)"
-                  className="font-mono tabular-nums"
+                  className="tabular-nums"
                 >
                   {tickLabel(v)}
                 </text>
@@ -332,7 +332,7 @@ export function DailyBars({
                   textAnchor="end"
                   fontSize={10}
                   fill="var(--muted)"
-                  className="font-mono tabular-nums"
+                  className="tabular-nums"
                 >
                   goal {Math.round(lastTarget)}
                   {unit !== "kcal" ? ` ${unit}` : ""}
@@ -366,7 +366,7 @@ export function DailyBars({
                 y={height - 7}
                 fontSize={10}
                 fill="var(--muted)"
-                className="font-mono"
+                className="tabular-nums"
               >
                 {data[0].short}
               </text>
@@ -378,7 +378,7 @@ export function DailyBars({
                 textAnchor="end"
                 fontSize={10}
                 fill="var(--muted)"
-                className="font-mono"
+                className="tabular-nums"
               >
                 {endLabel}
               </text>
@@ -426,7 +426,7 @@ export function DailyBars({
             }
           >
             <div className="text-muted">{current.label}</div>
-            <div className="font-mono tabular-nums">
+            <div className="tabular-nums">
               {current.value === null ? (
                 <span className="text-muted">{unit === "ml" ? "not tracked" : "no meals"}</span>
               ) : (
@@ -443,9 +443,11 @@ export function DailyBars({
                 </>
               )}
             </div>
-            {current.value !== null && <div className="font-mono text-muted">{current.detail}</div>}
+            {current.value !== null && (
+              <div className="tabular-nums text-muted">{current.detail}</div>
+            )}
             {activeSegment && (
-              <div className="mt-1 flex items-center gap-1.5 border-t border-line pt-1 font-mono text-muted">
+              <div className="mt-1 flex items-center gap-1.5 border-t border-line pt-1 tabular-nums text-muted">
                 <LineSwatch dashed={activeSegment.provisional} />
                 <span>
                   week avg{" "}
@@ -477,7 +479,7 @@ export function DailyBars({
                 )}
               </tr>
             </thead>
-            <tbody className="font-mono text-xs tabular-nums text-muted">
+            <tbody className="text-xs tabular-nums text-muted">
               {[...data].reverse().map((d) => (
                 <tr key={d.key} className="border-t border-line/60">
                   <td className="px-4 py-1.5 font-sans text-[13px] text-foreground">

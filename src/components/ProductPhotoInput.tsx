@@ -82,7 +82,7 @@ export function ProductPhotoInput({
             <img src={imageUrl} alt={productName} className="h-full w-full object-contain" />
           ) : (
             <span className="flex flex-col items-center text-muted">
-              <span className="font-mono text-xl text-accent" aria-hidden>
+              <span className="tabular-nums text-xl text-accent" aria-hidden>
                 +
               </span>
               <span className="text-[10px] font-semibold">Photo</span>

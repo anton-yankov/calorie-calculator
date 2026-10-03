@@ -41,3 +41,36 @@ export function trendOverRange(
   if (!last || !first || first === last) return { points: inRange, change: null };
   return { points: inRange, change: last.trendKg - first.trendKg };
 }
+
+/** Below this weekly pace the trend counts as flat, so no goal date is promised. */
+const FLAT_KG_PER_WEEK = 0.05;
+
+/**
+ * Where the trend is heading: its pace between the first and last weigh-in
+ * from `since` on (kg per week, negative = losing), and the day the goal
+ * weight is reached at that pace. `reachBy` is null when there's no goal, the
+ * trend is flat, or it's moving away from the goal. null overall without two
+ * weigh-ins to measure between.
+ */
+export function trendPace(
+  points: WeightPoint[],
+  since: string,
+  goalKg: number | null,
+): { kgPerWeek: number; reachBy: string | null } | null {
+  const inRange = points.filter((p) => p.day >= since);
+  const first = inRange[0];
+  const last = inRange.at(-1);
+  if (!first || !last || first === last) return null;
+  const days =
+    (Date.parse(`${last.day}T12:00:00Z`) - Date.parse(`${first.day}T12:00:00Z`)) / 86_400_000;
+  if (days <= 0) return null;
+  const kgPerWeek = ((last.trendKg - first.trendKg) / days) * 7;
+  if (goalKg === null || Math.abs(kgPerWeek) < FLAT_KG_PER_WEEK)
+    return { kgPerWeek, reachBy: null };
+  const toGo = goalKg - last.trendKg;
+  // Only a pace in the goal's direction leads there
+  if (Math.sign(toGo) !== Math.sign(kgPerWeek)) return { kgPerWeek, reachBy: null };
+  const reach = new Date(`${last.day}T12:00:00Z`);
+  reach.setUTCDate(reach.getUTCDate() + Math.round((toGo / kgPerWeek) * 7));
+  return { kgPerWeek, reachBy: reach.toISOString().slice(0, 10) };
+}

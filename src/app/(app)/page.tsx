@@ -1,317 +1,216 @@
 "use client";
 
-import { useWaterTracking } from "@/components/WaterTracking";
-import Link from "next/link";
-import { useEffect, useRef } from "react";
-import { useAiAllowance } from "@/components/AiAllowance";
-import { capReachedMessage } from "@/lib/ai-cap-message";
-import { AnalysisCard, CompactAnalysis } from "@/components/AnalysisCard";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useAnalysis } from "@/components/AnalysisProvider";
-import { BarcodeInput } from "@/components/BarcodeInput";
-import { CorrectionBar } from "@/components/CorrectionBar";
-import { DatePicker } from "@/components/DatePicker";
-import { SkeletonEstimate, Spinner } from "@/components/loaders";
-import { PhotoInput } from "@/components/PhotoInput";
-import { TodayStrip } from "@/components/TodayStrip";
-import { WeighInNudge } from "@/components/WeighInNudge";
+import { AddFood } from "@/components/home/AddFood";
+import { BarcodeFlow } from "@/components/home/BarcodeFlow";
+import { EatenToday } from "@/components/home/EatenToday";
+import { EarlierEstimate, EstimateCard } from "@/components/home/EstimateCard";
+import { ManualSheet } from "@/components/home/ManualSheet";
+import {
+  AnalyzingCard,
+  ComposeCard,
+  CorrectionCard,
+  FailedCard,
+} from "@/components/home/MealCards";
+import { TodayCards } from "@/components/home/TodayCards";
+import { useDay } from "@/components/home/useDay";
+import { WaterRow } from "@/components/home/WaterRow";
+import { WeighInCard } from "@/components/home/WeighInCard";
+import { logFoodsNow, loggedToast } from "@/components/meals/logFood";
 import { dayKey, dayLabel } from "@/lib/day";
+import type { FoodItem } from "@/lib/schema";
 
-function CorrectionBubble({ text }: { text: string }) {
-  return (
-    <div className="self-end max-w-[85%] rounded-panel rounded-br-sm border border-success/40 bg-success-soft px-4 py-2.5 text-sm text-foreground">
-      {text}
-    </div>
-  );
-}
+/** How long a just-logged meal stays tinted in the list. */
+const HIGHLIGHT_MS = 4000;
 
+/**
+ * The homepage. Phones get one column: the day's numbers, then either the
+ * four ways to add food or the meal being put together, then water, the
+ * weigh-in card and the day's meals. Desktop splits it: adding food on the
+ * left (sticky), the numbers, the meal in progress and the day's meals on the
+ * right. Both orders come from the same elements: on phones the two column
+ * wrappers dissolve (`contents`) and `order` interleaves their children.
+ */
 export default function Home() {
-  const waterTracking = useWaterTracking();
   // All analysis state lives in AnalysisProvider (mounted in the layout) so it
   // survives navigating away from this page mid-analysis
   const {
     sourceBlob,
     preparing,
-    previewUrl,
     description,
-    setDescription,
     history,
-    pendingCorrection,
     loading,
-    logging,
     error,
-    loggedAtLength,
-    logDate,
-    setLogDate,
     latest,
     session,
     handleSelect,
     handleClear,
-    handleLog,
     addScannedFood,
-    analyze,
-    handleGramsChange,
-    handleDrinkTypeChange,
-    quickAddWater,
-    quickWaterPending,
+    refreshDay,
   } = useAnalysis();
+  const { day, isToday, progress } = useDay();
+  const [describing, setDescribing] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Out of analyses: photos and corrections pause; text still goes through, since
-  // "water 500" needs no AI and anything else gets the server's cap message
-  const { allowance, capReached } = useAiAllowance();
-  const todayKey = dayKey(new Date());
-  const logged = latest !== undefined && loggedAtLength === history.length;
+  // Products' empty page links here with ?scan=1 to open the scanner straight away
+  const router = useRouter();
+  const scanRequested = useSearchParams().get("scan") === "1";
+  const [scanHandled, setScanHandled] = useState(false);
+  if (scanRequested && !scanHandled) {
+    setScanHandled(true);
+    setScanning(true);
+  }
 
-  const threadEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => () => clearTimeout(highlightTimer.current), []);
 
-  useEffect(() => {
-    if (history.length > 1 || pendingCorrection) {
-      threadEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  // A full reset (Start over, ✕, or logging) also closes the describe box
+  const [lastSession, setLastSession] = useState(session);
+  if (session !== lastSession) {
+    setLastSession(session);
+    setDescribing(false);
+  }
+
+  // Anything on the plate means the Add food area becomes the meal being made
+  const plateActive =
+    describing ||
+    sourceBlob !== null ||
+    preparing ||
+    loading ||
+    history.length > 0 ||
+    error !== null;
+
+  function highlight(id: string) {
+    setHighlightId(id);
+    clearTimeout(highlightTimer.current);
+    highlightTimer.current = setTimeout(() => setHighlightId(null), HIGHLIGHT_MS);
+  }
+
+  function onLogged(id: string, what: string, loggedDay: string | null) {
+    refreshDay();
+    highlight(id);
+    loggedToast(`${what} logged to ${loggedDay ? dayLabel(loggedDay) : "today"}`, id, refreshDay);
+  }
+
+  // A plate with something on it: a photo, a description or an estimate
+  const plateHasFood = sourceBlob !== null || description.trim() !== "" || history.length > 0;
+
+  // A scanned product joins the plate if one is being made, otherwise it's logged on its own
+  async function addProduct(food: FoodItem, productDay: string | null) {
+    if (plateHasFood) {
+      addScannedFood(food);
+      toast.success(`${food.name} added to the meal`);
+      return;
     }
-  }, [history.length, pendingCorrection]);
+    const result = await logFoodsNow([food], productDay);
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+    onLogged(result.id, food.name, productDay);
+  }
+
+  let mealCard: React.ReactNode = null;
+  if (loading) {
+    mealCard = <AnalyzingCard />;
+  } else if (latest) {
+    const earlier = history.slice(0, -1);
+    mealCard = (
+      <>
+        {earlier.map((entry, i) => (
+          <EarlierEstimate
+            key={i}
+            analysis={entry.analysis}
+            label={`Estimate ${i + 1}`}
+            correction={history[i + 1]?.correction ?? null}
+          />
+        ))}
+        <EstimateCard
+          analysis={latest.analysis}
+          previous={earlier.at(-1)?.analysis ?? null}
+          label={history.length > 1 ? `Estimate ${history.length}` : "Estimate"}
+          durationMs={latest.durationMs}
+          progress={progress}
+          onLogged={(id, loggedDay) =>
+            onLogged(id, "Meal", loggedDay === dayKey(new Date()) ? null : loggedDay)
+          }
+        />
+        <CorrectionCard />
+      </>
+    );
+  } else if (error && (sourceBlob || description.trim())) {
+    mealCard = <FailedCard />;
+  } else if (plateActive) {
+    mealCard = (
+      <ComposeCard
+        onClose={() => {
+          handleClear();
+          setDescribing(false);
+        }}
+      />
+    );
+  }
 
   return (
-    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 px-5 py-8 sm:px-6 sm:py-11 lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:content-start lg:items-start lg:gap-x-10">
-      <header className="mb-2 border-b-2 border-foreground pb-6 lg:col-span-2">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
-          Meal analysis
-        </p>
-        <h1 className="font-serif text-[clamp(2rem,8vw,2.9rem)] font-semibold leading-[1.08] tracking-tight">
-          What’s on your plate?
-        </h1>
-        <p className="mt-2 max-w-xl text-[15px] text-muted sm:text-base">
-          Photo or description in, macros out. Estimates — correct them below.
-        </p>
-      </header>
-
-      <TodayStrip />
-      <WeighInNudge />
-      {waterTracking && (
-        <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
-          <span className="mr-1 text-xs font-semibold text-muted">
-            Quick water{logDate ? ` · ${dayLabel(logDate)}` : " · today"}
-          </span>
-          {[250, 500, 1000].map((ml) => (
-            <button
-              key={ml}
-              type="button"
-              disabled={quickWaterPending}
-              onClick={() => void quickAddWater(ml)}
-              className="rounded-panel border border-line bg-surface px-3 py-2 text-sm font-semibold text-accent transition hover:border-accent disabled:opacity-40"
-            >
-              +{ml === 1000 ? "1 L" : `${ml} ml`}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Controls column — on lg it sticks below the nav while the thread scrolls */}
-      <div className="flex flex-col gap-4 lg:sticky lg:top-24">
-        {capReached && allowance?.cap != null && (
-          <p className="rounded-r-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm">
-            <span className="block font-semibold">{capReachedMessage(allowance.cap)}</span>
-            Barcodes, water and{" "}
-            <Link href="/log" className="font-semibold text-accent hover:underline">
-              adding food manually
-            </Link>{" "}
-            still work.
-          </p>
-        )}
-        <PhotoInput
-          previewUrl={previewUrl}
-          disabled={loading || preparing || capReached}
-          preparing={preparing}
-          compact={history.length > 0}
-          onSelect={(f) => void handleSelect(f)}
-          onClear={handleClear}
+    <main className="page-enter mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 pt-4 pb-12 lg:grid lg:max-w-5xl lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start lg:gap-6 lg:px-8 lg:pt-2">
+      {/* Left on desktop: the ways to add food, water and the weigh-in card */}
+      <div className="contents lg:sticky lg:top-6 lg:flex lg:flex-col lg:gap-3">
+        <AddFood
+          className={`order-2 ${plateActive ? "hidden lg:flex" : ""}`}
+          onPhoto={(file) => {
+            setDescribing(false);
+            void handleSelect(file);
+          }}
+          onDescribe={() => setDescribing(true)}
+          onBarcode={() => setScanning(true)}
+          onManual={() => setManualOpen(true)}
         />
-
-        {/* Keyed on the session so a full reset also closes an open product panel */}
-        <BarcodeInput
-          key={session}
-          disabled={loading || preparing || logging}
-          onAdd={addScannedFood}
-        />
-
-        <div className="relative flex">
-          <input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. 2 eggs, coffee 250ml, or water 500"
-            aria-label="Food or drink description"
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !loading && !preparing && !logging) void analyze();
-            }}
-            className="min-w-0 flex-1 rounded-panel border border-line bg-surface py-3 pl-4 pr-11 text-sm text-foreground placeholder:text-muted/75 transition-colors focus:border-accent focus:outline-none"
-          />
-          {description && (
-            <button
-              type="button"
-              aria-label="Clear description"
-              title="Clear description"
-              onClick={() => setDescription("")}
-              className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-sm font-semibold text-muted transition hover:bg-surface-raised hover:text-foreground"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-
-        {waterTracking && (
-          <p className="-mt-2 text-xs text-muted">
-            Water 500 = 500 ml · water 1 = 1 L. All drinks count toward Water.
-          </p>
-        )}
-
-        {(!latest || sourceBlob || description.trim()) && (
-          <button
-            type="button"
-            disabled={
-              (!sourceBlob && !description.trim()) ||
-              (capReached && sourceBlob !== null) ||
-              loading ||
-              preparing
-            }
-            onClick={() => analyze()}
-            className="flex items-center justify-center gap-2 rounded-panel bg-accent px-4 py-3 font-semibold text-background transition duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {/* During photo prep the frame overlay is the loader — the button stays plain */}
-            {loading && <Spinner />}
-            {loading
-              ? "Analyzing…"
-              : latest
-                ? sourceBlob
-                  ? "Start over with this photo"
-                  : "Analyze again"
-                : "Analyze"}
-          </button>
-        )}
-
-        {error && (
-          <p className="rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
-            {error}
-          </p>
-        )}
-
-        {/* Full reset — the photo ✕ only exists when there is a photo, and a
-            barcode-only or text-only plate would otherwise have no way out */}
-        {(latest || sourceBlob || description.trim()) && !logged && (
-          <button
-            type="button"
-            disabled={loading || preparing || logging}
-            onClick={handleClear}
-            className="self-center text-xs font-semibold text-muted transition-colors hover:text-foreground disabled:opacity-40"
-          >
-            Clear everything
-          </button>
-        )}
+        <WaterRow progress={progress} className="order-3" />
+        <WeighInCard className="order-4" />
       </div>
 
-      {/* Thread column — estimates, corrections, and log actions */}
-      <section className="flex min-w-0 flex-col gap-4">
-        {history.length === 0 && !loading && (
-          <div className="hidden min-h-56 items-center justify-center rounded-panel border-2 border-dashed border-line px-6 text-sm text-muted lg:flex">
-            Estimates appear here once you analyze a photo or description.
-          </div>
-        )}
+      {/* Right on desktop: the day's numbers, the meal in progress and the day's meals */}
+      <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-3">
+        <div className="order-1 flex flex-col gap-2">
+          {!isToday && (
+            <p className="text-[13px] font-semibold text-accent">Logging to {dayLabel(day)}</p>
+          )}
+          <TodayCards progress={progress} isToday={isToday} />
+        </div>
+        {mealCard && <div className="order-2 flex min-w-0 flex-col gap-3">{mealCard}</div>}
+        <EatenToday
+          className="order-5"
+          progress={progress}
+          day={day}
+          isToday={isToday}
+          highlightId={highlightId}
+          onChanged={refreshDay}
+        />
+      </div>
 
-        {history.map((entry, idx) => {
-          const isLatest = idx === history.length - 1;
-          const previous = idx > 0 ? (history[idx - 1]?.analysis ?? null) : null;
-          const label = history.length > 1 ? `Estimate ${idx + 1}` : "Estimate";
-          return (
-            <div key={idx} className="flex flex-col gap-3">
-              {entry.correction && <CorrectionBubble text={entry.correction} />}
-              {isLatest ? (
-                <AnalysisCard
-                  analysis={entry.analysis}
-                  previous={previous}
-                  label={label}
-                  disabled={loading || logged}
-                  onGramsChange={handleGramsChange}
-                  onDrinkTypeChange={handleDrinkTypeChange}
-                />
-              ) : (
-                <CompactAnalysis analysis={entry.analysis} label={label} />
-              )}
-            </div>
-          );
-        })}
-
-        {loading && !pendingCorrection && <SkeletonEstimate label="Estimate" />}
-
-        {pendingCorrection && (
-          <>
-            <CorrectionBubble text={pendingCorrection} />
-            <SkeletonEstimate label={`Estimate ${history.length + 1}`} />
-          </>
-        )}
-
-        {latest && !pendingCorrection && (
-          <>
-            {/* Before logging: pick a day and log. After: the picker and log
-                button are dead controls, so they collapse into a confirmation
-                line and the two follow-up actions get the room instead. */}
-            {logged ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="w-full text-sm font-semibold text-success sm:w-auto sm:flex-1">
-                  Logged to {dayLabel(logDate ?? todayKey)} ✓
-                </p>
-                <div className="flex w-full gap-2 sm:w-auto">
-                  <Link
-                    href="/log"
-                    className="flex flex-1 items-center justify-center rounded-panel bg-success px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110 sm:flex-none"
-                  >
-                    View log
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleClear}
-                    className="flex flex-1 items-center justify-center rounded-panel border border-line px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-accent sm:flex-none"
-                  >
-                    New meal
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                {/* Which day the meal lands on — capped at today, no future meals */}
-                <DatePicker
-                  value={logDate ?? todayKey}
-                  max={todayKey}
-                  disabled={logging}
-                  onChange={setLogDate}
-                  ariaLabel="Day to log this meal to"
-                />
-                <button
-                  type="button"
-                  disabled={loading || logging}
-                  onClick={() => void handleLog()}
-                  className="flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-panel border border-success px-4 py-2.5 text-sm font-semibold text-success transition-colors hover:bg-success-soft disabled:border-line disabled:text-muted"
-                >
-                  {logging && <Spinner className="h-3.5 w-3.5" />}
-                  {logging ? "Logging…" : logDate ? `Log to ${dayLabel(logDate)}` : "Log meal"}
-                </button>
-              </div>
-            )}
-            {/* A logged meal is final here (edit it on the Log), so correcting it is hidden */}
-            {!logged && (
-              <>
-                <CorrectionBar
-                  disabled={loading || capReached}
-                  loading={loading}
-                  onSubmit={(correction) => analyze(correction)}
-                />
-                <p className="text-center text-xs text-muted">
-                  Edit amounts for instant recalculation, or describe what’s wrong to re-analyze.
-                </p>
-              </>
-            )}
-          </>
-        )}
-
-        <div ref={threadEndRef} />
-      </section>
+      <ManualSheet
+        open={manualOpen}
+        onClose={() => setManualOpen(false)}
+        onLogged={(id, name, loggedDay) => {
+          setManualOpen(false);
+          onLogged(id, name, loggedDay);
+        }}
+      />
+      {scanning && (
+        <BarcodeFlow
+          target={plateHasFood ? "meal" : "now"}
+          onAdd={addProduct}
+          onDone={() => {
+            setScanning(false);
+            if (scanRequested) router.replace("/");
+          }}
+        />
+      )}
     </main>
   );
 }

@@ -5,7 +5,7 @@ import { getProfile } from "@/lib/profiles";
 import { getUserId } from "@/lib/supabase-session";
 
 /**
- * Wraps the tracker pages (Analyze, Log, Products, Stats, Settings). The folder
+ * Wraps the tracker pages (Home, Log, Stats, Products, Settings). The folder
  * in parentheses is a route group: it groups files without appearing in any
  * URL, so these pages keep their paths and only gain this shared layout.
  *

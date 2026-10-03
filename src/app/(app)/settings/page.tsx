@@ -1,39 +1,23 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { listPlans } from "@/lib/plan-history";
-import { getProfile } from "@/lib/profiles";
-import { createSessionClient, getViewer } from "@/lib/supabase-session";
-import { listWeights } from "@/lib/weights";
-import { SettingsView } from "./SettingsView";
+import { loadSettings } from "./load";
+import { PlanCard } from "./PlanCard";
+import { SettingsMenu } from "./SettingsMenu";
+import { SettingsShell } from "./SettingsShell";
 
 export const metadata: Metadata = {
   title: "Settings — Calorie Calculator",
-  description: "Your plan, your details, water tracking and your account.",
+  description: "Your plan, your details, reminders, water tracking and your account.",
 };
 
 export default async function SettingsPage() {
-  // The proxy already sends logged-out visitors to /login; this is the page's own check
-  const viewer = await getViewer();
-  if (!viewer) redirect("/login");
-  const { userId } = viewer;
-
-  const supabase = await createSessionClient();
-  const [{ data }, profile, plans, weights] = await Promise.all([
-    supabase.auth.getUser(),
-    getProfile(userId),
-    listPlans(userId),
-    listWeights(userId),
-  ]);
-  // The (app) layout guarantees a plan, which means onboarding saved a profile
-  if (!profile) redirect("/onboarding");
-
+  const data = await loadSettings();
+  const active = data.plans.at(-1)!;
   return (
-    <SettingsView
-      email={data.user?.email ?? ""}
-      profile={profile}
-      plans={plans}
-      latestWeighIn={weights.at(-1) ?? null}
-      isAdmin={viewer.isAdmin}
-    />
+    <SettingsShell menu={<SettingsMenu data={data} />} planCard={<PlanCard plan={active} />}>
+      {/* Desktop only: the right side before a section is picked */}
+      <p className="rounded-[20px] bg-surface px-5 py-6 text-center text-sm text-muted">
+        Pick a section on the left to change it.
+      </p>
+    </SettingsShell>
   );
 }

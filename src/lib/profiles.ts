@@ -1,3 +1,4 @@
+import { DEFAULT_REMINDER_DAYS, isReminderDays, type WeighInReminderDays } from "@/lib/reminder";
 import type { ActivityLevel, BodyDetails, Sex } from "@/lib/plan";
 import { createSessionClient, type Db } from "@/lib/supabase-session";
 
@@ -12,6 +13,8 @@ export interface Profile extends BodyDetails {
   waterTracking: boolean;
   /** Daily water goal in ml; null when none is set */
   waterGoalMl: number | null;
+  /** How old the last weigh-in can get before the homepage reminds you; 0 = never */
+  weighInReminderDays: WeighInReminderDays;
 }
 
 /** The columns the maintenance estimate needs — what onboarding and profile edits write. */
@@ -26,10 +29,11 @@ interface BodyRow {
 interface ProfileRow extends BodyRow {
   water_tracking: boolean;
   water_goal_ml: number | null;
+  weigh_in_reminder_days: number;
 }
 
 const PROFILE_COLUMNS =
-  "sex, birth_year, height_cm, weight_kg, activity_level, water_tracking, water_goal_ml";
+  "sex, birth_year, height_cm, weight_kg, activity_level, water_tracking, water_goal_ml, weigh_in_reminder_days";
 
 /** The user's profile, or null before onboarding. */
 export async function getProfile(userId: string, db?: Db): Promise<Profile | null> {
@@ -50,6 +54,9 @@ export async function getProfile(userId: string, db?: Db): Promise<Profile | nul
     activityLevel: row.activity_level,
     waterTracking: row.water_tracking,
     waterGoalMl: row.water_goal_ml,
+    weighInReminderDays: isReminderDays(row.weigh_in_reminder_days)
+      ? row.weigh_in_reminder_days
+      : DEFAULT_REMINDER_DAYS,
   };
 }
 
@@ -86,6 +93,19 @@ export async function saveWaterSetting(
     .update({ water_tracking: waterTracking, water_goal_ml: waterGoalMl })
     .eq("user_id", userId);
   if (error) throw new Error(`Couldn't save the water setting: ${error.message}`);
+}
+
+/** Stores how often the weigh-in reminder comes back; the profile always exists here. */
+export async function saveReminderSetting(
+  userId: string,
+  days: WeighInReminderDays,
+): Promise<void> {
+  const db = await createSessionClient();
+  const { error } = await db
+    .from("profiles")
+    .update({ weigh_in_reminder_days: days })
+    .eq("user_id", userId);
+  if (error) throw new Error(`Couldn't save the reminder setting: ${error.message}`);
 }
 
 /** The water goal days are judged against: null whenever water tracking is off. */

@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { IScannerControls } from "@zxing/browser";
@@ -163,7 +164,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-accent">
             Product scanner
           </p>
-          <h2 id="barcode-scanner-title" className="font-serif text-xl font-semibold">
+          <h2 id="barcode-scanner-title" className="text-xl font-extrabold">
             Scan a food barcode
           </h2>
         </div>
@@ -174,7 +175,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           onClick={onClose}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-lg transition hover:border-accent"
         >
-          ✕
+          <X className="h-[1.1em] w-[1.1em]" strokeWidth={2.25} aria-hidden />
         </button>
       </header>
 
@@ -245,7 +246,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
               setManualError(null);
             }}
             placeholder="e.g. 3017624010701"
-            className="min-w-0 flex-1 rounded-panel border border-line bg-surface px-3 py-2.5 font-mono text-sm tabular-nums placeholder:text-muted/65 focus:border-accent focus:outline-none"
+            className="min-w-0 flex-1 rounded-panel border border-line bg-surface px-3 py-2.5 text-sm tabular-nums placeholder:text-muted/65 focus:border-accent focus:outline-none"
           />
           <button
             type="submit"

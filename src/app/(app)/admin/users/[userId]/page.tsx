@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { ButtonLink } from "@/components/Button";
 import { notFound } from "next/navigation";
 import { WaterTrackingProvider } from "@/components/WaterTracking";
 import { aiUsageHistory, dailyCapOf, getAccount, requireAdmin } from "@/lib/admin";
@@ -16,6 +18,16 @@ import { Overview } from "./Overview";
 
 export const metadata: Metadata = { title: "User — Calorie Calculator" };
 
+const GOAL_LABELS = { lose: "Lose", maintain: "Maintain", gain: "Gain" } as const;
+
+/** "3 Oct", in Sofia time: this renders on the server, which runs in UTC. */
+const sofiaDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", {
+    timeZone: "Europe/Sofia",
+    day: "numeric",
+    month: "short",
+  });
+
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "log", label: "Log" },
@@ -25,9 +37,11 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-// The same two-column grid the Log and Stats pages use, so their views drop in as-is
+// The same two-column grids the Log and Stats pages use, so their views drop in as-is
 const GRID =
-  "flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:content-start lg:items-start lg:gap-x-10";
+  "flex flex-col gap-3 lg:grid lg:grid-cols-[380px_minmax(0,1fr)] lg:content-start lg:items-start lg:gap-x-6 lg:gap-y-3";
+const LOG_GRID =
+  "flex flex-col gap-3 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:content-start lg:items-start lg:gap-x-6";
 
 /**
  * Admin only: one account, read-only. Each tab reuses the page the user sees,
@@ -44,13 +58,21 @@ export default async function AdminUserPage(props: PageProps<"/admin/users/[user
   if (!account) notFound();
 
   const db = createAdminClient();
-  const [profile, plans] = await Promise.all([getProfile(userId, db), listPlans(userId, db)]);
+  // The header's key numbers need the plan and today's AI use on every tab
+  const [profile, plans, usage, dailyCap] = await Promise.all([
+    getProfile(userId, db),
+    listPlans(userId, db),
+    aiUsageHistory(userId, 14),
+    dailyCapOf(account),
+  ]);
   const waterGoalMl = activeWaterGoal(profile);
+  const plan = plans.at(-1) ?? null;
+  const usedToday = usage.at(-1)?.used ?? 0;
 
   let content: React.ReactNode;
   if (tab === "log") {
     content = (
-      <div className={GRID}>
+      <div className={LOG_GRID}>
         <LogList
           meals={await listMeals(userId, db)}
           plans={plans}
@@ -72,11 +94,7 @@ export default async function AdminUserPage(props: PageProps<"/admin/users/[user
   } else if (tab === "products") {
     content = <ProductList products={await listSavedBarcodeProducts(userId, db)} readOnly />;
   } else {
-    const [weights, usage, dailyCap] = await Promise.all([
-      listWeights(userId, db),
-      aiUsageHistory(userId, 14),
-      dailyCapOf(account),
-    ]);
+    const weights = await listWeights(userId, db);
     content = (
       <Overview
         account={account}
@@ -90,27 +108,56 @@ export default async function AdminUserPage(props: PageProps<"/admin/users/[user
   }
 
   return (
-    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-5 py-8 sm:px-6 sm:py-11 lg:max-w-5xl">
-      <header className="border-b-2 border-foreground pb-6">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
-          <Link href="/admin" className="hover:underline">
-            Admin · ← Users
-          </Link>
-        </p>
-        <h1 className="break-words font-serif text-[clamp(1.6rem,6vw,2.4rem)] font-semibold leading-[1.1] tracking-tight">
-          {account.email}
-        </h1>
-      </header>
+    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-3.5 px-4 pt-4 pb-12 lg:px-8 lg:pt-2 lg:max-w-5xl">
+      <div className="flex items-center gap-3">
+        <ButtonLink href="/admin" variant="outline" size="icon" aria-label="Back to users">
+          <ChevronLeft className="h-5 w-5" strokeWidth={2} aria-hidden />
+        </ButtonLink>
+        <p className="min-w-0 break-words text-lg font-extrabold tracking-tight">{account.email}</p>
+      </div>
 
-      <p className="rounded-r-panel border-l-4 border-amber bg-surface px-4 py-2.5 text-[13px]">
+      <span className="self-start rounded-full bg-[#33291a] px-3 py-1 text-xs font-bold text-amber">
         {account.userId === viewer.userId
-          ? "Your own account, shown the way you see other accounts: read-only."
-          : "Read-only view of this account. Only the AI cap (on the Users page) can be changed."}
-      </p>
+          ? "Your own account, shown read-only"
+          : "Read-only · only the AI cap can be changed"}
+      </span>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="min-w-0 rounded-[18px] bg-surface p-3">
+          <span className="block text-xs text-muted">Plan</span>
+          <b className="block truncate text-[17px] font-extrabold">
+            {plan ? GOAL_LABELS[plan.goal] : "None yet"}
+          </b>
+          {plan && (
+            <span className="block truncate text-xs text-muted tabular-nums">
+              {plan.calorieTarget.toLocaleString("en-US")} · {plan.proteinTarget} g
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 rounded-[18px] bg-surface p-3">
+          <span className="block text-xs text-muted">Last login</span>
+          <b className="block truncate text-[17px] font-extrabold">
+            {account.lastSignInAt ? sofiaDate(account.lastSignInAt) : "Never"}
+          </b>
+        </div>
+        <div className="min-w-0 rounded-[18px] bg-surface p-3">
+          <span className="block text-xs text-muted">AI today</span>
+          <b className="block text-[17px] font-extrabold tabular-nums">
+            {dailyCap === null ? usedToday : `${usedToday} / ${dailyCap}`}
+          </b>
+          <span className="block text-xs text-muted">
+            {dailyCap === null
+              ? "No cap"
+              : dailyCap === 0
+                ? "Paused"
+                : `${Math.max(dailyCap - usedToday, 0)} left`}
+          </span>
+        </div>
+      </div>
 
       <nav
         aria-label="Sections"
-        className="flex w-fit rounded-full border border-line bg-surface p-1"
+        className="grid grid-cols-4 gap-1 rounded-[16px] bg-surface p-1 lg:w-[480px]"
       >
         {TABS.map((t) => (
           <Link
@@ -119,8 +166,8 @@ export default async function AdminUserPage(props: PageProps<"/admin/users/[user
               t.id === "overview" ? `/admin/users/${userId}` : `/admin/users/${userId}?tab=${t.id}`
             }
             aria-current={t.id === tab ? "page" : undefined}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4 ${
-              t.id === tab ? "bg-accent text-background" : "text-muted hover:text-foreground"
+            className={`flex h-10 items-center justify-center rounded-[12px] text-[13px] font-bold transition-colors ${
+              t.id === tab ? "bg-accent text-[#241a15]" : "text-muted hover:text-foreground"
             }`}
           >
             {t.label}
