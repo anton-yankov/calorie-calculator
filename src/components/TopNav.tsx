@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserRound } from "lucide-react";
-import { logout } from "@/app/login/actions";
-import { Button } from "@/components/Button";
 import { inAccountArea, PAGES, pageTitle } from "@/components/nav";
 import { useMounted } from "@/components/useMounted";
 
@@ -21,12 +19,9 @@ export function TopNav() {
     ? new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
     : "";
 
-  // The login screen has its own full-page design
-  if (pathname === "/login") return null;
+  // Login and setup have their own full-page design, with no pages to go to yet
+  if (pathname === "/login" || pathname === "/onboarding") return null;
   const { sub, title } = pageTitle(pathname, today);
-  // Onboarding drops the tabs (every page would bounce back until there's a
-  // plan) but keeps Log out, in case it's the wrong account
-  const onOnboarding = pathname === "/onboarding";
   const accountArea = inAccountArea(pathname);
 
   // The installed app draws under the status bar (viewport-fit=cover in the
@@ -44,52 +39,42 @@ export function TopNav() {
               {title}
             </h1>
           </div>
-          {onOnboarding ? (
-            <form action={logout}>
-              <Button type="submit" variant="outline" size="sm">
-                Log out
-              </Button>
-            </form>
-          ) : (
-            <Link
-              href="/settings"
-              aria-label="Settings"
-              aria-current={pathname === "/settings" ? "page" : undefined}
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-panel transition-colors lg:hidden ${
-                accountArea
-                  ? "bg-accent text-background"
-                  : "bg-surface text-muted hover:text-foreground"
-              }`}
-            >
-              <UserRound className="h-[22px] w-[22px]" strokeWidth={1.9} aria-hidden />
-            </Link>
-          )}
+          <Link
+            href="/settings"
+            aria-label="Settings"
+            aria-current={pathname === "/settings" ? "page" : undefined}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-panel transition-colors lg:hidden ${
+              accountArea
+                ? "bg-accent text-background"
+                : "bg-surface text-muted hover:text-foreground"
+            }`}
+          >
+            <UserRound className="h-[22px] w-[22px]" strokeWidth={1.9} aria-hidden />
+          </Link>
         </div>
-        {!onOnboarding && (
-          <nav aria-label="Pages" className="-mx-2 flex lg:hidden">
-            {PAGES.map((page) => {
-              const active = pathname === page.href;
-              return (
-                <Link
-                  key={page.href}
-                  href={page.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`relative flex h-11 flex-1 items-center justify-center text-sm font-bold transition-colors ${
-                    active ? "text-foreground" : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  {page.label}
-                  {active && (
-                    <span
-                      aria-hidden
-                      className="absolute inset-x-[22%] -bottom-px h-[3px] rounded-full bg-accent"
-                    />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-        )}
+        <nav aria-label="Pages" className="-mx-2 flex lg:hidden">
+          {PAGES.map((page) => {
+            const active = pathname === page.href;
+            return (
+              <Link
+                key={page.href}
+                href={page.href}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex h-11 flex-1 items-center justify-center text-sm font-bold transition-colors ${
+                  active ? "text-foreground" : "text-muted hover:text-foreground"
+                }`}
+              >
+                {page.label}
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-[22%] -bottom-px h-[3px] rounded-full bg-accent"
+                  />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );

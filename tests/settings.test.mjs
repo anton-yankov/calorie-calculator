@@ -48,6 +48,7 @@ function settings({ userId = "user-1", stored = profile, auth = {} } = {}) {
       getProfile: async () => stored,
       saveProfile: async (id, body) => (saved.profile = { id, body }),
       saveWaterSetting: async (id, tracking, goalMl) => (saved.water = { id, tracking, goalMl }),
+      saveReminderSetting: async (id, days) => (saved.reminder = { id, days }),
     },
     "@/lib/plan-history": { savePlan: async (id, p) => (saved.plan = { id, plan: p }) },
   });
@@ -89,6 +90,7 @@ test("changing plans uses the stored profile and recomputes the targets", async 
       goalWeightKg: 75,
       kgPerWeek: 0.5,
       custom: null,
+      proteinPerKg: 1.6,
       today: todayKey,
     }),
     {},
@@ -99,7 +101,8 @@ test("changing plans uses the stored profile and recomputes the targets", async 
     kgPerWeek: 0.5,
     goalWeightKg: 75,
     calorieTarget: gainSteady,
-    proteinTarget: 140, // 2.0 g × 70 kg from the stored profile
+    proteinTarget: 112, // 1.6 g × 70 kg from the stored profile (gaining uses the current weight)
+    proteinPerKg: 1.6,
     maintenanceKcal: maintenance,
     weightKg: 70,
   });
@@ -112,6 +115,7 @@ test("a plan change can't smuggle in its own targets or an unoffered pace", asyn
     goalWeightKg: 75,
     kgPerWeek: 0.5,
     custom: { calorieTarget: 9000, proteinTarget: 400 },
+    proteinPerKg: 1.6,
     today: todayKey,
   });
   assert.equal(sneaky.saved.plan.plan.calorieTarget, gainSteady);
@@ -124,6 +128,7 @@ test("a plan change can't smuggle in its own targets or an unoffered pace", asyn
         goalWeightKg: 75,
         kgPerWeek: 3,
         custom: null,
+        proteinPerKg: 1.6,
         today: todayKey,
       })
     ).error,
@@ -186,4 +191,17 @@ test("logged-out requests change nothing", async () => {
     expected,
   );
   assert.deepEqual(saved, {});
+});
+
+test("the weigh-in reminder takes only the offered intervals", async () => {
+  const ok = settings();
+  assert.deepEqual(await ok.saveReminderAction(3), {});
+  assert.deepEqual(ok.saved.reminder, { id: "user-1", days: 3 });
+  assert.deepEqual(await ok.saveReminderAction(0), {}); // off
+
+  const odd = settings();
+  assert.deepEqual(await odd.saveReminderAction(5), {
+    error: "Choose one of the reminder options.",
+  });
+  assert.equal(odd.saved.reminder, undefined);
 });

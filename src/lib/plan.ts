@@ -51,7 +51,40 @@ export type Goal = "lose" | "maintain" | "gain";
  */
 const KCAL_PER_KG = 7700;
 
-const PROTEIN_G_PER_KG = 2.0;
+/**
+ * The protein levels to choose from, in grams per kg of body weight. Moderate
+ * suits most people, including while losing weight; High is for lifting weights
+ * regularly. Anything else can be typed in as a custom plan.
+ */
+export const PROTEIN_LEVELS = [
+  { perKg: 1.2, label: "Light", hint: "Enough for most people who don't train" },
+  {
+    perKg: 1.6,
+    label: "Moderate",
+    hint: "Recommended for most people, including while losing weight",
+  },
+  { perKg: 2.0, label: "High", hint: "If you lift weights 3 or more times a week" },
+] as const;
+
+export type ProteinPerKg = (typeof PROTEIN_LEVELS)[number]["perKg"];
+
+export const DEFAULT_PROTEIN_PER_KG: ProteinPerKg = 1.6;
+
+/**
+ * The daily protein target for a level. When losing, it's worked out from the
+ * goal weight, the weight you're heading to; with more to lose, the current
+ * weight would ask for far more protein than the body needs. Maintaining and
+ * gaining use the current weight.
+ */
+export function proteinTarget(
+  body: BodyDetails,
+  goal: Goal,
+  goalWeightKg: number | null,
+  perKg: ProteinPerKg,
+): number {
+  const basisKg = goal === "lose" && goalWeightKg !== null ? goalWeightKg : body.weightKg;
+  return Math.round(basisKg * perKg);
+}
 
 /** The YYYY-MM-DD date `weeks` after `today`, rounded to whole days. */
 function goalDateAfter(today: string, weeks: number): string {
@@ -87,6 +120,12 @@ const PACE_OPTIONS: Record<Goal, PaceOption[]> = {
   ],
 };
 
+/** The name of a suggested pace, e.g. "Steady"; null for a custom plan. */
+export function paceName(goal: Goal, kgPerWeek: number | null): string | null {
+  if (kgPerWeek === null) return null;
+  return PACE_OPTIONS[goal].find((option) => option.kgPerWeek === kgPerWeek)?.name ?? null;
+}
+
 interface SuggestedPlan extends PaceOption {
   calorieTarget: number;
   proteinTarget: number;
@@ -97,8 +136,8 @@ interface SuggestedPlan extends PaceOption {
 }
 
 /**
- * The plans to offer for a goal. `today` is a YYYY-MM-DD key (it also supplies
- * the year for the age). Inputs are trusted, e.g. a "lose" goal weight above
+ * The plans to offer for a goal, all with the chosen protein level. `today` is
+ * a YYYY-MM-DD key (it also supplies the year for the age). Inputs are trusted, e.g. a "lose" goal weight above
  * the current weight isn't caught here: the onboarding action validates them.
  */
 export function suggestPlans(
@@ -106,9 +145,10 @@ export function suggestPlans(
   goal: Goal,
   goalWeightKg: number | null,
   today: string,
+  proteinPerKg: ProteinPerKg = DEFAULT_PROTEIN_PER_KG,
 ): SuggestedPlan[] {
   const maintenance = maintenanceCalories(body, Number(today.slice(0, 4)));
-  const proteinTarget = Math.round(body.weightKg * PROTEIN_G_PER_KG);
+  const protein = proteinTarget(body, goal, goalWeightKg, proteinPerKg);
   // Losing eats below maintenance, gaining above; maintaining has a 0 kg pace
   const direction = goal === "lose" ? -1 : 1;
 
@@ -121,7 +161,7 @@ export function suggestPlans(
     return {
       ...option,
       calorieTarget: Math.round(maintenance + direction * dailyChange),
-      proteinTarget,
+      proteinTarget: protein,
       weeksToGoal,
       goalDate: weeksToGoal === null ? null : goalDateAfter(today, weeksToGoal),
     };

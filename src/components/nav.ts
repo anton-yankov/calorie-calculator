@@ -10,7 +10,7 @@ export const PAGES = [
 
 /** Settings and the admin pages sit behind the profile button, not a tab. */
 export const inAccountArea = (pathname: string) =>
-  pathname === "/settings" || pathname.startsWith("/admin");
+  pathname.startsWith("/settings") || pathname.startsWith("/admin");
 
 /**
  * The title row at the top of each page: a small line above, the page name
@@ -23,8 +23,9 @@ export function pageTitle(pathname: string, today: string): { sub: string; title
   if (pathname === "/stats") return { sub: "Your trends", title: "Stats" };
   if (pathname === "/products") return { sub: "Saved from barcodes", title: "Products" };
   if (pathname === "/settings") return { sub: "Your account", title: "Settings" };
+  if (pathname === "/settings/details") return { sub: "Settings", title: "Body details" };
+  if (pathname === "/settings/plan") return { sub: "Settings", title: "Change plan" };
   if (pathname === "/admin") return { sub: "Admin", title: "Users" };
   if (pathname.startsWith("/admin/users/")) return { sub: "Admin · Users", title: "Account" };
-  if (pathname === "/onboarding") return { sub: "Calories", title: "Setup" };
   return { sub: "", title: "Calories" };
 }

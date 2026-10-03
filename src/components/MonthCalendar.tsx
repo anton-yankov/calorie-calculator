@@ -110,3 +110,81 @@ export function MonthCalendar({
     </div>
   );
 }
+
+/**
+ * The days from `start` to `today` as whole weeks, Monday first: for the 7 and
+ * 30 day ranges, where a month split would be a fragment. Days before `start`
+ * or after today show faintly, so every row is a full week.
+ */
+export function WeeksCalendar({
+  start,
+  today,
+  dayStatus,
+  onSelect,
+}: {
+  start: string;
+  today: string;
+  dayStatus: (key: string) => CalendarDay;
+  onSelect?: (key: string) => void;
+}) {
+  const first = new Date(`${start}T12:00:00`);
+  first.setDate(first.getDate() - ((first.getDay() + 6) % 7));
+  const last = new Date(`${today}T12:00:00`);
+  last.setDate(last.getDate() + (6 - ((last.getDay() + 6) % 7)));
+  const keys: string[] = [];
+  for (const d = new Date(first); d <= last; d.setDate(d.getDate() + 1)) {
+    keys.push(keyOf(d.getFullYear(), d.getMonth(), d.getDate()));
+  }
+  return (
+    <div className="grid grid-cols-7 gap-1.5">
+      {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+        <span key={i} aria-hidden className="text-center text-xs font-bold text-muted">
+          {d}
+        </span>
+      ))}
+      {keys.map((key) => {
+        const status = key < start || key > today ? "none" : dayStatus(key);
+        const day = Number(key.slice(8));
+        const className = `flex aspect-square items-center justify-center rounded-[12px] text-[15px] font-extrabold tabular-nums ${CELL[status]}`;
+        return onSelect && status !== "none" && status !== "empty" ? (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onSelect(key)}
+            aria-label={new Date(`${key}T12:00:00`).toLocaleDateString("en-GB", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+            className={`${className} transition hover:brightness-110`}
+          >
+            {day}
+          </button>
+        ) : (
+          <span key={key} className={className}>
+            {day}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/** What the calendar colours mean. */
+export function CalendarLegend() {
+  const item = (swatch: string, label: string) => (
+    <span className="flex items-center gap-1.5">
+      <span aria-hidden className={`h-2.5 w-2.5 rounded-[3px] ${swatch}`} />
+      {label}
+    </span>
+  );
+  return (
+    <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-xs text-muted">
+      {item("bg-success", "On track")}
+      {item("bg-danger", "Over")}
+      {item("bg-amber", "Close or short")}
+      {item("bg-surface-raised", "Not logged")}
+      {item("border-2 border-tint-lose", "Today")}
+    </div>
+  );
+}

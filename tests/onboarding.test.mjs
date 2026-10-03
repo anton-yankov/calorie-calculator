@@ -18,6 +18,7 @@ const valid = {
   goalWeightKg: 78,
   kgPerWeek: 0.5,
   custom: null,
+  proteinPerKg: 1.6,
   today: todayKey,
 };
 
@@ -59,7 +60,8 @@ test("a suggested pace is stored with server-computed targets and snapshots", as
     kgPerWeek: 0.5,
     goalWeightKg: 78,
     calorieTarget: loseSteady, // recomputed here, not taken from the client
-    proteinTarget: 170, // 2.0 g × 85 kg
+    proteinTarget: 125, // Moderate: 1.6 g × the 78 kg goal weight
+    proteinPerKg: 1.6,
     maintenanceKcal: maintenance,
     weightKg: 85,
   });
@@ -89,6 +91,8 @@ test("custom targets are stored as typed, within bounds", async () => {
   assert.equal(saved.plan.plan.calorieTarget, 2400);
   assert.equal(saved.plan.plan.proteinTarget, 165);
   assert.equal(saved.plan.plan.kgPerWeek, null);
+  // A custom plan has no protein level
+  assert.equal(saved.plan.plan.proteinPerKg, null);
 
   const tooLow = onboarding();
   assert.match(
@@ -143,4 +147,19 @@ test("logged-out setup saves nothing", async () => {
   const { saved, save } = onboarding({ userId: null });
   assert.deepEqual(await save(valid), { error: "Authentication required" });
   assert.equal(saved.profile, undefined);
+});
+
+test("a protein level that isn't offered is rejected", async () => {
+  const { saved, save } = onboarding();
+  assert.deepEqual(await save({ ...valid, proteinPerKg: 3 }), {
+    error: "Choose one of the protein levels.",
+  });
+  assert.equal(saved.plan, undefined);
+});
+
+test("the chosen protein level sets the target", async () => {
+  const { saved, save } = onboarding();
+  await save({ ...valid, proteinPerKg: 2.0 });
+  assert.equal(saved.plan.plan.proteinTarget, 156); // 2.0 g × 78 kg
+  assert.equal(saved.plan.plan.proteinPerKg, 2.0);
 });

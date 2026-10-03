@@ -210,9 +210,9 @@ export function DailyBars({
   }
 
   return (
-    <section className="overflow-hidden rounded-panel border border-line bg-surface">
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 pb-1 pt-3">
-        <h2 className="text-sm font-semibold">{title}</h2>
+    <section className="overflow-hidden rounded-[22px] bg-surface">
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 pb-1 pt-3.5">
+        <h2 className="text-[15.5px] font-extrabold">{title}</h2>
         {/* Legend: needed once there's a second series to tell apart */}
         {mode === "day" && !empty && (
           <span className="flex items-center gap-3 text-[11px] text-muted">

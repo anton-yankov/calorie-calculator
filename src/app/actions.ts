@@ -37,6 +37,7 @@ import { activeWaterGoal, getProfile } from "@/lib/profiles";
 // Server Actions are reachable via direct POST, not just through the UI, so
 // each one re-checks the session with getUserId() — same rule as the proxy.
 import { getUserId, getViewer } from "@/lib/supabase-session";
+import { DEFAULT_REMINDER_DAYS, type WeighInReminderDays } from "@/lib/reminder";
 import { latestWeighIn, type WeightEntry } from "@/lib/weights";
 
 interface ActionResult {
@@ -317,14 +318,15 @@ export async function aiAllowanceAction(): Promise<ActionResult & { allowance?: 
   }
 }
 
-/** The latest weigh-in, for the homepage's weigh-in card. */
+/** The latest weigh-in and how often to remind, for the homepage's weigh-in card. */
 export async function latestWeighInAction(): Promise<
-  ActionResult & { latest?: WeightEntry | null }
+  ActionResult & { latest?: WeightEntry | null; reminderDays?: WeighInReminderDays }
 > {
   const userId = await getUserId();
   if (!userId) return { error: "Authentication required" };
   try {
-    return { latest: await latestWeighIn(userId) };
+    const [latest, profile] = await Promise.all([latestWeighIn(userId), getProfile(userId)]);
+    return { latest, reminderDays: profile?.weighInReminderDays ?? DEFAULT_REMINDER_DAYS };
   } catch (err) {
     return { error: message(err, "Couldn't load the latest weigh-in") };
   }

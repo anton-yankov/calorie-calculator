@@ -112,19 +112,23 @@ Decisions and mocks: `.plans/redesign/0-decisions-and-build-plan.html` ([postpla
 
 ### Phase R3 — Setup, Stats & Settings
 
-- [ ] R3.1 Protein levels + goal-weight basis in `plan.ts`, with tests.
-- [ ] R3.2 SQL `plans.protein_per_kg`; save and validate the level.
-- [ ] R3.3 Plan step UI (maintenance, Custom plan card, P1 bar, paces).
-- [ ] R3.4 Setup steps 1–2 and desktop step 3.
-- [ ] R3.5 Stats section switch, range, days on track vs before (tests).
-- [ ] R3.6 Calendar component (month grids, large dates, tap to open the day).
-- [ ] R3.7 Average tiles, charts, insight checks (tests) and card.
-- [ ] R3.8 Weight section: journey + pace (tests), Log weight sheet, smooth trend (tests), weigh-ins.
-- [ ] R3.9 Water section, Stats empty state, desktop Stats.
-- [ ] R3.10 Settings list with plan card and grouped rows.
-- [ ] R3.11 Body details and Change plan screens.
-- [ ] R3.12 SQL `profiles.weigh_in_reminder_days`; reminder sheet wired to the homepage card.
-- [ ] R3.13 Water autosave, password and plan-history sheets, desktop Settings.
+- [x] R3.1 `PROTEIN_LEVELS` (Light 1.2 / Moderate 1.6 default / High 2.0 g/kg) and `proteinTarget` in `plan.ts`: goal weight when losing, current weight otherwise; `suggestPlans` takes the level. Tests.
+- [x] R3.2 `plans.protein_per_kg` (in `schema.sql`; **SQL to run**, see below): `validProteinPerKg`, stored by setup and Change plan (null for custom). Tests.
+- [x] R3.3 `PlanPicker` rebuilt: maintenance with How we got this, Custom plan card under it (clearer can't-work message), P1 protein bar, pace cards, `PinnedAction` button at the bottom; maintain preselects its one plan.
+- [x] R3.4 Setup rebuilt: Back / Step N of 3 / Log out row, progress bar, choice cards (goal icons), pinned Continue; desktop step 3 in two columns. The top bar is hidden during setup.
+- [x] R3.5 Stats: Nutrition · Weight · Water switch, range pills, days on track with ▲/▼ vs the period before (`onTrackBefore`, tests).
+- [x] R3.6 `WeeksCalendar` (7d/30d) and `MonthCalendar` (90d/All, one full month each with its score), large dates, `dayOutcome` (tests), tap opens `/log#day-…`.
+- [x] R3.7 Two average tiles with plain captions, restyled charts, macro split, insight card from `pickInsight` (five fixed checks, no AI; tests).
+- [x] R3.8 Weight: journey card (plan start → now → goal, "at your pace so far" from `trendPace`, tests), Log weight sheet, tiles, chart with a smooth monotone trend (`curve.ts`, tests; goal line only when near the data), weigh-ins with ⋯ edit/delete and Show all.
+- [x] R3.9 Water section (tiles, chart, by drink), empty state with Add a meal / Go to Weight, desktop columns. `StatTile`/`RangePicker` removed.
+- [x] R3.10 Settings list (`SettingsMenu`): plan card, You / Tracking / Account / Admin rows with their current values; `SettingsShell` (list + section on desktop).
+- [x] R3.11 `/settings/details` and `/settings/plan` as their own screens (real URLs, back button on phones), shared `loadSettings`; `SettingsView` removed.
+- [x] R3.12 `profiles.weigh_in_reminder_days` (in `schema.sql`; **SQL to run**): reminder sheet (daily / 3 / 7 / 14 days / off, `saveReminderAction`, test), the homepage card follows it and its snooze sheet links to it.
+- [x] R3.13 Water switch with an autosaving goal, password and plan-history sheets, Log out row, desktop list + detail.
+
+- [ ] **Phase R3 SQL** (run before using this branch: every page reads both columns):
+  `alter table public.plans add column protein_per_kg numeric(2,1) check (protein_per_kg in (1.2, 1.6, 2.0));`
+  `alter table public.profiles add column weigh_in_reminder_days smallint not null default 7 check (weigh_in_reminder_days in (0, 1, 3, 7, 14));`
 
 ### Phase R4 — Admin & finish
 

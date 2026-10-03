@@ -1,9 +1,17 @@
 "use client";
 
+import { ChevronLeft, MoveRight, TrendingDown, TrendingUp } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { logout } from "@/app/login/actions";
+import { Button } from "@/components/Button";
 import { Choice, Field, Segmented } from "@/components/fields";
-import { ACTIVITY_LABELS, PlanPicker, type PlanChoice } from "@/components/PlanPicker";
+import {
+  ACTIVITY_LABELS,
+  PinnedAction,
+  PlanPicker,
+  type PlanChoice,
+} from "@/components/PlanPicker";
 import { dayKey } from "@/lib/day";
 import type { ActivityLevel, BodyDetails, Goal, Sex } from "@/lib/plan";
 import { saveOnboardingAction } from "./actions";
@@ -16,15 +24,38 @@ const ACTIVITY_HINTS: Record<ActivityLevel, string> = {
   extra: "Very hard training or a physical job",
 };
 
-const GOAL_CHOICES: { value: Goal; label: string; hint: string }[] = [
-  { value: "lose", label: "Lose weight", hint: "Eat a little under maintenance" },
-  { value: "maintain", label: "Maintain weight", hint: "Eat around maintenance" },
-  { value: "gain", label: "Gain weight", hint: "Eat a little over maintenance" },
+const GOAL_CHOICES: { value: Goal; label: string; hint: string; icon: React.ReactNode }[] = [
+  {
+    value: "lose",
+    label: "Lose weight",
+    hint: "Eat a little under maintenance",
+    icon: <TrendingDown className="h-5 w-5" strokeWidth={2} />,
+  },
+  {
+    value: "maintain",
+    label: "Maintain weight",
+    hint: "Eat around maintenance",
+    icon: <MoveRight className="h-5 w-5" strokeWidth={2} />,
+  },
+  {
+    value: "gain",
+    label: "Gain weight",
+    hint: "Eat a little over maintenance",
+    icon: <TrendingUp className="h-5 w-5" strokeWidth={2} />,
+  },
 ];
+
+const TITLES = ["About you", "What's your goal?", "Pick your plan"];
 
 /** "5.3" rather than float noise like "5.299999999999997". */
 const kgText = (kg: number) => kg.toLocaleString("en-US", { maximumFractionDigits: 1 });
 
+/**
+ * Setup in three steps: body details, goal, plan. Back sits at the top left
+ * and the main button is pinned to the bottom of the screen, so neither is
+ * ever scrolled out of reach. Log out stays at the top right, in case it's
+ * the wrong account.
+ */
 export function OnboardingFlow({ profile }: { profile: BodyDetails | null }) {
   const [step, setStep] = useState(1);
   const [sex, setSex] = useState<Sex>(profile?.sex ?? "male");
@@ -73,6 +104,7 @@ export function OnboardingFlow({ profile }: { profile: BodyDetails | null }) {
         goal,
         goalWeightKg: goal === "maintain" ? null : goalWeight,
         kgPerWeek: choice.kgPerWeek,
+        proteinPerKg: choice.proteinPerKg,
         custom: choice.custom,
         today,
       });
@@ -82,44 +114,52 @@ export function OnboardingFlow({ profile }: { profile: BodyDetails | null }) {
   }
 
   return (
-    <main className="page-enter mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-5 pb-16 pt-8 sm:px-6">
-      <div className="flex gap-1.5" aria-hidden>
+    <main
+      className={`page-enter mx-auto flex w-full flex-1 flex-col gap-3.5 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-32 lg:pb-16 ${
+        step === 3 ? "max-w-md lg:max-w-5xl lg:px-8" : "max-w-md"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3 lg:pt-6">
+        {step > 1 ? (
+          <Button variant="outline" size="icon" aria-label="Back" onClick={() => setStep(step - 1)}>
+            <ChevronLeft className="h-5 w-5" strokeWidth={2} aria-hidden />
+          </Button>
+        ) : (
+          <span className="h-11 w-11" />
+        )}
+        <span className="text-[13px] font-bold text-muted">Step {step} of 3</span>
+        <form action={logout}>
+          <Button type="submit" variant="outline" size="sm">
+            Log out
+          </Button>
+        </form>
+      </div>
+      <div aria-hidden className="grid grid-cols-3 gap-1.5">
         {[1, 2, 3].map((n) => (
           <span
             key={n}
-            className={`h-1 flex-1 rounded-full ${n <= step ? "bg-accent" : "bg-line"}`}
+            className={`h-[5px] rounded-full ${n <= step ? "bg-accent" : "bg-surface-raised"}`}
           />
         ))}
       </div>
-
-      <header className="border-b-2 border-foreground pb-5">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
-          Step {step} of 3
-        </p>
-        <h1 className="font-serif text-[clamp(1.9rem,7vw,2.5rem)] font-semibold leading-[1.08] tracking-tight">
-          {step === 1 ? "Tell us about you" : step === 2 ? "What's your goal?" : "Pick your plan"}
-        </h1>
-        {step === 1 && (
-          <p className="mt-2 text-[15px] text-muted">
-            We use this to estimate how many calories your body burns in a day.
-          </p>
-        )}
-      </header>
+      <h1 className="mt-1.5 text-[28px] leading-tight font-extrabold tracking-tight lg:text-[34px]">
+        {TITLES[step - 1]}
+      </h1>
 
       {step === 1 && (
         <>
-          <div>
-            <span className="mb-1.5 block text-xs font-semibold text-muted">Sex</span>
-            <Segmented
-              value={sex}
-              onChange={setSex}
-              options={[
-                { value: "male", label: "Male" },
-                { value: "female", label: "Female" },
-              ]}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+          <p className="text-[14.5px] text-muted">
+            We use this to estimate how many calories your body burns in a day.
+          </p>
+          <Segmented
+            value={sex}
+            onChange={setSex}
+            options={[
+              { value: "male", label: "Male" },
+              { value: "female", label: "Female" },
+            ]}
+          />
+          <div className="grid grid-cols-3 gap-2">
             <Field label="Birth year" value={birthYear} onChange={setBirthYear} />
             <Field label="Height" unit="cm" value={heightCm} onChange={setHeightCm} />
             <Field
@@ -130,30 +170,23 @@ export function OnboardingFlow({ profile }: { profile: BodyDetails | null }) {
               inputMode="decimal"
             />
           </div>
-          <div>
-            <span className="mb-1.5 block text-xs font-semibold text-muted">
-              How active are you?
-            </span>
-            <div className="flex flex-col gap-2">
-              {(Object.keys(ACTIVITY_HINTS) as ActivityLevel[]).map((level) => (
-                <Choice
-                  key={level}
-                  selected={activityLevel === level}
-                  label={ACTIVITY_LABELS[level]}
-                  hint={ACTIVITY_HINTS[level]}
-                  onSelect={() => setActivityLevel(level)}
-                />
-              ))}
-            </div>
+          <h2 className="mt-1 text-[15px] font-extrabold">How active are you?</h2>
+          <div className="flex flex-col gap-2">
+            {(Object.keys(ACTIVITY_HINTS) as ActivityLevel[]).map((level) => (
+              <Choice
+                key={level}
+                selected={activityLevel === level}
+                label={ACTIVITY_LABELS[level]}
+                hint={ACTIVITY_HINTS[level]}
+                onSelect={() => setActivityLevel(level)}
+              />
+            ))}
           </div>
-          <button
-            type="button"
-            disabled={!bodyReady}
-            onClick={() => setStep(2)}
-            className="rounded-panel bg-accent px-4 py-3 font-semibold text-background transition disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Continue
-          </button>
+          <PinnedAction>
+            <Button className="w-full" disabled={!bodyReady} onClick={() => setStep(2)}>
+              Continue
+            </Button>
+          </PinnedAction>
         </>
       )}
 
@@ -166,16 +199,17 @@ export function OnboardingFlow({ profile }: { profile: BodyDetails | null }) {
                 selected={goal === choice.value}
                 label={choice.label}
                 hint={choice.hint}
+                icon={choice.icon}
                 onSelect={() => setGoal(choice.value)}
               />
             ))}
           </div>
           {goal === "maintain" ? (
-            <p className="text-xs text-muted">
+            <p className="text-[13.5px] text-muted">
               No goal weight needed: we&apos;ll aim to keep you at {weightKg} kg.
             </p>
           ) : (
-            <div>
+            <div className="mt-1">
               <Field
                 label="Goal weight"
                 unit="kg"
@@ -183,52 +217,30 @@ export function OnboardingFlow({ profile }: { profile: BodyDetails | null }) {
                 onChange={setGoalWeightKg}
                 inputMode="decimal"
               />
-              <p className="mt-1.5 text-xs text-muted">
+              <p className="mt-1.5 text-[13.5px] text-muted">
                 {goalReady
                   ? `${kgText(Math.abs(weight - goalWeight))} kg to ${goal} from ${weight} kg`
                   : `Enter a weight ${goal === "lose" ? "below" : "above"} ${weight} kg`}
               </p>
             </div>
           )}
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className="rounded-panel border border-line px-4 py-3 font-semibold text-muted"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              disabled={!goalReady}
-              onClick={() => setStep(3)}
-              className="flex-1 rounded-panel bg-accent px-4 py-3 font-semibold text-background transition disabled:cursor-not-allowed disabled:opacity-40"
-            >
+          <PinnedAction>
+            <Button className="w-full" disabled={!goalReady} onClick={() => setStep(3)}>
               Continue
-            </button>
-          </div>
+            </Button>
+          </PinnedAction>
         </>
       )}
 
       {step === 3 && (
-        <>
-          <PlanPicker
-            body={body}
-            goal={goal}
-            goalWeightKg={goal === "maintain" ? null : goalWeight}
-            today={today}
-            submitLabel="Start this plan"
-            pending={pending}
-            onSubmit={start}
-          />
-          <button
-            type="button"
-            onClick={() => setStep(2)}
-            className="self-start rounded-panel border border-line px-4 py-3 font-semibold text-muted"
-          >
-            Back
-          </button>
-        </>
+        <PlanPicker
+          body={body}
+          goal={goal}
+          goalWeightKg={goal === "maintain" ? null : goalWeight}
+          today={today}
+          pending={pending}
+          onSubmit={start}
+        />
       )}
     </main>
   );

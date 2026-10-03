@@ -49,11 +49,14 @@ export function Choice({
   selected,
   label,
   hint,
+  icon,
   onSelect,
 }: {
   selected: boolean;
   label: string;
   hint: string;
+  /** Shown in a tile at the start, e.g. the goal's arrow */
+  icon?: React.ReactNode;
   onSelect: () => void;
 }) {
   return (
@@ -67,6 +70,14 @@ export function Choice({
           : "border-transparent bg-surface hover:border-line"
       }`}
     >
+      {icon && (
+        <span
+          aria-hidden
+          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[14px] bg-surface-raised text-accent"
+        >
+          {icon}
+        </span>
+      )}
       <span className="min-w-0 flex-1">
         <span className="block text-[15px] font-bold leading-snug">{label}</span>
         <span className="block text-[12.5px] text-muted">{hint}</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { monotonePath } from "@/lib/curve";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { dayLabel, daysBetween } from "@/lib/day";
 import type { WeightPoint } from "@/lib/weight-trend";
@@ -82,17 +83,24 @@ export function WeightChart({
   const x = (day: string) => MARGIN.left + (daysBetween(start, day) / span) * plotW;
   const empty = points.length === 0;
 
-  // With no weigh-ins nothing is drawn against the axis, so any scale will do
+  // With no weigh-ins nothing is drawn against the axis, so any scale will do.
+  // The goal joins the scale only when it's close to the data: a goal far below
+  // would squash the line flat, and the journey card above shows it anyway.
+  const data = points.flatMap((p) => [p.weightKg, p.trendKg]);
+  const dataLow = Math.min(...data);
+  const dataHigh = Math.max(...data);
+  const goalNear =
+    goalKg !== null &&
+    !empty &&
+    goalKg >= dataLow - (dataHigh - dataLow + 1) &&
+    goalKg <= dataHigh + (dataHigh - dataLow + 1);
   const { low, high, ticks } = weightScale(
-    empty
-      ? [0]
-      : [...points.flatMap((p) => [p.weightKg, p.trendKg]), ...(goalKg === null ? [] : [goalKg])],
+    empty ? [0] : [...data, ...(goalNear && goalKg !== null ? [goalKg] : [])],
   );
   const y = (v: number) => MARGIN.top + ((high - v) / (high - low)) * PLOT_H;
 
-  const trendPath = points
-    .map((p, i) => `${i === 0 ? "M" : "L"}${x(p.day).toFixed(1)} ${y(p.trendKg).toFixed(1)}`)
-    .join(" ");
+  // A smooth curve through the trend values that never overshoots them
+  const trendPath = monotonePath(points.map((p) => [x(p.day), y(p.trendKg)]));
   const current = active !== null ? points[active] : undefined;
 
   /** The weigh-in closest to the pointer, so nobody has to land on a dot. */
@@ -107,9 +115,9 @@ export function WeightChart({
   }
 
   return (
-    <section className="overflow-hidden rounded-panel border border-line bg-surface">
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 pb-1 pt-3">
-        <h2 className="text-sm font-semibold">Weight</h2>
+    <section className="overflow-hidden rounded-[22px] bg-surface">
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 pb-1 pt-3.5">
+        <h2 className="text-[15.5px] font-extrabold">Weight</h2>
         {!empty && (
           <span className="flex items-center gap-3 text-[11px] text-muted">
             <span className="flex items-center gap-1.5">
@@ -124,7 +132,7 @@ export function WeightChart({
               />
               trend
             </span>
-            {goalKg !== null && (
+            {goalNear && (
               <span className="flex items-center gap-1.5">
                 <span className="w-3.5 border-t border-dashed border-foreground" aria-hidden />
                 goal
@@ -186,7 +194,7 @@ export function WeightChart({
                 </g>
               ))}
 
-            {goalKg !== null && !empty && (
+            {goalNear && goalKg !== null && (
               <g>
                 <line
                   x1={MARGIN.left}
@@ -314,7 +322,7 @@ export function WeightChart({
               </thead>
               <tbody className="font-mono text-xs tabular-nums text-muted">
                 {[...points].reverse().map((p) => (
-                  <tr key={p.day} className="border-t border-line/60">
+                  <tr key={p.day} className="border-t border-line">
                     <td className="px-4 py-1.5 font-sans text-[13px] text-foreground">
                       {dayLabel(p.day)}
                     </td>

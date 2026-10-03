@@ -1,4 +1,11 @@
-import type { ActivityLevel, BodyDetails, Goal, Sex } from "@/lib/plan";
+import {
+  PROTEIN_LEVELS,
+  type ActivityLevel,
+  type BodyDetails,
+  type Goal,
+  type ProteinPerKg,
+  type Sex,
+} from "@/lib/plan";
 
 /**
  * Validation for anything the setup form and Settings both submit. Server
@@ -86,6 +93,12 @@ export function validGoalWeight(
     return "A goal weight for gaining has to be above your current weight.";
   }
   return target;
+}
+
+/** One of the offered protein levels (g per kg), or a message. */
+export function validProteinPerKg(value: unknown): ProteinPerKg | string {
+  const level = PROTEIN_LEVELS.find((option) => option.perKg === value);
+  return level ? level.perKg : "Choose one of the protein levels.";
 }
 
 /** The calorie and protein targets of a custom plan, or a message. */

@@ -44,12 +44,15 @@ const bodyRow = {
 };
 
 test("profiles are read and saved for the given user only", async () => {
-  const db = fakeDb([{ ...bodyRow, water_tracking: true, water_goal_ml: 2500 }]);
+  const db = fakeDb([
+    { ...bodyRow, water_tracking: true, water_goal_ml: 2500, weigh_in_reminder_days: 3 },
+  ]);
   const profiles = loadModule("src/lib/profiles.ts", db.mocks);
   assert.deepEqual(await profiles.getProfile("user-1"), {
     ...body,
     waterTracking: true,
     waterGoalMl: 2500,
+    weighInReminderDays: 3,
   });
   assert.deepEqual(db.calls[0].filters, [["user_id", "user-1"]]);
 
@@ -80,6 +83,7 @@ const storedPlan = {
   goalWeightKg: 78,
   calorieTarget: 2310,
   proteinTarget: 170,
+  proteinPerKg: 2,
   maintenanceKcal: 2860,
   weightKg: 85,
 };
@@ -90,6 +94,7 @@ const planRow = {
   goal_weight_kg: 78,
   calorie_target: 2310,
   protein_target: 170,
+  protein_per_kg: 2,
   maintenance_kcal: 2860,
   weight_kg: 85,
 };
