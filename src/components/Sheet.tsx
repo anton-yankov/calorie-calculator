@@ -26,8 +26,11 @@ export function Sheet({
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // The latest `open`, read when the dialog's close event fires
+  const openRef = useRef(open);
 
   useEffect(() => {
+    openRef.current = open;
     const dialog = ref.current;
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
@@ -46,7 +49,12 @@ export function Sheet({
     <dialog
       ref={ref}
       aria-label={title}
-      onClose={onClose}
+      // close also fires (a task later) after the parent sets `open` to false;
+      // only a close the user made (Escape) is reported, or a parent that
+      // swaps one sheet for another would hear onClose for the old one
+      onClose={() => {
+        if (openRef.current) onClose();
+      }}
       // The dialog itself has no padding, so a click whose target is the
       // dialog element can only be on the backdrop around the panel
       onClick={(event) => {
