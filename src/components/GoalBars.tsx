@@ -99,7 +99,7 @@ function GoalCell({
 }
 
 /**
- * Target progress for the log's day headers and the Analyze page's Today
+ * Target progress for the log's day headers and the homepage's Today
  * strip. Each cell is judged by the day's goal: losing treats calories as a
  * ceiling, maintaining as a ±10% range, gaining as a floor (see goal-status.ts).
  */

@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { TriangleAlert } from "lucide-react";
 import { useEffect } from "react";
+import { Button, ButtonLink } from "@/components/Button";
 
 /**
  * Shown when a page (or the (app) layout above it) fails to render, usually
@@ -21,34 +22,21 @@ export default function Error({
   }, [error]);
 
   return (
-    <main className="page-enter mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4 px-5 py-16 text-center sm:px-6">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-danger">
-        Something went wrong
-      </p>
-      <h1 className="font-serif text-[clamp(1.9rem,7vw,2.5rem)] font-semibold leading-[1.08] tracking-tight">
-        This page didn&apos;t load
-      </h1>
+    <main className="page-enter mx-auto flex w-full max-w-sm flex-1 flex-col items-center gap-3 px-6 pt-16 pb-24 text-center lg:justify-center lg:pt-0">
+      <span className="flex h-18 w-18 items-center justify-center rounded-[24px] bg-danger-soft text-danger">
+        <TriangleAlert className="h-9 w-9" strokeWidth={1.75} aria-hidden />
+      </span>
+      <h2 className="mt-1 text-2xl font-extrabold tracking-tight">This page didn&apos;t load</h2>
       <p className="text-[15px] text-muted">
-        Usually a connection hiccup. Your logged meals are safe — try again in a moment.
+        Usually a connection hiccup. Your logged meals are safe, so try again in a moment.
       </p>
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <button
-          type="button"
-          onClick={() => retry()}
-          className="rounded-panel bg-accent px-5 py-3 font-semibold text-background transition hover:brightness-110"
-        >
-          Try again
-        </button>
-        <Link
-          href="/"
-          className="rounded-panel border border-line px-5 py-3 font-semibold transition hover:border-muted/60"
-        >
-          Go to Analyze
-        </Link>
-      </div>
-      {error.digest && (
-        <p className="font-mono text-[11px] text-muted">Reference: {error.digest}</p>
-      )}
+      <Button onClick={() => retry()} className="mt-2 w-full">
+        Try again
+      </Button>
+      <ButtonLink href="/" variant="outline" className="w-full">
+        Go to Home
+      </ButtonLink>
+      {error.digest && <p className="text-xs text-muted">Reference: {error.digest}</p>}
     </main>
   );
 }

@@ -1,27 +1,22 @@
 "use client";
 
+import { LoaderCircle } from "lucide-react";
+
 /** Inline spinner for button-level action feedback. Static under prefers-reduced-motion. */
 export function Spinner({ className = "h-4 w-4" }: { className?: string }) {
   return (
-    <svg
+    <LoaderCircle
       className={`motion-safe:animate-spin ${className}`}
-      viewBox="0 0 24 24"
-      fill="none"
+      strokeWidth={2.5}
       aria-hidden
-    >
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
-      <path
-        d="M12 2a10 10 0 0 1 10 10"
-        stroke="currentColor"
-        strokeWidth="4"
-        strokeLinecap="round"
-      />
-    </svg>
+    />
   );
 }
 
 function GhostBar({ className, style }: { className: string; style?: React.CSSProperties }) {
-  return <div className={`ghost-shimmer rounded bg-line ${className}`} style={style} />;
+  return (
+    <div className={`ghost-shimmer rounded-md bg-surface-raised ${className}`} style={style} />
+  );
 }
 
 /** Ghost version of the meal-log list: one day header + a few entry rows. */
@@ -36,7 +31,7 @@ export function SkeletonLog() {
         <div
           key={i}
           aria-hidden
-          className="flex items-center gap-3 rounded-panel border border-line bg-surface px-4 py-3"
+          className="flex items-center gap-3 rounded-[20px] bg-surface px-4 py-3"
         >
           <GhostBar className="h-12 w-12 rounded-lg" />
           <div className="min-w-0 flex-1">
@@ -88,11 +83,11 @@ export function SkeletonLogRail() {
   return (
     <div aria-hidden className="flex flex-col gap-4">
       <GhostBar className="h-[42px] w-full rounded-panel lg:hidden" />
-      <div className="hidden flex-col gap-2 rounded-panel border border-line bg-surface px-4 py-3 lg:flex">
+      <div className="hidden flex-col gap-2 rounded-[20px] bg-surface px-4 py-3 lg:flex">
         <GhostBar className="h-3.5 w-12" />
         <SkeletonGoalBars water={false} />
       </div>
-      <div className="hidden flex-col gap-3 rounded-panel border border-line bg-surface p-4 lg:flex">
+      <div className="hidden flex-col gap-3 rounded-[20px] bg-surface p-4 lg:flex">
         <GhostBar className="h-3.5 w-36" />
         {[0, 1, 2].map((i) => (
           <div key={i} className="grid grid-cols-2 gap-3">
@@ -117,7 +112,7 @@ export function SkeletonPanels({ label, heights }: { label: string; heights: num
         <div
           key={i}
           aria-hidden
-          className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-4"
+          className="flex flex-col gap-3 rounded-[20px] bg-surface p-4"
           style={{ height }}
         >
           <GhostBar className={`h-3 ${i % 2 ? "w-24" : "w-32"}`} />
@@ -137,11 +132,7 @@ export function SkeletonProducts() {
         <GhostBar className="h-3.5 w-20" />
       </div>
       {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          aria-hidden
-          className="overflow-hidden rounded-panel border border-line bg-surface"
-        >
+        <div key={i} aria-hidden className="overflow-hidden rounded-[20px] bg-surface">
           <div className="flex items-start gap-4 p-4">
             <GhostBar className="h-[72px] w-[72px] rounded-lg" />
             <div className="min-w-0 flex-1">
@@ -170,7 +161,7 @@ export function SkeletonEstimate({ label }: { label: string }) {
     <section
       role="status"
       aria-label={`${label} loading`}
-      className="overflow-hidden rounded-panel border border-line bg-surface"
+      className="overflow-hidden rounded-[20px] bg-surface"
     >
       <header className="flex items-center gap-2 border-b border-line bg-surface-raised px-4 py-2.5">
         <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
@@ -209,7 +200,7 @@ function GhostTiles({ count }: { count: number }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="rounded-panel border border-line bg-surface px-4 py-3">
+        <div key={i} className="rounded-[20px] bg-surface px-4 py-3">
           <GhostBar className="h-2.5 w-20" />
           <GhostBar className={`mt-2.5 h-7 ${i % 2 ? "w-14" : "w-20"}`} />
           <GhostBar className="mt-2.5 h-2.5 w-28" />
@@ -231,13 +222,13 @@ export function SkeletonStats() {
       <div className="flex flex-col gap-4" aria-hidden>
         <GhostBar className="h-9 w-44 rounded-full" />
         <GhostTiles count={4} />
-        <div className="rounded-panel border border-line bg-surface px-4 py-3">
+        <div className="rounded-[20px] bg-surface px-4 py-3">
           <GhostBar className="h-2.5 w-40" />
           <GhostBar className="mt-2.5 h-2 w-full rounded-full" />
           <GhostBar className="mt-2.5 h-3 w-56" />
         </div>
         <GhostTiles count={2} />
-        <div className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-4">
+        <div className="flex flex-col gap-3 rounded-[20px] bg-surface p-4">
           <GhostBar className="h-3.5 w-24" />
           <GhostBar className="h-[46px] w-full rounded-panel" />
           <GhostBar className="h-[42px] w-full rounded-panel" />
@@ -246,7 +237,7 @@ export function SkeletonStats() {
       <div className="flex flex-col gap-4" aria-hidden>
         {/* Calories, protein and weight */}
         {[0, 1, 2].map((i) => (
-          <div key={i} className="rounded-panel border border-line bg-surface px-4 pb-3 pt-3">
+          <div key={i} className="rounded-[20px] bg-surface px-4 pb-3 pt-3">
             <GhostBar className="h-3.5 w-32" />
             <div className="mt-4 flex h-44 items-end gap-1.5">
               {GHOST_BARS.map((h, j) => (
@@ -256,7 +247,7 @@ export function SkeletonStats() {
             <GhostBar className="mt-3 h-3 w-24" />
           </div>
         ))}
-        <div className="rounded-panel border border-line bg-surface px-4 py-3">
+        <div className="rounded-[20px] bg-surface px-4 py-3">
           <GhostBar className="h-4 w-32" />
         </div>
       </div>

@@ -270,7 +270,7 @@ export interface TodayProgress {
 }
 
 /**
- * Totals for [startIso, endIso) plus that day's targets, for the Analyze page's
+ * Totals for [startIso, endIso) plus that day's targets, for the homepage's
  * "today so far" strip. The client supplies the day and bounds because "today"
  * depends on the viewer's timezone, which the server doesn't know (Vercel runs
  * in UTC).
@@ -312,7 +312,7 @@ export async function aiAllowanceAction(): Promise<ActionResult & { allowance?: 
   }
 }
 
-/** The day of the latest weigh-in, for the Analyze page's weigh-in nudge. */
+/** The day of the latest weigh-in, for the homepage's weigh-in nudge. */
 export async function latestWeighInAction(): Promise<ActionResult & { day?: string | null }> {
   const userId = await getUserId();
   if (!userId) return { error: "Authentication required" };

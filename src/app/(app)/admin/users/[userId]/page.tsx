@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { ButtonLink } from "@/components/Button";
 import { notFound } from "next/navigation";
 import { WaterTrackingProvider } from "@/components/WaterTracking";
 import { aiUsageHistory, dailyCapOf, getAccount, requireAdmin } from "@/lib/admin";
@@ -90,17 +92,13 @@ export default async function AdminUserPage(props: PageProps<"/admin/users/[user
   }
 
   return (
-    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-5 py-8 sm:px-6 sm:py-11 lg:max-w-5xl">
-      <header className="border-b-2 border-foreground pb-6">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
-          <Link href="/admin" className="hover:underline">
-            Admin · ← Users
-          </Link>
-        </p>
-        <h1 className="break-words font-serif text-[clamp(1.6rem,6vw,2.4rem)] font-semibold leading-[1.1] tracking-tight">
-          {account.email}
-        </h1>
-      </header>
+    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-4 pt-4 pb-12 lg:px-8 lg:pt-2 lg:max-w-5xl">
+      <div className="flex items-center gap-3">
+        <ButtonLink href="/admin" variant="outline" size="icon" aria-label="Back to users">
+          <ChevronLeft className="h-5 w-5" strokeWidth={2} aria-hidden />
+        </ButtonLink>
+        <p className="min-w-0 break-words text-lg font-extrabold tracking-tight">{account.email}</p>
+      </div>
 
       <p className="rounded-r-panel border-l-4 border-amber bg-surface px-4 py-2.5 text-[13px]">
         {account.userId === viewer.userId

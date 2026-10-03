@@ -84,16 +84,16 @@ Decisions and mocks: `.plans/redesign/0-decisions-and-build-plan.html` ([postpla
 
 ### Phase R1 — Foundations, shell & states
 
-- [ ] R1.1 Design tokens (style C colours, radii); Inter only.
-- [ ] R1.2 `lucide-react`; replace the hand-made icons.
-- [ ] R1.3 `Button` component (primary, secondary, outline, destructive, icon).
-- [ ] R1.4 `Sheet` component (bottom sheet on phones, dialog on desktop).
-- [ ] R1.5 Form pieces and toast style.
-- [ ] R1.6 Top bar: title row, underlined tabs, profile button; AI strip removed.
-- [ ] R1.7 Desktop sidebar with pages, AI counter, Settings.
-- [ ] R1.8 Page layout on every page (no big header).
-- [ ] R1.9 App icon I2, favicon, manifest theme colour.
-- [ ] R1.10 Login, error page, 404, skeleton loading screens.
+- [x] R1.1 Design tokens: style C colours on the existing token names, `--radius-panel` 14px, Inter only (serif/mono utilities point at Inter until the R4.3 scan).
+- [x] R1.2 `lucide-react` installed; gear, ∞, date-picker chevron, spinner, product barcode placeholder and the ✕ close buttons now use its icons.
+- [x] R1.3 `Button` / `ButtonLink` (`src/components/Button.tsx`): primary, secondary, outline, destructive; sizes md 48px, sm 44px, icon 44px square; `pending` shows the spinner. New `--line-strong` token for outline borders.
+- [-] R1.4 Moved to R2.7, where the first sheet is needed, so Phase R1 leaves no unused code.
+- [x] R1.5 `fields.tsx` restyled (48px fields, equal-width segmented buttons, choice cards with a visible radio); toasts: filled circular marks (`ToastMark`, "!" for errors), rounded raised background, tinted Undo button. Also fixed: the global `font: inherit` on buttons/inputs moved into `@layer base`, so weight and size utilities on buttons work again.
+- [x] R1.6 `TopNav`: page title row (`pageTitle` in `src/components/nav.ts`), underlined Home · Log · Stats · Products tabs on phones, profile button to Settings (peach in Settings/admin); onboarding keeps Log out; no nav on /login. AI strip and desktop pill removed (phone count returns on the homepage in R2.2).
+- [x] R1.7 `Sidebar` (lg only, sticky full height): pages with lucide icons, `AiCounterCard` (left of cap with amber/red bar, ∞ for admin, Paused), Settings. Root layout is now sidebar + page column.
+- [x] R1.8 Big serif headers removed from every page and loading screen; padding px-4 (lg px-8); desktop sticky columns now `lg:top-6`; admin account page gets a back button + email line. "Analyze page" wording → homepage.
+- [x] R1.9 App icon I2 (`src/app/icon.svg`), PNGs regenerated with `scripts/generate-icons.mjs`, manifest colours #1a1720.
+- [x] R1.10 Login redesigned (phone: icon, name, tagline, form with error box above the fields; desktop: split with a decorative preview), error page and 404 with icon tiles and real buttons, skeleton cards restyled (shapes follow each page as it's redesigned).
 
 ### Phase R2 — Homepage, Log & Products
 
@@ -103,7 +103,7 @@ Decisions and mocks: `.plans/redesign/0-decisions-and-build-plan.html` ([postpla
 - [ ] R2.4 Analyzing card with the live seconds counter.
 - [ ] R2.5 Estimate card and corrections card.
 - [ ] R2.6 Logged state (toast with Undo, highlight).
-- [ ] R2.7 Manual add sheet (moved from Log) and barcode product sheet.
+- [ ] R2.7 `Sheet` component (bottom sheet on phones, dialog on desktop; was R1.4), then the manual add sheet (moved from Log) and barcode product sheet.
 - [ ] R2.8 Eaten today list and ⋯ meal sheet.
 - [ ] R2.9 Weigh-in card: save in place, snooze sheet.
 - [ ] R2.10 Water row, empty day, desktop homepage.

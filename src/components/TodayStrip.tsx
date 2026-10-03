@@ -9,7 +9,7 @@ import { useWaterTracking } from "@/components/WaterTracking";
 import { dayBounds, dayKey, dayLabel } from "@/lib/day";
 
 /**
- * Progress vs the daily goals, shown on the Analyze page so you can see your
+ * Progress vs the daily goals, shown on the homepage so you can see your
  * headroom before deciding what to eat. Follows the selected log date (today
  * by default) so backdating is visible at a glance. Day bounds are computed
  * here in the viewer's timezone (the server can't know it) and summed

@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { AiAllowanceProvider } from "@/components/AiAllowance";
 import { AnalysisProvider } from "@/components/AnalysisProvider";
 import { LightboxProvider } from "@/components/ImageLightbox";
+import { Sidebar } from "@/components/Sidebar";
+import { ToastMark } from "@/components/ToastMark";
 import { TopNav } from "@/components/TopNav";
 import "./globals.css";
 
@@ -17,16 +19,6 @@ export const viewport: Viewport = {
 
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
@@ -48,29 +40,46 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AiAllowanceProvider>
-          <TopNav />
-          <LightboxProvider>
-            <AnalysisProvider>{children}</AnalysisProvider>
-          </LightboxProvider>
+          {/* Desktop: sidebar on the left, the page beside it. Phones: one column. */}
+          <div className="flex flex-1">
+            <Sidebar />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <TopNav />
+              <LightboxProvider>
+                <AnalysisProvider>{children}</AnalysisProvider>
+              </LightboxProvider>
+            </div>
+          </div>
         </AiAllowanceProvider>
         <Toaster
           position="bottom-center"
+          icons={{
+            success: <ToastMark tone="success" />,
+            info: <ToastMark tone="info" />,
+            warning: <ToastMark tone="error" />,
+            error: <ToastMark tone="error" />,
+          }}
           toastOptions={{
             style: {
               background: "var(--surface-raised)",
-              border: "1px solid var(--line)",
+              border: "none",
               color: "var(--foreground)",
-              borderRadius: "10px",
+              borderRadius: "16px",
+              boxShadow: "0 12px 30px -10px rgba(0, 0, 0, 0.7)",
+              fontSize: "14px",
+              fontWeight: 650,
             },
             actionButtonStyle: {
-              background: "var(--accent)",
-              color: "var(--background)",
+              background: "var(--surface)",
+              color: "var(--accent)",
+              borderRadius: "10px",
+              height: "36px",
+              padding: "0 12px",
+              fontSize: "13.5px",
+              fontWeight: 750,
             },
           }}
         />

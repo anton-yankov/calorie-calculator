@@ -52,7 +52,7 @@ export async function saveWaterAction(input: {
   } catch (err) {
     return failed(err, "Couldn't save the water setting");
   }
-  // The water bar appears or disappears on the Log, Stats and Analyze pages
+  // The water bar appears or disappears on the Log, Stats and homepage
   revalidatePath("/", "layout");
   return {};
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ChevronDown } from "lucide-react";
 import { dayKey, dayLabel } from "@/lib/day";
 
 // Estimated popover footprint, used to pick a side before it renders
@@ -122,20 +123,11 @@ export function DatePicker({
         className={`flex shrink-0 items-center gap-1.5 border font-mono text-foreground transition-colors hover:border-accent disabled:text-muted disabled:hover:border-line ${className}`}
       >
         {dayLabel(value)}
-        <svg
+        <ChevronDown
           aria-hidden
-          viewBox="0 0 12 12"
-          className={`h-3 w-3 text-muted transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          <path
-            d="M2.5 4.5 6 8l3.5-3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+          strokeWidth={2}
+          className={`h-3.5 w-3.5 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open &&

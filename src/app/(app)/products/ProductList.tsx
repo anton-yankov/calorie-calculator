@@ -1,6 +1,7 @@
 "use client";
 
 import { useWaterTracking } from "@/components/WaterTracking";
+import { Barcode } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteProductAction, saveProductAction } from "@/app/actions";
@@ -21,21 +22,6 @@ const MACROS = [
   { key: "fat_g", label: "fat", swatch: "bg-muted", kcal: KCAL_PER_GRAM.fat },
 ] as const;
 
-/** Barcode-stripe placeholder for products without a photo. */
-function BarcodeGlyph() {
-  const widths = [2, 1, 3, 1, 2, 2, 1, 3, 1, 2, 1, 2];
-  let x = 0;
-  return (
-    <svg viewBox="0 0 32 20" className="h-6 w-9 text-muted/70" aria-hidden>
-      {widths.map((w, i) => {
-        const bar = <rect key={i} x={x} y={0} width={w} height={20} fill="currentColor" />;
-        x += w + 1;
-        return bar;
-      })}
-    </svg>
-  );
-}
-
 function ProductImage({ product }: { product: BarcodeProduct }) {
   if (product.imageUrl) {
     return (
@@ -50,7 +36,7 @@ function ProductImage({ product }: { product: BarcodeProduct }) {
   }
   return (
     <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-background">
-      <BarcodeGlyph />
+      <Barcode className="h-7 w-7 text-muted/70" strokeWidth={1.75} aria-hidden />
     </div>
   );
 }
@@ -423,7 +409,7 @@ export function ProductList({
         <p className="font-serif text-xl font-semibold text-foreground">No saved products yet</p>
         {!readOnly && (
           <p className="mx-auto mt-1 max-w-sm text-sm">
-            Scan a barcode on Analyze and log the meal. The product and its nutrition will be saved
+            Scan a barcode on Home and log the meal. The product and its nutrition will be saved
             here for next time.
           </p>
         )}

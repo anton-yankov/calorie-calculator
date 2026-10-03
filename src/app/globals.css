@@ -1,25 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --background: #1b1a16;
-  --foreground: #edeae0;
-  --surface: #24221c;
-  --surface-raised: #2a281f;
-  --muted: #a5a195;
-  --accent: #e08a5c;
-  --accent-soft: #3a2a20;
-  --green: #7fbf92;
-  --green-soft: #22312a;
-  --line: #38352c;
-  --danger: #e58b82;
-  --danger-soft: #3b2421;
-  --amber: #e0b25c;
-  /* Progress colour per goal: cool when losing, stone when maintaining, warm when gaining */
-  --tint-lose: #7fa8bf;
-  --tint-maintain: #a5a195;
-  --tint-gain: #e08a5c;
+  /* Style C ("Plate"): deep plum surfaces, peach accent, mint for success */
+  --background: #1a1720;
+  --foreground: #f1ecf4;
+  --surface: #24202c;
+  --surface-raised: #2f2a39;
+  --muted: #a8a0b2;
+  --accent: #f4a77a;
+  --accent-soft: #3b2a2a;
+  --green: #86d3b0;
+  --green-soft: #1f3330;
+  --line: #352f40;
+  /* Outline-button borders: one step brighter than --line so they read as buttons */
+  --line-strong: #3a3446;
+  --danger: #f08a8a;
+  --danger-soft: #3a2228;
+  --amber: #f2c66d;
+  /* Progress colour per goal: cool when losing, neutral when maintaining, warm when gaining */
+  --tint-lose: #8db4e8;
+  --tint-maintain: #a8a0b2;
+  --tint-gain: #f4a77a;
   /* Macro split: protein and carbs reuse --green and --accent */
-  --macro-fat: #c9a96e;
+  --macro-fat: #f2c66d;
 }
 
 @theme inline {
@@ -33,13 +36,17 @@
   --color-success: var(--green);
   --color-success-soft: var(--green-soft);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-amber: var(--amber);
+  --color-tint-lose: var(--tint-lose);
   --font-sans: var(--font-inter);
-  --font-serif: var(--font-fraunces);
-  --font-mono: var(--font-jetbrains-mono);
-  --radius-panel: 10px;
+  /* Inter is the only typeface now. The serif and mono utilities still used by
+     pages that aren't redesigned yet fall back to it; they go in the R4.3 scan. */
+  --font-serif: var(--font-inter);
+  --font-mono: var(--font-inter);
+  --radius-panel: 14px;
 }
 
 html,
@@ -55,7 +62,7 @@ html {
 
 body {
   background:
-    radial-gradient(circle at 50% -10%, rgba(224, 138, 92, 0.08), transparent 34rem),
+    radial-gradient(circle at 50% -10%, rgba(244, 167, 122, 0.06), transparent 34rem),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
@@ -63,9 +70,13 @@ body {
   line-height: 1.55;
 }
 
-button,
-input {
-  font: inherit;
+/* In the base layer so Tailwind's font-weight and text-size utilities can
+   still override it; unlayered, it beat them and every button lost its weight */
+@layer base {
+  button,
+  input {
+    font: inherit;
+  }
 }
 
 button,
@@ -122,7 +133,7 @@ textarea:focus-visible {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(237, 234, 224, 0.09), transparent);
+  background: linear-gradient(90deg, transparent, rgba(241, 236, 244, 0.06), transparent);
 }
 
 /* Motion only for users who haven't opted out — otherwise bars stay static */

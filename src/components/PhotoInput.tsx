@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useRef } from "react";
 import { useLightbox } from "@/components/ImageLightbox";
 import { Spinner } from "@/components/loaders";
@@ -96,7 +97,7 @@ export function PhotoInput({
             onClick={onClear}
             className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-background/85 text-sm font-semibold text-foreground backdrop-blur transition hover:border-accent disabled:opacity-40"
           >
-            ✕
+            <X className="h-[1.1em] w-[1.1em]" strokeWidth={2.25} aria-hidden />
           </button>
         </div>
       )}

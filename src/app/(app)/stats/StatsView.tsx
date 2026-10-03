@@ -224,7 +224,7 @@ export function StatsView({
           </p>
         </div>
       )}
-      <div className="flex flex-col gap-4 lg:sticky lg:top-24">
+      <div className="flex flex-col gap-4 lg:sticky lg:top-6">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <RangePicker value={range} onChange={setRange} />
           <span className="font-mono text-xs tabular-nums text-muted">{rangeLabel}</span>

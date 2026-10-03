@@ -1,7 +1,7 @@
 import type { FoodItem, MealTotals } from "@/lib/schema";
 
 /**
- * Linear portion math shared by the Analyze page (live gram edits) and the
+ * Linear portion math shared by the homepage (live gram edits) and the
  * meal log (editing a saved entry). Always scale from an untouched baseline,
  * not the current values — setting grams to 0 would otherwise destroy the
  * per-gram ratios (0 × anything stays 0).

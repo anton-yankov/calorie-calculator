@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { IScannerControls } from "@zxing/browser";
@@ -174,7 +175,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           onClick={onClose}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-lg transition hover:border-accent"
         >
-          ✕
+          <X className="h-[1.1em] w-[1.1em]" strokeWidth={2.25} aria-hidden />
         </button>
       </header>
 

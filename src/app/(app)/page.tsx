@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useWaterTracking } from "@/components/WaterTracking";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
@@ -70,19 +71,7 @@ export default function Home() {
   }, [history.length, pendingCorrection]);
 
   return (
-    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 px-5 py-8 sm:px-6 sm:py-11 lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:content-start lg:items-start lg:gap-x-10">
-      <header className="mb-2 border-b-2 border-foreground pb-6 lg:col-span-2">
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent">
-          Meal analysis
-        </p>
-        <h1 className="font-serif text-[clamp(2rem,8vw,2.9rem)] font-semibold leading-[1.08] tracking-tight">
-          What’s on your plate?
-        </h1>
-        <p className="mt-2 max-w-xl text-[15px] text-muted sm:text-base">
-          Photo or description in, macros out. Estimates — correct them below.
-        </p>
-      </header>
-
+    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-4 px-4 pt-4 pb-12 lg:px-8 lg:pt-2 lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:content-start lg:items-start lg:gap-x-10">
       <TodayStrip />
       <WeighInNudge />
       {waterTracking && (
@@ -105,7 +94,7 @@ export default function Home() {
       )}
 
       {/* Controls column — on lg it sticks below the nav while the thread scrolls */}
-      <div className="flex flex-col gap-4 lg:sticky lg:top-24">
+      <div className="flex flex-col gap-4 lg:sticky lg:top-6">
         {capReached && allowance?.cap != null && (
           <p className="rounded-r-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm">
             <span className="block font-semibold">{capReachedMessage(allowance.cap)}</span>
@@ -152,7 +141,7 @@ export default function Home() {
               onClick={() => setDescription("")}
               className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-sm font-semibold text-muted transition hover:bg-surface-raised hover:text-foreground"
             >
-              ✕
+              <X className="h-[1.1em] w-[1.1em]" strokeWidth={2.25} aria-hidden />
             </button>
           )}
         </div>

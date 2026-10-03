@@ -439,7 +439,7 @@ export function LogList({
 
   return (
     <>
-      <div className="flex flex-col gap-4 lg:sticky lg:top-24">
+      <div className="flex flex-col gap-4 lg:sticky lg:top-6">
         {todayTargets && (
           <div className="hidden flex-col gap-2 rounded-panel border border-line bg-surface px-4 py-3 lg:flex">
             <span className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Today</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { latestWeighInAction } from "@/app/actions";
@@ -18,7 +19,7 @@ const subscribe = (onChange: () => void) => {
 };
 
 /**
- * A banner on Analyze when the last weigh-in is a week old or more. Dismissing
+ * A banner on the homepage when the last weigh-in is a week old or more. Dismissing
  * it hides it until tomorrow; the dismissal is remembered in this browser only,
  * which is all a reminder needs.
  */
@@ -70,7 +71,7 @@ export function WeighInNudge() {
         }}
         className="shrink-0 px-1 text-lg leading-none text-muted hover:text-foreground"
       >
-        ×
+        <X className="h-[1.1em] w-[1.1em]" strokeWidth={2.25} aria-hidden />
       </button>
     </div>
   );

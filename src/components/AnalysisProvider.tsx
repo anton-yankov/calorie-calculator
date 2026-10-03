@@ -44,7 +44,7 @@ interface AnalysisState {
   setLogDate: (key: string | null) => void;
   latest: HistoryEntry | undefined;
   /**
-   * Bumps on every full reset. The Analyze page keys child components that own
+   * Bumps on every full reset. The homepage keys child components that own
    * their own state (the barcode panel) on it so a reset also closes them.
    */
   session: number;
@@ -61,7 +61,7 @@ const AnalysisContext = createContext<AnalysisState | null>(null);
 
 /**
  * Owns all analysis state and lives in the root layout, which persists across
- * navigation. The Analyze page unmounts when the user switches tabs; keeping the
+ * navigation. The homepage unmounts when the user switches tabs; keeping the
  * state (and the in-flight /api/analyze request) here means nothing is lost —
  * results that arrive while the page is away are waiting on return.
  */
