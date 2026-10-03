@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redesign 5 — Log &amp; Products — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16; --surface: #24221C; --surface-raised: #2A281F; --ink: #EDEAE0; --ink-soft: #A5A195;
+    --accent: #E08A5C; --accent-soft: #3A2A20; --green: #7FBF92; --green-soft: #22312A; --line: #38352C;
+    --code-bg: #2d2d2d; --radius: 10px;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.65; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  .page.cont { padding-top: 0; padding-bottom: 0; }
+  .wide { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  ul.tight { margin: 8px 0; padding-left: 20px; } ul.tight li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px; }
+  th { text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px; }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill { font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 16px 46px; }
+  ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--bg); font-family: var(--mono); font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  ol.steps > li:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 34px; bottom: 2px; width: 2px; background: var(--line); }
+  ol.steps strong { display: block; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  /* ---------- Mock scaffolding ---------- */
+  .phones { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; align-items: flex-start; margin: 28px 0 8px; }
+  .pcol { display: flex; flex-direction: column; gap: 12px; width: 375px; max-width: 100%; }
+  .pcap { font-size: 14px; color: var(--ink-soft); }
+  .pcap b { display: block; color: var(--ink); font-size: 15.5px; margin-bottom: 2px; }
+  .phone { position: relative; width: 375px; height: 812px; max-width: 100%; border-radius: 46px; overflow: hidden; border: 10px solid #0c0b09; box-shadow: 0 0 0 1px #3a372e, 0 30px 60px -20px rgba(0,0,0,.7); }
+  .phone.tall { height: auto; }
+  .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 110px; height: 30px; border-radius: 20px; background: #000; z-index: 9; }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 14px; font-weight: 600; }
+  .status .dots { display: flex; gap: 5px; } .status .dots i { width: 16px; height: 9px; border-radius: 2px; background: currentColor; opacity: .9; } .status .dots i:first-child { width: 14px; opacity: .6; }
+  .home-ind { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; border-radius: 4px; background: currentColor; opacity: .5; z-index: 9; }
+  .fold { position: absolute; left: -10px; right: -10px; top: 792px; border-top: 2px dashed rgba(244,167,122,.7); z-index: 7; }
+  .fold span { position: absolute; right: 16px; top: -11px; font-size: 11px; font-weight: 700; color: #F4A77A; background: #1A1720; padding: 2px 8px; border-radius: 999px; }
+  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .scroll-x { overflow-x: auto; padding-bottom: 12px; }
+  .split { display: grid; grid-template-columns: 375px 1fr; gap: 36px; align-items: start; margin: 26px 0; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+
+  /* =========================================================
+     Style C · Plate — the chosen look
+     ========================================================= */
+  .c {
+    --b: #1A1720; --s1: #24202C; --s2: #2F2A39; --s3: #3A3446; --tx: #F1ECF4; --mu: #A8A0B2;
+    --ac: #F4A77A; --acs: #3B2A2A; --gr: #86D3B0; --grs: #1F3330; --lose: #8DB4E8; --amb: #F2C66D;
+    --red: #F08A8A; --reds: #3A2228; --ln: #352F40;
+    background: var(--b); color: var(--tx); font-family: var(--sans);
+  }
+  .c .topnav { padding: 2px 18px 0; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--ln); background: var(--b); position: relative; z-index: 3; }
+  .c .topnav .row { display: flex; align-items: center; justify-content: space-between; }
+  .c .ttl { font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+  .c .ttl small { display: block; font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .c .avatar { width: 44px; height: 44px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .c .tabs { display: flex; margin: 0 -10px; }
+  .c .tabs a { flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--mu); position: relative; }
+  .c .tabs a.on { color: var(--tx); }
+  .c .tabs a.on::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 3px; border-radius: 3px; background: var(--ac); }
+  .c .body { padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+
+  .c .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .c .stat { background: var(--s1); border-radius: 20px; padding: 14px; }
+  .c .stat small { font-size: 12.5px; color: var(--mu); }
+  .c .stat b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .c .stat b span { font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .c .track { height: 6px; border-radius: 6px; background: var(--s3); margin-top: 10px; position: relative; overflow: hidden; }
+  .c .track i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; }
+  .c .track u { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(241,236,244,.6); }
+  .c .stat .msg { font-size: 12px; margin-top: 6px; color: var(--mu); }
+
+  .c .hero { background: var(--ac); color: #241a15; border-radius: 26px; padding: 18px; height: 150px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+  .c .hero .ic { width: 52px; height: 52px; border-radius: 18px; background: rgba(36,26,21,.12); display: flex; align-items: center; justify-content: center; }
+  .c .hero .ic svg { width: 28px; height: 28px; }
+  .c .hero b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; display: block; }
+  .c .hero small { font-size: 13px; opacity: .75; }
+  .c .hero .ai { position: absolute; top: 18px; right: 18px; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: rgba(36,26,21,.12); }
+  .c .hero.off { background: var(--s1); color: var(--mu); }
+  .c .hero.off .ic { background: var(--s2); }
+  .c .hero.off b { color: var(--tx); }
+  .c .hero.off .ai { background: var(--reds); color: var(--red); }
+  .c .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .c .sq { background: var(--s1); border-radius: 20px; height: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; font-weight: 700; font-size: 13.5px; }
+  .c .sq svg { color: var(--ac); }
+  .c .sq.off { color: var(--mu); } .c .sq.off svg { color: var(--mu); opacity: .6; }
+
+  .c .card { background: var(--s1); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .c .card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .c .card-h b { font-size: 16px; font-weight: 800; letter-spacing: -.01em; display: block; }
+  .c .card-h small { font-size: 13px; color: var(--mu); }
+  .c .x { width: 36px; height: 36px; border-radius: 12px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--mu); font-size: 15px; flex-shrink: 0; }
+
+  .c .field { height: 48px; border-radius: 14px; background: var(--b); border: 1.5px solid var(--ln); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: var(--mu); font-size: 15px; }
+  .c .field.focus { border-color: var(--ac); }
+  .c .field.val { color: var(--tx); }
+  .c .field .u { color: var(--mu); font-size: 14px; }
+  .c .flabel { font-size: 12.5px; color: var(--mu); margin-bottom: 5px; font-weight: 600; }
+  .c .area { min-height: 92px; border-radius: 16px; background: var(--b); border: 1.5px solid var(--ac); padding: 12px 14px; font-size: 15.5px; line-height: 1.45; }
+  .c .caret { display: inline-block; width: 2px; height: 18px; background: var(--ac); vertical-align: -3px; margin-left: 1px; }
+
+  .c .btn { white-space: nowrap; height: 48px; border-radius: 14px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 750; font-size: 15px; }
+  .c .btn svg { width: 19px; height: 19px; }
+  .c .btn-p { background: var(--ac); color: #241a15; }
+  .c .btn-t { background: var(--s2); color: var(--ac); }
+  .c .btn-o { border: 1.5px solid var(--s3); color: var(--tx); }
+  .c .btn-d { background: var(--reds); color: var(--red); }
+  .c .btn.full { width: 100%; }
+  .c .btn.sm { height: 44px; font-size: 14px; padding: 0 14px; }
+  .c .btn.dim { opacity: .4; }
+  .c .btns { display: flex; gap: 8px; }
+  .c .btns .grow { flex: 1; }
+
+  .c .sec { font-size: 17px; font-weight: 800; letter-spacing: -.02em; margin-top: 6px; display: flex; justify-content: space-between; align-items: baseline; }
+  .c .sec span { font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .c .meal { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+  .c .thumb { width: 48px; height: 48px; border-radius: 16px; flex-shrink: 0; }
+  .c .thumb.txt { background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .c .meal-t { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 650; line-height: 1.25; }
+  .c .meal-t small { display: block; color: var(--mu); font-weight: 400; font-size: 12.5px; }
+  .c .kc { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .c .more { width: 40px; height: 40px; border-radius: 12px; border: 1.5px solid var(--s3); display: flex; align-items: center; justify-content: center; color: var(--mu); flex-shrink: 0; }
+  .c .meal.new { background: var(--grs); border-radius: 18px; padding: 8px; margin: 0 -8px; }
+
+  .c .water { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .c .water .chip { justify-content: center; }
+  .c .water .lbl { grid-column: 1 / -1; font-size: 13px; color: var(--mu); font-weight: 600; }
+  .c .chip { height: 44px; padding: 0 14px; border-radius: 14px; background: var(--s1); display: inline-flex; align-items: center; font-weight: 750; font-size: 14px; color: var(--lose); }
+
+  /* Analysis */
+  .c .photo { height: 150px; border-radius: 18px; background: radial-gradient(circle at 35% 40%, #e6c48a 0 18%, transparent 19%), radial-gradient(circle at 62% 55%, #8fbf7a 0 20%, transparent 21%), radial-gradient(circle at 50% 50%, #f1ece4 0 42%, #6b5a4a 43% 100%); position: relative; }
+  .c .photo.small { height: 90px; }
+  .c .photo .tag { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+  .c .photo .tag span { height: 34px; padding: 0 12px; border-radius: 11px; background: rgba(26,23,32,.8); display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; color: var(--tx); }
+  .c .timer { display: flex; align-items: center; gap: 14px; }
+  .c .timer .sec-n { font-size: 40px; font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .c .timer .sec-n span { font-size: 16px; color: var(--mu); font-weight: 600; letter-spacing: 0; margin-left: 2px; }
+  .c .timer .t { font-size: 13.5px; color: var(--mu); line-height: 1.4; }
+  .c .timer .t b { display: block; color: var(--tx); font-size: 15.5px; }
+  .c .indet { height: 6px; border-radius: 6px; background: var(--s3); overflow: hidden; position: relative; }
+  .c .indet i { position: absolute; top: 0; bottom: 0; width: 38%; border-radius: 6px; background: var(--ac); left: 0; animation: indet 1.6s ease-in-out infinite; }
+  @keyframes indet { 0% { left: -38%; } 100% { left: 100%; } }
+  @media (prefers-reduced-motion: reduce) { .c .indet i { animation: none; left: 31%; } }
+  .c .ghost { height: 14px; border-radius: 7px; background: var(--s2); }
+  .c .food { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--ln); }
+  .c .food:first-child { border-top: 0; }
+  .c .food .n { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 650; line-height: 1.3; }
+  .c .food .n small { display: block; color: var(--mu); font-weight: 400; font-size: 12.5px; }
+  .c .grams { width: 74px; height: 40px; border-radius: 12px; border: 1.5px solid var(--s3); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .c .conf { font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px; }
+  .c .conf.h { background: var(--grs); color: var(--gr); }
+  .c .conf.m { background: var(--acs); color: var(--ac); }
+  .c .totals { display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 2px solid var(--s3); }
+  .c .totals b { white-space: nowrap; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .c .totals span { color: var(--mu); font-size: 13.5px; }
+  .c .after { border-radius: 14px; background: var(--s2); padding: 10px 12px; font-size: 13.5px; color: var(--mu); display: flex; flex-direction: column; gap: 1px; }
+  .c .after > span:first-child { font-size: 12px; }
+  .c .after b { color: var(--tx); }
+  .c .bubble { align-self: flex-end; max-width: 85%; border-radius: 18px 18px 6px 18px; background: var(--s2); padding: 10px 14px; font-size: 14px; }
+  .c .hint { font-size: 12.5px; color: var(--mu); text-align: center; }
+  .c .toast { border-radius: 16px; background: var(--s3); padding: 10px 10px 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 650; box-shadow: 0 12px 30px -10px rgba(0,0,0,.7); }
+  .c .toast .ok { width: 26px; height: 26px; border-radius: 50%; background: var(--gr); color: var(--b); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; }
+  .c .toast .undo { margin-left: auto; height: 36px; padding: 0 12px; border-radius: 10px; background: var(--s2); color: var(--ac); display: inline-flex; align-items: center; font-weight: 750; font-size: 13.5px; }
+
+  /* Sheets */
+  .c .dim { position: absolute; inset: 0; background: rgba(10,8,14,.62); z-index: 5; }
+  .c .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--s1); border-radius: 28px 28px 0 0; padding: 10px 18px 34px; display: flex; flex-direction: column; gap: 12px; }
+  .c .grab { width: 40px; height: 5px; border-radius: 5px; background: var(--s3); margin: 0 auto 4px; }
+  .c .sheet h5 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.02em; display: flex; justify-content: space-between; align-items: center; }
+  .c .sheet h5 span { font-size: 12px; font-weight: 700; color: var(--gr); background: var(--grs); border-radius: 999px; padding: 3px 10px; letter-spacing: 0; }
+  .c .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .c .opt { font-weight: 400; }
+
+  /* Desktop */
+  .desk { width: 1180px; height: 820px; border-radius: 14px; overflow: hidden; border: 1px solid #3a372e; box-shadow: 0 30px 60px -24px rgba(0,0,0,.7); margin: 22px auto 0; display: flex; flex-direction: column; }
+  .desk .chrome { height: 34px; background: #0f0d13; display: flex; align-items: center; gap: 7px; padding: 0 14px; flex-shrink: 0; }
+  .desk .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #352F40; }
+  .desk .chrome span { margin-left: 16px; font-size: 12px; color: #6e6678; font-family: var(--mono); }
+  .desk .app { flex: 1; display: grid; grid-template-columns: 236px 1fr; min-height: 0; }
+  .c .side { background: #16131B; border-right: 1px solid var(--ln); padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .c .brand { font-size: 21px; font-weight: 800; letter-spacing: -.03em; padding: 0 10px 18px; }
+  .c .side a { display: flex; align-items: center; gap: 12px; padding: 0 12px; height: 46px; border-radius: 14px; font-size: 15px; font-weight: 700; color: var(--mu); }
+  .c .side a.on { background: var(--s1); color: var(--tx); }
+  .c .side a.on svg { color: var(--ac); }
+  .c .side .spacer { flex: 1; }
+  .c .side .ai { background: var(--s1); border-radius: 16px; padding: 12px; font-size: 12.5px; color: var(--mu); margin-bottom: 6px; }
+  .c .side .ai b { display: block; color: var(--tx); font-size: 18px; font-weight: 800; }
+  .c .dmain { padding: 26px 34px; overflow: hidden; display: grid; grid-template-columns: 360px minmax(0,1fr); gap: 26px; align-content: start; }
+  .c .dmain .head { grid-column: 1 / -1; }
+  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  /* ---------- Log & Products ---------- */
+  .c .dayh { display: flex; flex-direction: column; gap: 10px; background: var(--s1); border-radius: 20px; padding: 14px; }
+  .c .dayh-t { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .c .dayh-t b { font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
+  .c .dayh-t b small { font-size: 12.5px; font-weight: 500; color: var(--mu); letter-spacing: 0; margin-left: 6px; }
+  .c .st { font-size: 12px; font-weight: 750; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .c .st.ok { background: var(--grs); color: var(--gr); }
+  .c .st.over { background: var(--reds); color: var(--red); }
+  .c .st.prog { background: var(--s2); color: var(--lose); }
+  .c .minibars { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .c .mb-l { display: flex; justify-content: space-between; font-size: 12px; color: var(--mu); }
+  .c .mb-l b { color: var(--tx); font-weight: 750; font-variant-numeric: tabular-nums; }
+  .c .minibars .track { margin-top: 5px; }
+  .c .dlist { display: flex; flex-direction: column; gap: 2px; padding: 0 2px; }
+  .c .open { background: var(--s1); border-radius: 22px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .c .open .meal { padding: 0; }
+  .c .ophoto { height: 130px; border-radius: 16px; background: radial-gradient(circle at 38% 45%, #e6c48a 0 16%, transparent 17%), radial-gradient(circle at 60% 55%, #8fbf7a 0 19%, transparent 20%), radial-gradient(circle at 50% 50%, #f1ece4 0 40%, #5e4f42 41% 100%); position: relative; }
+  .c .ophoto span { position: absolute; right: 10px; bottom: 10px; height: 32px; padding: 0 12px; border-radius: 10px; background: rgba(26,23,32,.8); display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 700; }
+  .c .frow { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; padding: 8px 0; border-top: 1px solid var(--ln); }
+  .c .frow:first-child { border-top: 0; }
+  .c .frow span { color: var(--mu); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .c .frow b { font-weight: 650; }
+  .c .macline { font-size: 12.5px; color: var(--mu); }
+  .c .acts { display: grid; grid-template-columns: 1fr 1fr 48px; gap: 8px; }
+  .c .acts .btn { padding: 0 10px; }
+  .c .pcard2 { background: var(--s1); border-radius: 22px; overflow: hidden; }
+  .c .pcard2 .ph { height: 120px; }
+  .c .pcard2 .in { padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .c .search { height: 46px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--mu); font-size: 15px; }
+  .c .prod { display: flex; align-items: center; gap: 12px; background: var(--s1); border-radius: 20px; padding: 10px 10px 10px 10px; }
+  .c .pimg { width: 56px; height: 56px; border-radius: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .c .pimg.bc { background: var(--s2); color: var(--mu); }
+  .c .prod .t { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 750; line-height: 1.3; }
+  .c .prod .t small { display: block; font-size: 12.5px; font-weight: 400; color: var(--mu); }
+  .c .prod .t em { font-style: normal; font-size: 11.5px; font-weight: 700; color: var(--ac); background: var(--acs); border-radius: 999px; padding: 1px 8px; display: inline-block; margin-top: 4px; }
+  .c .seg2 { display: grid; grid-template-columns: 1fr 1fr; background: var(--b); border-radius: 12px; padding: 3px; gap: 3px; }
+  .c .seg2 span { height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: 750; color: var(--mu); }
+  .c .seg2 span.on { background: var(--s3); color: var(--tx); }
+  .c .empty-card { background: var(--s1); border-radius: 22px; padding: 26px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+  .c .empty-card .ic { width: 56px; height: 56px; border-radius: 18px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--ac); }
+  .c .empty-card b { font-size: 17px; font-weight: 800; }
+  .c .empty-card small { font-size: 13.5px; color: var(--mu); line-height: 1.45; }
+  .c .sheet .frow { align-items: center; }
+  .c .grams.sm { width: 84px; }
+  .c .dlog { padding: 26px 34px; overflow: hidden; display: grid; grid-template-columns: 340px minmax(0,1fr); gap: 26px; align-content: start; }
+  .c .dlog .head { grid-column: 1 / -1; }
+  .c .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+  .c .cal .wd { font-size: 11.5px; font-weight: 700; color: var(--mu); text-align: center; }
+  .c .cal .cell { aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: 800; }
+  .c .cal .met { background: var(--gr); color: #10241d; } .c .cal .over { background: var(--red); color: #2c1015; } .c .cal .empty { background: var(--s2); color: var(--mu); }
+  .c .cal .today { border: 2px solid var(--lose); color: var(--lose); } .c .cal .sel { box-shadow: 0 0 0 2px var(--b), 0 0 0 4px var(--tx); }
+  .c .pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M4 8 12 4l8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/></symbol>
+    <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M4 7V5h3M17 5h3v2M20 17v2h-3M7 19H4v-2M8 9v6M11 9v6M14 9v6M17 9v6"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M5 19h4L19 9l-4-4L5 15z"/><path d="m13 7 4 4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.5"/><path d="M5.5 19c1.2-3.2 3.6-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9.5a4 4 0 0 1 6 0M12 9.5l1.2-1.6"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  </defs>
+</svg>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Redesign · mock 5 of 8 · v2</div>
+  <h1>Log &amp; Products</h1>
+  <p class="subtitle">The two list pages. Both keep everything they do today; what changes is that every action becomes a real button, and editing happens in a sheet instead of tiny inline fields.</p>
+  <div class="meta">
+    <span><strong>Same data as mocks 2 and 4</strong></span>
+    <span><strong>Your picks:</strong> 2 questions in section 05</span>
+  </div>
+</header>
+
+<div class="callout good"><b>Decided:</b> as shown, plus "Log it now" on products and search on Products (shown once there are more than ~6). No g/ml switch: the unit follows the product (ml for drinks, g otherwise).</div>
+
+<h2><span class="num">01</span>What changes</h2>
+<ul class="tight">
+  <li><b>No big header, no manual-entry panel.</b> Manual add moved to the homepage (mock 2), so the Log is only your days.</li>
+  <li><b>Each day is a card</b> with its status chip ("On track", "Over by 140", "910 left") and two slim bars, followed by that day's meals in the same rows as the homepage.</li>
+  <li><b>Tap a meal to open it:</b> photo, every food with its weight, macros, and three real buttons: Edit · Log again · Delete.</li>
+  <li><b>Edit opens a sheet</b> with big weight fields, day and time, and the new total before you save. Today it's 56px inputs inside the row.</li>
+  <li><b>⋯ on each row</b> gives the same actions without opening the meal.</li>
+  <li><b>Products get a search field,</b> a row per product with its default amount, and the same ⋯ / sheet pattern.</li>
+</ul>
+
+<h2><span class="num">02</span>Log</h2>
+</div>
+
+<div class="wide">
+<div class="phones">
+  <div class="pcol">
+    <div class="phone tall c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>All your meals, by day</small>Log</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a class="on">Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+
+      <div class="body">
+        <div class="dayh"><div class="dayh-t"><b>Today<small>Sat 3 Oct</small></b><span class="st prog">910 left</span></div>
+<div class="minibars"><div><div class="mb-l">Calories <span><b>1,240</b> / 2,150</span></div><div class="track"><i style="width:48%;background:var(--lose)"></i><u style="left:83.3%"></u></div></div>
+<div><div class="mb-l">Protein <span><b>88</b> / 125 g</span></div><div class="track"><i style="width:59%;background:var(--lose)"></i><u style="left:83.3%"></u></div></div></div></div>
+        <div class="dlist">
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#8a6a3e,#e0b77a)"></div><div class="meal-t">Oats, banana &amp; honey<small>08:12 · 31 g protein</small></div><span class="kc">520</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#4e7a5e,#9fd1a8)"></div><div class="meal-t">Chicken salad wrap<small>13:40 · 46 g protein</small></div><span class="kc">610</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+          <div class="meal"><div class="thumb txt"><svg class="i"><use href="#i-pencil"/></svg></div><div class="meal-t">Greek yogurt<small>16:05 · 11 g protein · manual</small></div><span class="kc">110</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+        </div>
+        <div class="dayh"><div class="dayh-t"><b>Yesterday<small>Fri 2 Oct</small></b><span class="st over">Over by 140</span></div>
+<div class="minibars"><div><div class="mb-l">Calories <span><b>2,290</b> / 2,150</span></div><div class="track"><i style="width:89%;background:var(--red)"></i><u style="left:83.3%"></u></div></div>
+<div><div class="mb-l">Protein <span><b>131</b> / 125 g</span></div><div class="track"><i style="width:87%;background:var(--gr)"></i><u style="left:83.3%"></u></div></div></div></div>
+        <div class="dlist">
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#a0523d,#e39b72)"></div><div class="meal-t">Shakshuka with bread<small>09:30 · 28 g protein</small></div><span class="kc">640</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#6f5b8a,#b9a3d6)"></div><div class="meal-t">Pasta with tuna<small>14:10 · 45 g protein</small></div><span class="kc">820</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+          <div class="meal"><div class="thumb" style="background:radial-gradient(circle at 50% 50%, #f1ece4 0 42%, #6b5a4a 43%)"></div><div class="meal-t">Burger and fries<small>20:45 · 58 g protein</small></div><span class="kc">830</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+        </div>
+        <div class="dayh"><div class="dayh-t"><b>Thursday<small>1 Oct</small></b><span class="st ok">On track</span></div>
+<div class="minibars"><div><div class="mb-l">Calories <span><b>1,980</b> / 2,150</span></div><div class="track"><i style="width:77%;background:var(--gr)"></i><u style="left:83.3%"></u></div></div>
+<div><div class="mb-l">Protein <span><b>127</b> / 125 g</span></div><div class="track"><i style="width:85%;background:var(--gr)"></i><u style="left:83.3%"></u></div></div></div></div>
+        <div class="dlist">
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#8a6a3e,#e0b77a)"></div><div class="meal-t">Overnight oats<small>07:50 · 30 g protein</small></div><span class="kc">450</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#4e7a5e,#9fd1a8)"></div><div class="meal-t">Chicken, rice &amp; broccoli<small>13:05 · 52 g protein</small></div><span class="kc">690</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#a0523d,#e39b72)"></div><div class="meal-t">Salmon &amp; potatoes<small>19:40 · 45 g protein</small></div><span class="kc">840</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+        </div>
+      </div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>The Log</b>Newest day first. Today shows what's left, finished days show how they went, with the same goal colours as Stats. Meal rows match the homepage: photo, or a pencil icon for manual entries, time, protein, kcal, ⋯.</div>
+  </div>
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>All your meals, by day</small>Log</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a class="on">Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+
+      <div class="body">
+        <div class="dayh"><div class="dayh-t"><b>Yesterday<small>Fri 2 Oct</small></b><span class="st over">Over by 140</span></div>
+<div class="minibars"><div><div class="mb-l">Calories <span><b>2,290</b> / 2,150</span></div><div class="track"><i style="width:89%;background:var(--red)"></i><u style="left:83.3%"></u></div></div>
+<div><div class="mb-l">Protein <span><b>131</b> / 125 g</span></div><div class="track"><i style="width:87%;background:var(--gr)"></i><u style="left:83.3%"></u></div></div></div></div>
+        <div class="open">
+          <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#a0523d,#e39b72)"></div><div class="meal-t">Shakshuka with bread<small>09:30 · Fri 2 Oct</small></div><span class="kc">640</span></div>
+          <div class="ophoto"><span>View photo</span></div>
+          <div>
+            <div class="frow"><b>Eggs in tomato sauce</b><span>250 g · 380 kcal</span></div>
+            <div class="frow"><b>Sourdough bread</b><span>90 g · 230 kcal</span></div>
+            <div class="frow"><b>Feta</b><span>10 g · 30 kcal</span></div>
+          </div>
+          <div class="macline">28 g protein · 62 g carbs · 29 g fat</div>
+          <div class="acts"><span class="btn btn-o sm"><svg class="i"><use href="#i-pencil"/></svg>Edit</span><span class="btn btn-t sm"><svg class="i"><use href="#i-redo"/></svg>Log again</span><span class="btn btn-d sm" style="padding:0"><svg class="i"><use href="#i-trash"/></svg></span></div>
+        </div>
+        <div class="dlist"><div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#6f5b8a,#b9a3d6)"></div><div class="meal-t">Pasta with tuna<small>14:10 · 45 g protein</small></div><span class="kc">820</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div></div>
+      </div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>A meal, opened</b>Tapping the row expands it in place: the photo (tap for full size), each food with its weight and calories, the macros, and Edit / Log again / Delete as buttons. Tap the row again to close it.</div>
+  </div>
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>All your meals, by day</small>Log</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a class="on">Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+
+      <div class="body"><div class="dayh"><div class="dayh-t"><b>Yesterday<small>Fri 2 Oct</small></b><span class="st over">Over by 140</span></div>
+<div class="minibars"><div><div class="mb-l">Calories <span><b>2,290</b> / 2,150</span></div><div class="track"><i style="width:89%;background:var(--red)"></i><u style="left:83.3%"></u></div></div>
+<div><div class="mb-l">Protein <span><b>131</b> / 125 g</span></div><div class="track"><i style="width:87%;background:var(--gr)"></i><u style="left:83.3%"></u></div></div></div></div></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h5>Edit meal</h5>
+        <div>
+          <div class="frow"><b>Eggs in tomato sauce</b><span class="grams sm">250 g</span></div>
+          <div class="frow"><b>Sourdough bread</b><span class="grams sm" style="border-color:var(--ac)">60 g</span></div>
+          <div class="frow"><b>Feta</b><span class="grams sm">10 g</span></div>
+        </div>
+        <div class="after"><span>New total</span><span><b>563 kcal</b> · <b>26 g</b> protein (was 640 kcal)</span></div>
+        <div class="g2">
+          <div><div class="flabel">Day</div><div class="field val"><span>Fri 2 Oct</span><svg class="i" style="width:18px;height:18px;color:var(--mu)"><use href="#i-cal"/></svg></div></div>
+          <div><div class="flabel">Time</div><div class="field val"><span>09:30</span></div></div>
+        </div>
+        <div class="btns"><span class="btn btn-o">Cancel</span><span class="btn btn-p grow">Save changes</span></div>
+      </div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>Edit meal</b>Weights are big tap targets; the total updates as you type, compared with the old one. Day and time sit in the same sheet. With water tracking on, drinks also get their drink-type picker here.</div>
+  </div>
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>All your meals, by day</small>Log</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a class="on">Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+
+      <div class="body"><div class="dayh"><div class="dayh-t"><b>Today<small>Sat 3 Oct</small></b><span class="st prog">910 left</span></div>
+<div class="minibars"><div><div class="mb-l">Calories <span><b>1,240</b> / 2,150</span></div><div class="track"><i style="width:48%;background:var(--lose)"></i><u style="left:83.3%"></u></div></div>
+<div><div class="mb-l">Protein <span><b>88</b> / 125 g</span></div><div class="track"><i style="width:59%;background:var(--lose)"></i><u style="left:83.3%"></u></div></div></div></div><div class="dlist"><div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#8a6a3e,#e0b77a)"></div><div class="meal-t">Oats, banana &amp; honey<small>08:12 · 31 g protein</small></div><span class="kc">520</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#4e7a5e,#9fd1a8)"></div><div class="meal-t">Chicken salad wrap<small>13:40 · 46 g protein</small></div><span class="kc">610</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div></div></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h5>Chicken salad wrap</h5>
+        <span class="btn btn-o full" style="justify-content:flex-start"><svg class="i"><use href="#i-pencil"/></svg>Edit amounts, day or time</span>
+        <span class="btn btn-o full" style="justify-content:flex-start"><svg class="i"><use href="#i-redo"/></svg>Log again today</span>
+        <span class="btn btn-d full" style="justify-content:flex-start"><svg class="i"><use href="#i-trash"/></svg>Delete meal</span>
+      </div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>⋯ on a row</b>The same three actions without opening the meal. Delete still shows a toast with Undo, as today.</div>
+  </div>
+</div>
+</div>
+
+<div class="page cont">
+<h2><span class="num">03</span>Products</h2>
+<p class="lede">Your products saved from barcodes. Scanning still happens on the homepage; this page is for finding, fixing and reusing them.</p>
+</div>
+
+<div class="wide">
+<div class="phones">
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>9 saved from barcodes</small>Products</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a>Log</a><a>Stats</a><a class="on">Products</a></div>
+      </div>
+
+      <div class="body">
+        <div class="search"><svg class="i"><use href="#i-search"/></svg>Search your products</div>
+        <div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#dfe7ef,#9fb6cc)"></div><div class="t">Skyr natural<small>63 kcal · 11 g protein per 100 g</small><em>150 g per scan</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+        <div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#3b2a20,#a8743f)"></div><div class="t">Protein bar, salted caramel<small>352 kcal · 33 g protein per 100 g</small><em>1 bar · 60 g</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+        <div class="prod"><div class="pimg bc" style=""><svg class="i"><use href="#i-barcode"/></svg></div><div class="t">Oat drink barista<small>59 kcal · 1 g protein per 100 ml</small><em>250 ml per scan</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+        <div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#e9d8a6,#c9a227)"></div><div class="t">Rice cakes, lightly salted<small>387 kcal · 8 g protein per 100 g</small></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+        <div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#f3e3d3,#d9a066)"></div><div class="t">Wholegrain toast bread<small>251 kcal · 9 g protein per 100 g</small><em>2 slices · 56 g</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+      </div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>The list</b>🟡 New: search by name. Each product shows its photo (or a barcode icon), calories and protein per 100 g or ml, and its default amount in peach when one is set. The macro split moves into Edit.</div>
+  </div>
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>9 saved from barcodes</small>Products</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a>Log</a><a>Stats</a><a class="on">Products</a></div>
+      </div>
+
+      <div class="body"><div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#dfe7ef,#9fb6cc)"></div><div class="t">Skyr natural<small>63 kcal · 11 g protein per 100 g</small><em>150 g per scan</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h5>Edit product</h5>
+        <div><div class="flabel">Name</div><div class="field val"><span>Skyr natural</span></div></div>
+        <div class="flabel" style="margin:2px 0 -4px">Per 100 g</div>
+        <div class="g2">
+          <div><div class="flabel">Calories</div><div class="field val"><span>63</span><span class="u">kcal</span></div></div>
+          <div><div class="flabel">Protein</div><div class="field val"><span>11</span><span class="u">g</span></div></div>
+          <div><div class="flabel">Carbs</div><div class="field val"><span>4</span><span class="u">g</span></div></div>
+          <div><div class="flabel">Fat</div><div class="field val"><span>0.2</span><span class="u">g</span></div></div>
+        </div>
+        <div><div class="flabel">Amount when scanned <span class="opt">· optional</span></div><div class="field val"><span>150</span><span class="u">g</span></div></div>
+        <div class="btns"><span class="btn btn-o">Cancel</span><span class="btn btn-p grow">Save product</span></div>
+      </div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>Edit product</b>Name, the four values and the default amount, with Save product and Cancel as real buttons. No g/ml switch: the unit is set automatically when the product is first scanned (ml for drinks, g for everything else) and every label just follows it, e.g. "Per 100 ml" and "250 ml" for the oat drink.</div>
+  </div>
+  <div class="pcol">
+    <div class="phone c" style="height:560px">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>9 saved from barcodes</small>Products</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a>Log</a><a>Stats</a><a class="on">Products</a></div>
+      </div>
+
+      <div class="body"><div class="prod"><div class="pimg bc" style=""><svg class="i"><use href="#i-barcode"/></svg></div><div class="t">Oat drink barista<small>59 kcal · 1 g protein per 100 ml</small><em>250 ml per scan</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h5>Oat drink barista</h5>
+        <span class="btn btn-p full" style="justify-content:flex-start"><svg class="i"><use href="#i-plus"/></svg>Log it now</span>
+        <span class="btn btn-o full" style="justify-content:flex-start"><svg class="i"><use href="#i-pencil"/></svg>Edit product</span>
+        <span class="btn btn-d full" style="justify-content:flex-start"><svg class="i"><use href="#i-trash"/></svg>Delete product</span>
+      </div>
+    </div>
+    <div class="pcap"><b>⋯ on a product</b>🟡 New: "Log it now" opens the same amount sheet as a barcode scan, so you can log a saved product without the box in your hand. Delete keeps its Undo toast.</div>
+  </div>
+</div>
+</div>
+
+<div class="page cont">
+<h3>Empty pages</h3>
+<p class="lede">An empty page says what goes there and gives you the button to start.</p>
+</div>
+<div class="wide">
+<div class="phones">
+  <div class="pcol"><div class="phone c" style="height:560px">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>All your meals, by day</small>Log</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a class="on">Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+
+      <div class="body"><div class="empty-card"><span class="ic"><svg class="i"><use href="#i-log"/></svg></span><b>No meals logged yet</b><small>Everything you log on Home shows up here, grouped by day.</small><span class="btn btn-p">Add your first meal</span></div></div>
+    </div><div class="pcap"><b>Log, empty</b>"Add your first meal" goes to the homepage.</div></div>
+  <div class="pcol"><div class="phone c" style="height:560px">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>Saved from barcodes</small>Products</div><div class="avatar"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a>Log</a><a>Stats</a><a class="on">Products</a></div>
+      </div>
+
+      <div class="body"><div class="empty-card"><span class="ic"><svg class="i"><use href="#i-barcode"/></svg></span><b>No saved products yet</b><small>Scan a barcode on Home. Every product you scan is saved here, so next time it's one tap.</small><span class="btn btn-p"><svg class="i"><use href="#i-barcode"/></svg>Scan a barcode</span></div></div>
+    </div><div class="pcap"><b>Products, empty</b>"Scan a barcode" goes to the homepage and opens the scanner.</div></div>
+</div>
+</div>
+
+<div class="page cont">
+<h2><span class="num">04</span>Desktop</h2>
+<p class="lede">Log: the month calendars from Stats sit in a sticky left column, and clicking a day scrolls the list to it (Fri 2 Oct is selected here). Products: a three-column grid of the same rows.</p>
+</div>
+
+<div class="wide scroll-x"><div class="desk c" style="height:820px">
+    <div class="chrome"><i></i><i></i><i></i><span>calorie-calculator.app/log</span></div>
+    <div class="app">
+      <aside class="side">
+        <div class="brand">Calories</div>
+        <a><svg class="i"><use href="#i-home"/></svg>Home</a>
+        <a class="on"><svg class="i"><use href="#i-log"/></svg>Log</a>
+        <a><svg class="i"><use href="#i-stats"/></svg>Stats</a>
+        <a><svg class="i"><use href="#i-box"/></svg>Products</a>
+        <div class="spacer"></div>
+        <div class="ai">AI analyses today<b>14 of 20 left</b><div class="track"><i style="width:70%;background:var(--ac)"></i></div></div>
+        <a><svg class="i"><use href="#i-gear"/></svg>Settings</a>
+      </aside>
+      <div class="dlog">
+        <div class="head ttl"><small>All your meals, by day</small>Log</div>
+        <div class="col">
+          <div class="calcard" style="background:var(--s1);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px">
+            <div class="mon-h" style="display:flex;justify-content:space-between"><b style="font-size:16px;font-weight:800">October</b><span style="font-size:12.5px;color:var(--mu)">tap a day to jump to it</span></div>
+            <div class="cal"><span class="wd">M</span><span class="wd">T</span><span class="wd">W</span><span class="wd">T</span><span class="wd">F</span><span class="wd">S</span><span class="wd">S</span><span></span><span></span><span></span><span class="cell met">1</span><span class="cell over sel">2</span><span class="cell today">3</span></div>
+            <div style="border-top:1px solid var(--ln);padding-top:12px;display:flex;justify-content:space-between"><b style="font-size:16px;font-weight:800">September</b><span style="font-size:12.5px;color:var(--mu)">19 of 27 on track</span></div>
+            <div class="cal"><span class="wd">M</span><span class="wd">T</span><span class="wd">W</span><span class="wd">T</span><span class="wd">F</span><span class="wd">S</span><span class="wd">S</span><span></span><span class="cell met">1</span><span class="cell met">2</span><span class="cell over">3</span><span class="cell over">4</span><span class="cell over">5</span><span class="cell met">6</span><span class="cell met">7</span><span class="cell met">8</span><span class="cell met">9</span><span class="cell met">10</span><span class="cell over">11</span><span class="cell empty">12</span><span class="cell over">13</span><span class="cell met">14</span><span class="cell met">15</span><span class="cell met">16</span><span class="cell met">17</span><span class="cell met">18</span><span class="cell over">19</span><span class="cell empty">20</span><span class="cell met">21</span><span class="cell met">22</span><span class="cell met">23</span><span class="cell met">24</span><span class="cell over">25</span><span class="cell over">26</span><span class="cell empty">27</span><span class="cell met">28</span><span class="cell met">29</span><span class="cell met">30</span></div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="dayh"><div class="dayh-t"><b>Yesterday<small>Fri 2 Oct</small></b><span class="st over">Over by 140</span></div>
+<div class="minibars"><div><div class="mb-l">Calories <span><b>2,290</b> / 2,150</span></div><div class="track"><i style="width:89%;background:var(--red)"></i><u style="left:83.3%"></u></div></div>
+<div><div class="mb-l">Protein <span><b>131</b> / 125 g</span></div><div class="track"><i style="width:87%;background:var(--gr)"></i><u style="left:83.3%"></u></div></div></div></div>
+          <div class="dlist">
+            <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#a0523d,#e39b72)"></div><div class="meal-t">Shakshuka with bread<small>09:30 · 28 g protein</small></div><span class="kc">640</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+            <div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#6f5b8a,#b9a3d6)"></div><div class="meal-t">Pasta with tuna<small>14:10 · 45 g protein</small></div><span class="kc">820</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+            <div class="meal"><div class="thumb" style="background:radial-gradient(circle at 50% 50%, #f1ece4 0 42%, #6b5a4a 43%)"></div><div class="meal-t">Burger and fries<small>20:45 · 58 g protein</small></div><span class="kc">830</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div>
+          </div>
+          <div class="dayh"><div class="dayh-t"><b>Thursday<small>1 Oct</small></b><span class="st ok">On track</span></div>
+<div class="minibars"><div><div class="mb-l">Calories <span><b>1,980</b> / 2,150</span></div><div class="track"><i style="width:77%;background:var(--gr)"></i><u style="left:83.3%"></u></div></div>
+<div><div class="mb-l">Protein <span><b>127</b> / 125 g</span></div><div class="track"><i style="width:85%;background:var(--gr)"></i><u style="left:83.3%"></u></div></div></div></div>
+          <div class="dlist"><div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#8a6a3e,#e0b77a)"></div><div class="meal-t">Overnight oats<small>07:50 · 30 g protein</small></div><span class="kc">450</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#4e7a5e,#9fd1a8)"></div><div class="meal-t">Chicken, rice &amp; broccoli<small>13:05 · 52 g protein</small></div><span class="kc">690</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="meal"><div class="thumb" style="background:linear-gradient(135deg,#a0523d,#e39b72)"></div><div class="meal-t">Salmon &amp; potatoes<small>19:40 · 45 g protein</small></div><span class="kc">840</span><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+<div class="wide scroll-x">
+  <div class="desk c" style="height:420px">
+    <div class="chrome"><i></i><i></i><i></i><span>calorie-calculator.app/products</span></div>
+    <div class="app">
+      <aside class="side">
+        <div class="brand">Calories</div>
+        <a><svg class="i"><use href="#i-home"/></svg>Home</a>
+        <a><svg class="i"><use href="#i-log"/></svg>Log</a>
+        <a><svg class="i"><use href="#i-stats"/></svg>Stats</a>
+        <a class="on"><svg class="i"><use href="#i-box"/></svg>Products</a>
+      </aside>
+      <div style="padding:26px 34px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:20px"><div class="ttl"><small>9 saved from barcodes</small>Products</div><div class="search" style="width:320px"><svg class="i"><use href="#i-search"/></svg>Search your products</div></div>
+        <div class="pgrid"><div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#dfe7ef,#9fb6cc)"></div><div class="t">Skyr natural<small>63 kcal · 11 g protein per 100 g</small><em>150 g per scan</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#3b2a20,#a8743f)"></div><div class="t">Protein bar, salted caramel<small>352 kcal · 33 g per 100 g</small><em>1 bar · 60 g</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="prod"><div class="pimg bc" style=""><svg class="i"><use href="#i-barcode"/></svg></div><div class="t">Oat drink barista<small>59 kcal · 1 g per 100 ml</small><em>250 ml per scan</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#e9d8a6,#c9a227)"></div><div class="t">Rice cakes<small>387 kcal · 8 g per 100 g</small></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#f3e3d3,#d9a066)"></div><div class="t">Wholegrain toast bread<small>251 kcal · 9 g per 100 g</small><em>2 slices · 56 g</em></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div><div class="prod"><div class="pimg" style="background:linear-gradient(135deg,#efe3c8,#b98b4f)"></div><div class="t">Peanut butter<small>588 kcal · 25 g per 100 g</small></div><span class="more"><svg class="i"><use href="#i-dots"/></svg></span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" style="padding-top:0">
+<h2><span class="num">05</span>What I need from you</h2>
+<ol class="steps">
+  <li><strong>Add "Log it now" to products?</strong><span class="step-note">Lets you log a saved product without scanning it again. Small to build, since the amount sheet already exists for barcodes. My pick: yes.</span></li>
+  <li><strong>Add search to Products?</strong><span class="step-note">A simple filter by name, shown once you have more than about 6 products. My pick: yes.</span></li>
+</ol>
+<p>Anything else on these two pages to change? Next up after this: <b>mock 6: Settings</b>.</p>
+
+<footer class="doc">
+  Calorie Calculator · redesign mock 5 of 8 · the read-only admin views reuse these pages with the ⋯ and edit buttons hidden
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redesign 6 — Settings — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16; --surface: #24221C; --surface-raised: #2A281F; --ink: #EDEAE0; --ink-soft: #A5A195;
+    --accent: #E08A5C; --accent-soft: #3A2A20; --green: #7FBF92; --green-soft: #22312A; --line: #38352C;
+    --code-bg: #2d2d2d; --radius: 10px;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.65; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  .page.cont { padding-top: 0; padding-bottom: 0; }
+  .wide { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  ul.tight { margin: 8px 0; padding-left: 20px; } ul.tight li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px; }
+  th { text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px; }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill { font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 16px 46px; }
+  ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--bg); font-family: var(--mono); font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  ol.steps > li:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 34px; bottom: 2px; width: 2px; background: var(--line); }
+  ol.steps strong { display: block; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  /* ---------- Mock scaffolding ---------- */
+  .phones { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; align-items: flex-start; margin: 28px 0 8px; }
+  .pcol { display: flex; flex-direction: column; gap: 12px; width: 375px; max-width: 100%; }
+  .pcap { font-size: 14px; color: var(--ink-soft); }
+  .pcap b { display: block; color: var(--ink); font-size: 15.5px; margin-bottom: 2px; }
+  .phone { position: relative; width: 375px; height: 812px; max-width: 100%; border-radius: 46px; overflow: hidden; border: 10px solid #0c0b09; box-shadow: 0 0 0 1px #3a372e, 0 30px 60px -20px rgba(0,0,0,.7); }
+  .phone.tall { height: auto; }
+  .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 110px; height: 30px; border-radius: 20px; background: #000; z-index: 9; }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 14px; font-weight: 600; }
+  .status .dots { display: flex; gap: 5px; } .status .dots i { width: 16px; height: 9px; border-radius: 2px; background: currentColor; opacity: .9; } .status .dots i:first-child { width: 14px; opacity: .6; }
+  .home-ind { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; border-radius: 4px; background: currentColor; opacity: .5; z-index: 9; }
+  .fold { position: absolute; left: -10px; right: -10px; top: 792px; border-top: 2px dashed rgba(244,167,122,.7); z-index: 7; }
+  .fold span { position: absolute; right: 16px; top: -11px; font-size: 11px; font-weight: 700; color: #F4A77A; background: #1A1720; padding: 2px 8px; border-radius: 999px; }
+  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .scroll-x { overflow-x: auto; padding-bottom: 12px; }
+  .split { display: grid; grid-template-columns: 375px 1fr; gap: 36px; align-items: start; margin: 26px 0; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+
+  /* =========================================================
+     Style C · Plate — the chosen look
+     ========================================================= */
+  .c {
+    --b: #1A1720; --s1: #24202C; --s2: #2F2A39; --s3: #3A3446; --tx: #F1ECF4; --mu: #A8A0B2;
+    --ac: #F4A77A; --acs: #3B2A2A; --gr: #86D3B0; --grs: #1F3330; --lose: #8DB4E8; --amb: #F2C66D;
+    --red: #F08A8A; --reds: #3A2228; --ln: #352F40;
+    background: var(--b); color: var(--tx); font-family: var(--sans);
+  }
+  .c .topnav { padding: 2px 18px 0; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--ln); background: var(--b); position: relative; z-index: 3; }
+  .c .topnav .row { display: flex; align-items: center; justify-content: space-between; }
+  .c .ttl { font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+  .c .ttl small { display: block; font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .c .avatar { width: 44px; height: 44px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .c .tabs { display: flex; margin: 0 -10px; }
+  .c .tabs a { flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--mu); position: relative; }
+  .c .tabs a.on { color: var(--tx); }
+  .c .tabs a.on::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 3px; border-radius: 3px; background: var(--ac); }
+  .c .body { padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+
+  .c .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .c .stat { background: var(--s1); border-radius: 20px; padding: 14px; }
+  .c .stat small { font-size: 12.5px; color: var(--mu); }
+  .c .stat b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .c .stat b span { font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .c .track { height: 6px; border-radius: 6px; background: var(--s3); margin-top: 10px; position: relative; overflow: hidden; }
+  .c .track i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; }
+  .c .track u { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(241,236,244,.6); }
+  .c .stat .msg { font-size: 12px; margin-top: 6px; color: var(--mu); }
+
+  .c .hero { background: var(--ac); color: #241a15; border-radius: 26px; padding: 18px; height: 150px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+  .c .hero .ic { width: 52px; height: 52px; border-radius: 18px; background: rgba(36,26,21,.12); display: flex; align-items: center; justify-content: center; }
+  .c .hero .ic svg { width: 28px; height: 28px; }
+  .c .hero b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; display: block; }
+  .c .hero small { font-size: 13px; opacity: .75; }
+  .c .hero .ai { position: absolute; top: 18px; right: 18px; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: rgba(36,26,21,.12); }
+  .c .hero.off { background: var(--s1); color: var(--mu); }
+  .c .hero.off .ic { background: var(--s2); }
+  .c .hero.off b { color: var(--tx); }
+  .c .hero.off .ai { background: var(--reds); color: var(--red); }
+  .c .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .c .sq { background: var(--s1); border-radius: 20px; height: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; font-weight: 700; font-size: 13.5px; }
+  .c .sq svg { color: var(--ac); }
+  .c .sq.off { color: var(--mu); } .c .sq.off svg { color: var(--mu); opacity: .6; }
+
+  .c .card { background: var(--s1); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .c .card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .c .card-h b { font-size: 16px; font-weight: 800; letter-spacing: -.01em; display: block; }
+  .c .card-h small { font-size: 13px; color: var(--mu); }
+  .c .x { width: 36px; height: 36px; border-radius: 12px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--mu); font-size: 15px; flex-shrink: 0; }
+
+  .c .field { height: 48px; border-radius: 14px; background: var(--b); border: 1.5px solid var(--ln); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: var(--mu); font-size: 15px; }
+  .c .field.focus { border-color: var(--ac); }
+  .c .field.val { color: var(--tx); }
+  .c .field .u { color: var(--mu); font-size: 14px; }
+  .c .flabel { font-size: 12.5px; color: var(--mu); margin-bottom: 5px; font-weight: 600; }
+  .c .area { min-height: 92px; border-radius: 16px; background: var(--b); border: 1.5px solid var(--ac); padding: 12px 14px; font-size: 15.5px; line-height: 1.45; }
+  .c .caret { display: inline-block; width: 2px; height: 18px; background: var(--ac); vertical-align: -3px; margin-left: 1px; }
+
+  .c .btn { white-space: nowrap; height: 48px; border-radius: 14px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 750; font-size: 15px; }
+  .c .btn svg { width: 19px; height: 19px; }
+  .c .btn-p { background: var(--ac); color: #241a15; }
+  .c .btn-t { background: var(--s2); color: var(--ac); }
+  .c .btn-o { border: 1.5px solid var(--s3); color: var(--tx); }
+  .c .btn-d { background: var(--reds); color: var(--red); }
+  .c .btn.full { width: 100%; }
+  .c .btn.sm { height: 44px; font-size: 14px; padding: 0 14px; }
+  .c .btn.dim { opacity: .4; }
+  .c .btns { display: flex; gap: 8px; }
+  .c .btns .grow { flex: 1; }
+
+  .c .sec { font-size: 17px; font-weight: 800; letter-spacing: -.02em; margin-top: 6px; display: flex; justify-content: space-between; align-items: baseline; }
+  .c .sec span { font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .c .meal { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+  .c .thumb { width: 48px; height: 48px; border-radius: 16px; flex-shrink: 0; }
+  .c .thumb.txt { background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .c .meal-t { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 650; line-height: 1.25; }
+  .c .meal-t small { display: block; color: var(--mu); font-weight: 400; font-size: 12.5px; }
+  .c .kc { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .c .more { width: 40px; height: 40px; border-radius: 12px; border: 1.5px solid var(--s3); display: flex; align-items: center; justify-content: center; color: var(--mu); flex-shrink: 0; }
+  .c .meal.new { background: var(--grs); border-radius: 18px; padding: 8px; margin: 0 -8px; }
+
+  .c .water { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .c .water .chip { justify-content: center; }
+  .c .water .lbl { grid-column: 1 / -1; font-size: 13px; color: var(--mu); font-weight: 600; }
+  .c .chip { height: 44px; padding: 0 14px; border-radius: 14px; background: var(--s1); display: inline-flex; align-items: center; font-weight: 750; font-size: 14px; color: var(--lose); }
+
+  /* Analysis */
+  .c .photo { height: 150px; border-radius: 18px; background: radial-gradient(circle at 35% 40%, #e6c48a 0 18%, transparent 19%), radial-gradient(circle at 62% 55%, #8fbf7a 0 20%, transparent 21%), radial-gradient(circle at 50% 50%, #f1ece4 0 42%, #6b5a4a 43% 100%); position: relative; }
+  .c .photo.small { height: 90px; }
+  .c .photo .tag { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+  .c .photo .tag span { height: 34px; padding: 0 12px; border-radius: 11px; background: rgba(26,23,32,.8); display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; color: var(--tx); }
+  .c .timer { display: flex; align-items: center; gap: 14px; }
+  .c .timer .sec-n { font-size: 40px; font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .c .timer .sec-n span { font-size: 16px; color: var(--mu); font-weight: 600; letter-spacing: 0; margin-left: 2px; }
+  .c .timer .t { font-size: 13.5px; color: var(--mu); line-height: 1.4; }
+  .c .timer .t b { display: block; color: var(--tx); font-size: 15.5px; }
+  .c .indet { height: 6px; border-radius: 6px; background: var(--s3); overflow: hidden; position: relative; }
+  .c .indet i { position: absolute; top: 0; bottom: 0; width: 38%; border-radius: 6px; background: var(--ac); left: 0; animation: indet 1.6s ease-in-out infinite; }
+  @keyframes indet { 0% { left: -38%; } 100% { left: 100%; } }
+  @media (prefers-reduced-motion: reduce) { .c .indet i { animation: none; left: 31%; } }
+  .c .ghost { height: 14px; border-radius: 7px; background: var(--s2); }
+  .c .food { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--ln); }
+  .c .food:first-child { border-top: 0; }
+  .c .food .n { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 650; line-height: 1.3; }
+  .c .food .n small { display: block; color: var(--mu); font-weight: 400; font-size: 12.5px; }
+  .c .grams { width: 74px; height: 40px; border-radius: 12px; border: 1.5px solid var(--s3); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .c .conf { font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px; }
+  .c .conf.h { background: var(--grs); color: var(--gr); }
+  .c .conf.m { background: var(--acs); color: var(--ac); }
+  .c .totals { display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 2px solid var(--s3); }
+  .c .totals b { white-space: nowrap; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .c .totals span { color: var(--mu); font-size: 13.5px; }
+  .c .after { border-radius: 14px; background: var(--s2); padding: 10px 12px; font-size: 13.5px; color: var(--mu); display: flex; flex-direction: column; gap: 1px; }
+  .c .after > span:first-child { font-size: 12px; }
+  .c .after b { color: var(--tx); }
+  .c .bubble { align-self: flex-end; max-width: 85%; border-radius: 18px 18px 6px 18px; background: var(--s2); padding: 10px 14px; font-size: 14px; }
+  .c .hint { font-size: 12.5px; color: var(--mu); text-align: center; }
+  .c .toast { border-radius: 16px; background: var(--s3); padding: 10px 10px 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 650; box-shadow: 0 12px 30px -10px rgba(0,0,0,.7); }
+  .c .toast .ok { width: 26px; height: 26px; border-radius: 50%; background: var(--gr); color: var(--b); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; }
+  .c .toast .undo { margin-left: auto; height: 36px; padding: 0 12px; border-radius: 10px; background: var(--s2); color: var(--ac); display: inline-flex; align-items: center; font-weight: 750; font-size: 13.5px; }
+
+  /* Sheets */
+  .c .dim { position: absolute; inset: 0; background: rgba(10,8,14,.62); z-index: 5; }
+  .c .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--s1); border-radius: 28px 28px 0 0; padding: 10px 18px 34px; display: flex; flex-direction: column; gap: 12px; }
+  .c .grab { width: 40px; height: 5px; border-radius: 5px; background: var(--s3); margin: 0 auto 4px; }
+  .c .sheet h5 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.02em; display: flex; justify-content: space-between; align-items: center; }
+  .c .sheet h5 span { font-size: 12px; font-weight: 700; color: var(--gr); background: var(--grs); border-radius: 999px; padding: 3px 10px; letter-spacing: 0; }
+  .c .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .c .opt { font-weight: 400; }
+
+  /* Desktop */
+  .desk { width: 1180px; height: 820px; border-radius: 14px; overflow: hidden; border: 1px solid #3a372e; box-shadow: 0 30px 60px -24px rgba(0,0,0,.7); margin: 22px auto 0; display: flex; flex-direction: column; }
+  .desk .chrome { height: 34px; background: #0f0d13; display: flex; align-items: center; gap: 7px; padding: 0 14px; flex-shrink: 0; }
+  .desk .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #352F40; }
+  .desk .chrome span { margin-left: 16px; font-size: 12px; color: #6e6678; font-family: var(--mono); }
+  .desk .app { flex: 1; display: grid; grid-template-columns: 236px 1fr; min-height: 0; }
+  .c .side { background: #16131B; border-right: 1px solid var(--ln); padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .c .brand { font-size: 21px; font-weight: 800; letter-spacing: -.03em; padding: 0 10px 18px; }
+  .c .side a { display: flex; align-items: center; gap: 12px; padding: 0 12px; height: 46px; border-radius: 14px; font-size: 15px; font-weight: 700; color: var(--mu); }
+  .c .side a.on { background: var(--s1); color: var(--tx); }
+  .c .side a.on svg { color: var(--ac); }
+  .c .side .spacer { flex: 1; }
+  .c .side .ai { background: var(--s1); border-radius: 16px; padding: 12px; font-size: 12.5px; color: var(--mu); margin-bottom: 6px; }
+  .c .side .ai b { display: block; color: var(--tx); font-size: 18px; font-weight: 800; }
+  .c .dmain { padding: 26px 34px; overflow: hidden; display: grid; grid-template-columns: 360px minmax(0,1fr); gap: 26px; align-content: start; }
+  .c .dmain .head { grid-column: 1 / -1; }
+  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  /* ---------- Setup-specific ---------- */
+  .c .ob { padding: 6px 18px 0; display: flex; flex-direction: column; gap: 12px; }
+  .c .ob-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .c .iconbtn { width: 44px; height: 44px; border-radius: 14px; border: 1.5px solid var(--s3); display: flex; align-items: center; justify-content: center; color: var(--tx); }
+  .c .iconbtn.ghost { visibility: hidden; }
+  .c .stepn { font-size: 13px; font-weight: 700; color: var(--mu); }
+  .c .prog { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .c .prog i { height: 5px; border-radius: 5px; background: var(--s2); }
+  .c .prog i.on { background: var(--ac); }
+  .c .h1 { font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin-top: 6px; }
+  .c .lead { font-size: 14.5px; color: var(--mu); line-height: 1.45; }
+  .c .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .c .seg span { height: 48px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; justify-content: center; font-weight: 750; font-size: 15px; color: var(--mu); border: 2px solid transparent; }
+  .c .seg span.on { border-color: var(--ac); background: var(--acs); color: var(--tx); }
+  .c .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .c .choice { border-radius: 18px; background: var(--s1); padding: 12px 14px; display: flex; align-items: center; gap: 12px; border: 2px solid transparent; }
+  .c .choice .t { flex: 1; font-size: 15px; font-weight: 750; line-height: 1.3; }
+  .c .choice .t small { display: block; font-size: 12.5px; font-weight: 400; color: var(--mu); }
+  .c .choice .ic { width: 42px; height: 42px; border-radius: 14px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--ac); }
+  .c .radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--s3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .c .choice.on { border-color: var(--ac); background: var(--acs); }
+  .c .choice.on .radio { border-color: var(--ac); background: var(--ac); color: var(--b); }
+  .c .choice.on .radio svg { width: 14px; height: 14px; stroke-width: 3; }
+  .c .lbl2 { font-size: 15px; font-weight: 800; letter-spacing: -.01em; margin-top: 4px; display: flex; justify-content: space-between; align-items: baseline; }
+  .c .lbl2 span { font-size: 12.5px; font-weight: 500; color: var(--mu); }
+  .c .maint { background: var(--s1); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .c .maint-row { display: flex; justify-content: space-between; align-items: center; }
+  .c .maint-row small { font-size: 12.5px; color: var(--mu); display: block; }
+  .c .maint-row b { font-size: 24px; font-weight: 800; letter-spacing: -.03em; }
+  .c .work { border-radius: 14px; background: var(--b); padding: 10px 12px; font-size: 13px; line-height: 1.6; color: var(--mu); }
+  .c .work b { color: var(--tx); font-weight: 700; }
+  .c .pcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .c .pcard { border-radius: 18px; background: var(--s1); padding: 12px 10px; text-align: center; border: 2px solid transparent; display: flex; flex-direction: column; gap: 1px; }
+  .c .pcard small { font-size: 12.5px; color: var(--mu); font-weight: 600; }
+  .c .pcard b { font-size: 24px; font-weight: 800; letter-spacing: -.03em; line-height: 1.2; }
+  .c .pcard em { font-style: normal; font-size: 11.5px; color: var(--mu); }
+  .c .pcard.on { border-color: var(--ac); background: var(--acs); }
+  .c .pcard.on small { color: var(--ac); }
+  .c .pnote { font-size: 13px; color: var(--mu); line-height: 1.45; background: var(--s1); border-radius: 14px; padding: 10px 12px; }
+  .c .pnote b { color: var(--tx); }
+  .c .slider { background: var(--s1); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .c .readout { display: flex; justify-content: space-between; align-items: baseline; }
+  .c .readout b { font-size: 32px; font-weight: 800; letter-spacing: -.04em; }
+  .c .readout b span { font-size: 15px; color: var(--mu); font-weight: 600; letter-spacing: 0; }
+  .c .readout em { font-style: normal; font-size: 13px; font-weight: 750; color: var(--ac); background: var(--acs); border-radius: 999px; padding: 3px 10px; }
+  .c .rail { position: relative; height: 34px; }
+  .c .rail .bar { position: absolute; left: 12px; right: 12px; top: 14px; height: 6px; border-radius: 6px; background: var(--s3); }
+  .c .rail .fill { position: absolute; left: 12px; top: 14px; height: 6px; border-radius: 6px; background: var(--ac); }
+  .c .rail .stop { position: absolute; top: 12px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--s3); border: 2px solid var(--s1); }
+  .c .rail .thumb { position: absolute; top: 3px; width: 28px; height: 28px; margin-left: -14px; border-radius: 50%; background: var(--tx); box-shadow: 0 0 0 6px rgba(244,167,122,.25); }
+  .c .rail-l { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 12px; color: var(--mu); text-align: center; margin: -6px -6px 0; }
+  .c .rail-l span b { display: block; color: var(--tx); font-size: 12.5px; }
+  .c .rail-l span.on b { color: var(--ac); }
+  .c .plan { border-radius: 20px; background: var(--s1); padding: 14px 16px; border: 2px solid transparent; display: flex; flex-direction: column; gap: 8px; }
+  .c .plan.on { border-color: var(--ac); background: var(--acs); }
+  .c .plan-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .c .plan-h b { font-size: 16px; font-weight: 800; }
+  .c .plan-h .pace { font-size: 13px; font-weight: 700; color: var(--mu); }
+  .c .badge { font-size: 11.5px; font-weight: 750; color: var(--gr); background: var(--grs); border-radius: 999px; padding: 3px 9px; margin-left: 6px; vertical-align: 2px; }
+  .c .nums { display: flex; gap: 18px; }
+  .c .nums b { font-size: 22px; font-weight: 800; letter-spacing: -.03em; }
+  .c .nums > span > span { font-size: 12.5px; color: var(--mu); margin-left: 3px; }
+  .c .plan .when { font-size: 13px; color: var(--mu); }
+  .c .plan .when b { color: var(--tx); }
+  .c .custom { border-radius: 20px; border: 2px dashed var(--s3); padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .c .custom .ic { width: 42px; height: 42px; border-radius: 14px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--ac); }
+  .c .custom .t { flex: 1; font-size: 15.5px; font-weight: 800; }
+  .c .custom .t small { display: block; font-size: 12.5px; font-weight: 400; color: var(--mu); }
+  .c .custom.open { border-style: solid; border-color: var(--ac); background: var(--acs); flex-direction: column; align-items: stretch; }
+  .c .cta { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 18px 30px; background: linear-gradient(transparent, var(--b) 30%); z-index: 4; }
+  .c .cta-note { text-align: center; font-size: 12.5px; color: var(--mu); margin-top: 8px; }
+  .c .outlook { font-size: 13.5px; color: var(--mu); line-height: 1.45; }
+  .c .outlook b { color: var(--tx); }
+  .c .warn { border-radius: 14px; background: var(--reds); color: var(--red); padding: 10px 12px; font-size: 13.5px; font-weight: 650; }
+  .c .sum { background: var(--s1); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+  .c .sum-r { display: flex; justify-content: space-between; color: var(--mu); }
+  .c .sum-r b { color: var(--tx); font-weight: 700; }
+  .c .plans3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .desk.ob { height: 640px; }
+  .c .dob { overflow: hidden; display: grid; grid-template-columns: 380px minmax(0,1fr); gap: 34px; padding: 34px 48px; align-content: start; }
+
+  /* Protein pickers, v2 */
+  .c .segp { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--s1); border-radius: 18px; padding: 4px; gap: 4px; }
+  .c .segp span { border-radius: 14px; padding: 9px 4px; text-align: center; display: flex; flex-direction: column; gap: 0; font-size: 12.5px; font-weight: 650; color: var(--mu); }
+  .c .segp span b { font-size: 19px; font-weight: 800; letter-spacing: -.02em; color: var(--tx); line-height: 1.25; }
+  .c .segp span.on { background: var(--ac); color: rgba(36,26,21,.75); }
+  .c .segp span.on b { color: #241a15; }
+  .c .sl2 { background: var(--s1); border-radius: 18px; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .c .sl2-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: var(--mu); }
+  .c .sl2-h b { font-size: 22px; font-weight: 800; color: var(--tx); letter-spacing: -.02em; }
+  .c .sl2-h b span { font-size: 13px; font-weight: 700; color: var(--ac); letter-spacing: 0; margin-left: 6px; }
+  .c .rail2 { position: relative; height: 18px; margin: 0 8px; }
+  .c .rail2 .bar { position: absolute; left: 0; right: 0; top: 7px; height: 4px; border-radius: 4px; background: var(--s3); }
+  .c .rail2 .fill { position: absolute; left: 0; top: 7px; height: 4px; border-radius: 4px; background: var(--ac); }
+  .c .rail2 .tick { position: absolute; top: 5px; width: 2px; height: 8px; margin-left: -1px; border-radius: 2px; background: var(--mu); opacity: .6; }
+  .c .rail2 .knob { position: absolute; top: 1px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--ac); box-shadow: 0 0 0 3px var(--s1); }
+  .c .rail2-l { display: flex; justify-content: space-between; font-size: 12px; color: var(--mu); font-weight: 600; margin: 0 -6px; }
+  .c .rail2-l .on { color: var(--ac); }
+  .c .step { background: var(--s1); border-radius: 18px; padding: 10px; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 8px; }
+  .c .step .pm { width: 48px; height: 48px; border-radius: 14px; background: var(--s2); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: var(--ac); }
+  .c .step .mid { text-align: center; line-height: 1.25; }
+  .c .step .mid b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+  .c .step .mid small { font-size: 12.5px; color: var(--mu); font-weight: 600; }
+  .c .step .mid small em { font-style: normal; color: var(--ac); }
+  .c .dots4 { display: flex; justify-content: center; gap: 6px; margin-top: 4px; }
+  .c .dots4 i { width: 6px; height: 6px; border-radius: 50%; background: var(--s3); }
+  .c .dots4 i.on { background: var(--ac); width: 16px; border-radius: 4px; }
+
+  /* ---------- Settings ---------- */
+  .c .who { display: flex; align-items: center; gap: 12px; }
+  .c .who .av { width: 48px; height: 48px; border-radius: 16px; background: var(--ac); color: #241a15; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; }
+  .c .who b { display: block; font-size: 16px; font-weight: 800; }
+  .c .who small { font-size: 13px; color: var(--mu); }
+  .c .plan-card { background: var(--acs); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .c .plan-card .top { display: flex; justify-content: space-between; align-items: center; }
+  .c .plan-card .top b { font-size: 16.5px; font-weight: 800; }
+  .c .plan-card .top span { white-space: nowrap; font-size: 12.5px; font-weight: 750; color: var(--ac); }
+  .c .plan-card .nums b { font-size: 26px; }
+  .c .plan-card .meta2 { font-size: 13px; color: var(--mu); }
+  .c .plan-card .meta2 b { color: var(--tx); }
+  .c .grp-t { font-size: 13px; font-weight: 750; color: var(--mu); margin: 6px 4px -4px; }
+  .c .grp { background: var(--s1); border-radius: 20px; overflow: hidden; }
+  .c .srow { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 14px; border-top: 1px solid var(--ln); }
+  .c .srow:first-child { border-top: 0; }
+  .c .srow .ic { width: 38px; height: 38px; border-radius: 12px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--ac); flex-shrink: 0; }
+  .c .srow .ic svg { width: 20px; height: 20px; }
+  .c .srow .t { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; line-height: 1.3; }
+  .c .srow .t small { display: block; font-size: 12.5px; font-weight: 400; color: var(--mu); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c .srow .chev { color: var(--mu); }
+  .c .srow.sel { background: var(--s2); }
+  .c .srow.danger .t { color: var(--red); } .c .srow.danger .ic { color: var(--red); background: var(--reds); }
+  .c .toggle { width: 52px; height: 32px; border-radius: 16px; background: var(--s3); position: relative; flex-shrink: 0; }
+  .c .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--mu); }
+  .c .toggle.on { background: var(--gr); } .c .toggle.on::after { left: 23px; background: #10241d; }
+  .c .back { display: flex; align-items: center; gap: 10px; padding: 4px 18px 0; }
+  .c .back b { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .c .note { border-radius: 14px; background: var(--s2); padding: 10px 12px; font-size: 13px; color: var(--mu); line-height: 1.45; }
+  .c .note b { color: var(--tx); }
+  .c .note.accent { background: var(--acs); }
+  .c .hrow { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--ln); font-size: 14px; }
+  .c .hrow:first-child { border-top: 0; }
+  .c .hrow span { color: var(--mu); }
+  .c .hrow b { font-weight: 750; }
+  .c .hrow .r { text-align: right; }
+  .c .dset { display: grid; grid-template-columns: 380px minmax(0,1fr); gap: 0; min-height: 0; }
+  .c .dset .l { padding: 26px 24px; border-right: 1px solid var(--ln); display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .c .dset .r { padding: 26px 34px; display: flex; flex-direction: column; gap: 14px; max-width: 620px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M4 8 12 4l8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/></symbol>
+    <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M4 7V5h3M17 5h3v2M20 17v2h-3M7 19H4v-2M8 9v6M11 9v6M14 9v6M17 9v6"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M5 19h4L19 9l-4-4L5 15z"/><path d="m13 7 4 4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.5"/><path d="M5.5 19c1.2-3.2 3.6-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9.5a4 4 0 0 1 6 0M12 9.5l1.2-1.6"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M4 7l6 6 4-4 6 6M20 10v5h-5"/></symbol>
+    <symbol id="i-flat" viewBox="0 0 24 24"><path d="M4 12h16M16 8l4 4-4 4"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M4 17l6-6 4 4 6-6M20 14V9h-5"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3"/><path d="M3.5 19c.9-2.8 3-4.2 5.5-4.2s4.6 1.4 5.5 4.2M16 6.5a3 3 0 0 1 0 5.6M17.5 15c1.6.5 2.6 1.8 3 4"/></symbol>
+    <symbol id="i-hist" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4M12 8v4l3 2"/></symbol>
+    <symbol id="i-body" viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="2.2"/><path d="M7 9h10M12 9v5M12 14l-3 6M12 14l3 6"/></symbol>
+      <symbol id="i-chevdown" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3c3.5 4.5 6 7.8 6 11a6 6 0 0 1-12 0c0-3.2 2.5-6.5 6-11z"/></symbol>
+  </defs>
+</svg>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Redesign · mock 6 of 8</div>
+  <h1>Settings</h1>
+  <p class="subtitle">Your account page, rebuilt as a short list. The plan stays on top; everything else is one row that opens its own screen or sheet, instead of five long forms stacked on one page.</p>
+  <div class="meta">
+    <span><strong>Opens from:</strong> the profile button at the top right</span>
+    <span><strong>Your picks:</strong> 2 questions in section 05</span>
+  </div>
+</header>
+
+<div class="callout good"><b>Decided:</b> as shown · reminder options daily / 3 / 7 (default) / 14 days / off, saved on the account (new column, SQL at build time) · water goal saves by itself · icons in the real build come from an icon library (none is installed, so lucide-react gets added).</div>
+
+<h2><span class="num">01</span>What changes</h2>
+<ul class="tight">
+  <li><b>Plan card on top</b> with your targets, goal date and protein level, and Change plan as the main button.</li>
+  <li><b>Grouped rows</b> (You · Tracking · Account · Admin). Each shows its current value, so you can read your settings without opening anything.</li>
+  <li><b>New: Weigh-in reminder</b>, the setting the homepage card links to (mock 2).</li>
+  <li><b>Water tracking is a real toggle</b> right in the list; the goal field appears under it when it's on.</li>
+  <li><b>Log out is its own red row</b>, not a big outlined button at the end of a long form.</li>
+  <li>Everything that works today stays: the plan history, "your plan was built at 85.3 kg" hint, weight pre-filled from the latest weigh-in, password check, admin link.</li>
+</ul>
+
+<h2><span class="num">02</span>The list</h2>
+</div>
+
+<div class="wide">
+<div class="split" style="max-width:1000px;margin-left:auto;margin-right:auto">
+  <div class="phone tall c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>Your account</small>Settings</div><div class="avatar" style="background:var(--ac);color:#241a15"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a>Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+
+      <div class="body">
+        <div class="plan-card">
+  <div class="top"><b>Steady · lose 0.5 kg a week</b><span>Since 4 Sep</span></div>
+  <div class="nums"><span style="margin:0"><b>2,150</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+  <div class="meta2">Goal <b>78 kg</b> around <b>3 Jan 2027</b> · protein Moderate (1.6 g/kg)</div>
+  <span class="btn btn-p full">Change plan</span>
+</div>
+        <div class="grp-t">You</div>
+<div class="grp"><div class="srow "><span class="ic"><svg class="i"><use href="#i-body"/></svg></span><div class="t">Body details<small>Male · 32 · 180 cm · 84.2 kg · moderately active</small></div><svg class="i chev"><use href="#i-chev"/></svg></div><div class="srow "><span class="ic"><svg class="i"><use href="#i-hist"/></svg></span><div class="t">Plan history<small>2 plans since 4 Sep</small></div><svg class="i chev"><use href="#i-chev"/></svg></div></div>
+<div class="grp-t">Tracking</div>
+<div class="grp"><div class="srow "><span class="ic"><svg class="i"><use href="#i-scale"/></svg></span><div class="t">Weigh-in reminder<small>Every 7 days</small></div><svg class="i chev"><use href="#i-chev"/></svg></div><div class="srow "><span class="ic"><svg class="i"><use href="#i-drop"/></svg></span><div class="t">Track water<small>Off</small></div><span class="toggle"></span></div></div>
+<div class="grp-t">Account</div>
+<div class="grp"><div class="srow "><span class="ic"><svg class="i"><use href="#i-lock"/></svg></span><div class="t">Change password<small>anton@example.com</small></div><svg class="i chev"><use href="#i-chev"/></svg></div><div class="srow danger"><span class="ic"><svg class="i"><use href="#i-out"/></svg></span><div class="t">Log out<small>On this device</small></div><span></span></div></div>
+<div class="grp-t">Admin</div>
+<div class="grp"><div class="srow "><span class="ic"><svg class="i"><use href="#i-users"/></svg></span><div class="t">Users and AI caps<small>3 accounts</small></div><svg class="i chev"><use href="#i-chev"/></svg></div></div>
+      </div>
+      <div class="home-ind"></div>
+    </div>
+  <div>
+    <ol class="steps">
+      <li><strong>Plan card</strong><span class="step-note">The plan you're on now, in the accent tint so it reads as the most important thing here. Change plan opens the plan screen (section 03).</span></li>
+      <li><strong>You</strong><span class="step-note">Body details (summary on the row) and Plan history.</span></li>
+      <li><strong>Tracking</strong><span class="step-note">Weigh-in reminder (how often) and Track water, with its toggle on the row itself.</span></li>
+      <li><strong>Account</strong><span class="step-note">Change password, with your email shown on the row. Log out in red.</span></li>
+      <li><strong>Admin</strong><span class="step-note">Only for you. Opens the Users page (mock 7).</span></li>
+    </ol>
+    <p style="font-size:14.5px;color:var(--ink-soft)">The tabs stay at the top with none underlined; the profile button is filled in peach to show you're in Settings.</p>
+  </div>
+</div>
+</div>
+
+<div class="page cont">
+<h2><span class="num">03</span>What each row opens</h2>
+<p class="lede">Bigger things (body details, changing the plan) get their own screen with a back button. Small things open a sheet.</p>
+</div>
+
+<div class="wide">
+<div class="phones">
+  <div class="pcol"><div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="back"><span class="iconbtn"><svg class="i"><use href="#i-left"/></svg></span><b>Body details</b></div>
+
+      <div class="ob">
+        <div class="seg"><span class="on">Male</span><span>Female</span></div>
+        <div class="g3">
+          <div><div class="flabel">Birth year</div><div class="field val"><span>1994</span></div></div>
+          <div><div class="flabel">Height</div><div class="field val"><span>180</span><span class="u">cm</span></div></div>
+          <div><div class="flabel">Weight</div><div class="field val focus"><span>84.2</span><span class="u">kg</span></div></div>
+        </div>
+        <div class="lead" style="font-size:12.5px;margin-top:-6px">Weight filled in from today's weigh-in.</div>
+        <div><div class="flabel">Activity</div><div class="field val"><span>Moderately active · 3–5 days a week</span><svg class="i" style="width:18px;height:18px;color:var(--mu)"><use href="#i-chevdown"/></svg></div></div>
+        <div class="maint"><div class="maint-row"><div><small>Maintenance now</small><b>≈ 2,790 kcal</b></div></div></div>
+        <div class="note accent">Your plan was built at <b>85.3 kg</b>. Your targets stay as they are until you <b>change your plan</b>.</div>
+      </div>
+      <div class="cta"><span class="btn btn-p full">Save details</span></div>
+      <div class="home-ind"></div>
+    </div><div class="pcap"><b>Body details · screen</b>The same fields as setup. Weight is filled in from your latest weigh-in, with a line saying so. Maintenance updates as you type; the accent note explains that the plan's targets don't change until you change the plan.</div></div>
+  <div class="pcol"><div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="back"><span class="iconbtn"><svg class="i"><use href="#i-left"/></svg></span><b>Change plan</b></div>
+
+      <div class="ob">
+        <div class="seg" style="grid-template-columns:repeat(3,1fr)"><span class="on">Lose</span><span>Maintain</span><span>Gain</span></div>
+        <div><div class="flabel">Goal weight</div><div class="field val"><span>78</span><span class="u">kg</span></div></div>
+        <div class="note">The new plan <b>starts today</b>. Earlier days keep the plan they were logged under.</div>
+        <div class="maint"><div class="maint-row"><div><small>Your maintenance</small><b>≈ 2,790 kcal</b></div><span class="btn btn-t sm">How we got this</span></div></div>
+        <div class="custom"><span class="ic"><svg class="i"><use href="#i-pencil"/></svg></span><div class="t">Custom plan<small>Enter your own calories and protein</small></div><svg class="i" style="color:var(--mu)"><use href="#i-chev"/></svg></div>
+        <div class="lbl2">Protein per day <span>from your goal weight</span></div>
+        <div class="segp"><span>Light<b>94 g</b>1.2 g/kg</span><span class="on">Moderate<b>125 g</b>1.6 g/kg</span><span>High<b>156 g</b>2.0 g/kg</span></div>
+        <div class="lbl2">Pace</div>
+        <div class="plan on"><div class="plan-h"><b>Steady<span class="badge">Recommended</span></b><span class="pace">−0.5 kg/wk</span></div><div class="nums"><span style="margin:0"><b>2,240</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div></div>
+      </div>
+      <div class="cta"><span class="btn btn-p full">Start Steady plan today</span></div>
+      <div class="home-ind"></div>
+    </div><div class="pcap"><b>Change plan · screen</b>Goal and goal weight on top, then the exact plan step from setup (mock 3): maintenance, Custom plan, protein P1, paces. The note says it starts today.</div></div>
+  <div class="pcol"><div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>Your account</small>Settings</div><div class="avatar" style="background:var(--ac);color:#241a15"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a>Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+
+      <div class="body"><div class="plan-card">
+  <div class="top"><b>Steady · lose 0.5 kg a week</b><span>Since 4 Sep</span></div>
+  <div class="nums"><span style="margin:0"><b>2,150</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+  <div class="meta2">Goal <b>78 kg</b> around <b>3 Jan 2027</b> · protein Moderate (1.6 g/kg)</div>
+  <span class="btn btn-p full">Change plan</span>
+</div></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h5>Weigh-in reminder</h5>
+        <div class="lead" style="font-size:13.5px;margin-top:-6px">The card on Home appears when your last weigh-in is older than this.</div>
+        <div class="choice"><div class="t">Every day<small>For daily weighers; the trend smooths out the noise</small></div><span class="radio"></span></div>
+        <div class="choice"><div class="t">Every 3 days<small></small></div><span class="radio"></span></div>
+        <div class="choice on"><div class="t">Every 7 days<span class="badge">Recommended</span><small>Once a week is enough for a reliable trend</small></div><span class="radio"><svg class="i"><use href="#i-check"/></svg></span></div>
+        <div class="choice"><div class="t">Every 14 days<small></small></div><span class="radio"></span></div>
+        <div class="choice"><div class="t">Off<small>No card on Home</small></div><span class="radio"></span></div>
+      </div>
+      <div class="home-ind"></div>
+    </div><div class="pcap"><b>Weigh-in reminder · sheet</b>Tap an option and the sheet closes; that's it. Every 7 days is the default and recommended. "Off" removes the card from Home completely.</div></div>
+</div>
+<div class="phones">
+  <div class="pcol"><div class="phone c" style="height:520px">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="back"><span class="iconbtn"><svg class="i"><use href="#i-left"/></svg></span><b>Settings</b></div>
+
+      <div class="ob">
+        <div class="grp-t">Tracking</div>
+        <div class="grp"><div class="srow "><span class="ic"><svg class="i"><use href="#i-scale"/></svg></span><div class="t">Weigh-in reminder<small>Every 7 days</small></div><svg class="i chev"><use href="#i-chev"/></svg></div><div class="srow "><span class="ic"><svg class="i"><use href="#i-drop"/></svg></span><div class="t">Track water<small>On · goal 2 L</small></div><span class="toggle on"></span></div>
+          <div style="padding:4px 14px 14px;display:flex;flex-direction:column;gap:10px">
+            <div><div class="flabel">Daily water goal</div><div class="field val"><span>2,000</span><span class="u">ml</span></div></div>
+            <div class="lead" style="font-size:12.5px">All drinks count. Saved as soon as you leave the field.</div>
+          </div>
+        </div>
+      </div>
+    </div><div class="pcap"><b>Track water · in place</b>Flip the toggle and the goal field slides open under it. No separate Save button: the goal saves when you leave the field, with a "Saved" toast.</div></div>
+  <div class="pcol"><div class="phone c" style="height:620px">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>Your account</small>Settings</div><div class="avatar" style="background:var(--ac);color:#241a15"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a>Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+
+      <div class="body"><div class="plan-card">
+  <div class="top"><b>Steady · lose 0.5 kg a week</b><span>Since 4 Sep</span></div>
+  <div class="nums"><span style="margin:0"><b>2,150</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+  <div class="meta2">Goal <b>78 kg</b> around <b>3 Jan 2027</b> · protein Moderate (1.6 g/kg)</div>
+  <span class="btn btn-p full">Change plan</span>
+</div></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h5>Change password</h5>
+        <div><div class="flabel">Current password</div><div class="field val"><span>••••••••••</span></div></div>
+        <div><div class="flabel">New password</div><div class="field val focus"><span>••••••••<span class="caret"></span></span></div></div>
+        <div class="lead" style="font-size:12.5px">At least 8 characters. You stay logged in on this device.</div>
+        <div class="btns"><span class="btn btn-o">Cancel</span><span class="btn btn-p grow">Update password</span></div>
+      </div>
+    </div><div class="pcap"><b>Change password · sheet</b>Current and new password, as today, with Update password and Cancel as buttons.</div></div>
+  <div class="pcol"><div class="phone c" style="height:620px">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="topnav">
+        <div class="row"><div class="ttl"><small>Your account</small>Settings</div><div class="avatar" style="background:var(--ac);color:#241a15"><svg class="i"><use href="#i-user"/></svg></div></div>
+        <div class="tabs"><a>Home</a><a>Log</a><a>Stats</a><a>Products</a></div>
+      </div>
+
+      <div class="body"><div class="plan-card">
+  <div class="top"><b>Steady · lose 0.5 kg a week</b><span>Since 4 Sep</span></div>
+  <div class="nums"><span style="margin:0"><b>2,150</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+  <div class="meta2">Goal <b>78 kg</b> around <b>3 Jan 2027</b> · protein Moderate (1.6 g/kg)</div>
+  <span class="btn btn-p full">Change plan</span>
+</div></div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h5>Plan history</h5>
+        <div>
+          <div class="hrow"><div><b>Steady · lose 0.5 kg/wk</b><br><span>Since 4 Sep 2026 · current</span></div><div class="r"><b>2,150 kcal</b><br><span>125 g</span></div></div>
+          <div class="hrow"><div><b>Faster · lose 0.75 kg/wk</b><br><span>16 Aug – 3 Sep 2026</span></div><div class="r"><b>1,950 kcal</b><br><span>170 g</span></div></div>
+        </div>
+        <div class="lead" style="font-size:12.5px">Each day in your Log and Stats is judged by the plan it was logged under.</div>
+      </div>
+    </div><div class="pcap"><b>Plan history · sheet</b>Every plan with its dates and targets, newest first.</div></div>
+</div>
+</div>
+
+<div class="page cont">
+<h2><span class="num">04</span>Desktop</h2>
+<p class="lede">A list on the left and the selected section on the right, like the Settings app on a Mac. The plan card always sits at the top of the right side; Body details is selected here.</p>
+</div>
+<div class="wide scroll-x"><div class="desk c" style="height:760px">
+    <div class="chrome"><i></i><i></i><i></i><span>calorie-calculator.app/settings</span></div>
+    <div class="app">
+      <aside class="side">
+        <div class="brand">Calories</div>
+        <a><svg class="i"><use href="#i-home"/></svg>Home</a>
+        <a><svg class="i"><use href="#i-log"/></svg>Log</a>
+        <a><svg class="i"><use href="#i-stats"/></svg>Stats</a>
+        <a><svg class="i"><use href="#i-box"/></svg>Products</a>
+        <div class="spacer"></div>
+        <div class="ai">AI analyses today<b>∞ unlimited</b></div>
+        <a class="on"><svg class="i"><use href="#i-gear"/></svg>Settings</a>
+      </aside>
+      <div class="dset">
+        <div class="l">
+          <div class="ttl"><small>Your account</small>Settings</div>
+          <div class="grp"><div class="srow sel"><span class="ic"><svg class="i"><use href="#i-body"/></svg></span><div class="t">Body details<small>Male · 32 · 180 cm · 84.2 kg</small></div><svg class="i chev"><use href="#i-chev"/></svg></div><div class="srow "><span class="ic"><svg class="i"><use href="#i-hist"/></svg></span><div class="t">Plan history<small>2 plans</small></div><svg class="i chev"><use href="#i-chev"/></svg></div></div>
+          <div class="grp"><div class="srow "><span class="ic"><svg class="i"><use href="#i-scale"/></svg></span><div class="t">Weigh-in reminder<small>Every 7 days</small></div><svg class="i chev"><use href="#i-chev"/></svg></div><div class="srow "><span class="ic"><svg class="i"><use href="#i-drop"/></svg></span><div class="t">Track water<small>Off</small></div><span class="toggle"></span></div></div>
+          <div class="grp"><div class="srow "><span class="ic"><svg class="i"><use href="#i-lock"/></svg></span><div class="t">Change password<small>anton@example.com</small></div><svg class="i chev"><use href="#i-chev"/></svg></div><div class="srow danger"><span class="ic"><svg class="i"><use href="#i-out"/></svg></span><div class="t">Log out<small>On this device</small></div><span></span></div></div>
+          <div class="grp"><div class="srow "><span class="ic"><svg class="i"><use href="#i-users"/></svg></span><div class="t">Users and AI caps<small>3 accounts</small></div><svg class="i chev"><use href="#i-chev"/></svg></div></div>
+        </div>
+        <div class="r">
+          <div class="plan-card">
+  <div class="top"><b>Steady · lose 0.5 kg a week</b><span>Since 4 Sep</span></div>
+  <div class="nums"><span style="margin:0"><b>2,150</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+  <div class="meta2">Goal <b>78 kg</b> around <b>3 Jan 2027</b> · protein Moderate (1.6 g/kg)</div>
+  <span class="btn btn-p full">Change plan</span>
+</div>
+          <div class="lbl2" style="font-size:17px">Body details</div>
+          <div class="seg" style="max-width:320px"><span class="on">Male</span><span>Female</span></div>
+          <div class="g3">
+            <div><div class="flabel">Birth year</div><div class="field val"><span>1994</span></div></div>
+            <div><div class="flabel">Height</div><div class="field val"><span>180</span><span class="u">cm</span></div></div>
+            <div><div class="flabel">Weight</div><div class="field val"><span>84.2</span><span class="u">kg</span></div></div>
+          </div>
+          <div><div class="flabel">Activity</div><div class="field val"><span>Moderately active · 3–5 days a week</span></div></div>
+          <div class="note accent">Maintenance now <b>≈ 2,790 kcal</b>. Your plan was built at 85.3 kg; targets stay until you change your plan.</div>
+          <div><span class="btn btn-p">Save details</span></div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+<div class="page" style="padding-top:0">
+<h2><span class="num">05</span>What I need from you</h2>
+<ol class="steps">
+  <li><strong>Weigh-in reminder options OK?</strong><span class="step-note">Every day · every 3 days · every 7 days (default) · every 14 days · off. It's saved on your account, so it's the same on your phone and laptop. This needs one new column; I'll give you the SQL when we build it.</span></li>
+  <li><strong>Water goal saving by itself (no Save button)?</strong><span class="step-note">My pick: yes, since it's a single number. Body details keep their Save button, because changing them affects your maintenance.</span></li>
+</ol>
+<p>Anything else on Settings to change? Next up after this: <b>mock 7: Users (admin)</b>.</p>
+
+<footer class="doc">
+  Calorie Calculator · redesign mock 6 of 8 · email shown is a placeholder
+</footer>
+</div>
+</body>
+</html>

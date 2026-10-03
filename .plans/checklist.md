@@ -78,6 +78,62 @@ Decisions: `test@gmail.com` is a test account (use it for the 5.4 run-through, d
 - [x] 5.4b Independent review (two Fable 5.1 agents: security + AI cap; numbers/dates + handover): no critical/high issues. Fixed: unreadable-label refunds, OpenAI timeout/`maxDuration`, paused-cap wording, text-size limits, Log/admin dates rendered only in the browser, Settings plan preview from saved details, whole-unit goal judging ("Over by 0"), "Yesterday" on DST days, onboarding kg noise, "1,200" in quick entry. Deferred: A3 below.
 - [ ] 5.5 PR opened: https://github.com/anton-yankov/calorie-calculator/pull/13. When you ask: I open one PR from `feat/multi-user-rework` into `main`; you review and merge (Vercel deploys); check the live site; then you create his account and send him his credentials.
 
+## Redesign (branch `feat/redesign`, one PR into `main` at the end)
+
+Decisions and mocks: `.plans/redesign/0-decisions-and-build-plan.html` ([postplan](https://9va32v4ynyap.postplan.dev)), mocks 1–8 in the same folder. SQL is given in chat at the step that needs it.
+
+### Phase R1 — Foundations, shell & states
+
+- [ ] R1.1 Design tokens (style C colours, radii); Inter only.
+- [ ] R1.2 `lucide-react`; replace the hand-made icons.
+- [ ] R1.3 `Button` component (primary, secondary, outline, destructive, icon).
+- [ ] R1.4 `Sheet` component (bottom sheet on phones, dialog on desktop).
+- [ ] R1.5 Form pieces and toast style.
+- [ ] R1.6 Top bar: title row, underlined tabs, profile button; AI strip removed.
+- [ ] R1.7 Desktop sidebar with pages, AI counter, Settings.
+- [ ] R1.8 Page layout on every page (no big header).
+- [ ] R1.9 App icon I2, favicon, manifest theme colour.
+- [ ] R1.10 Login, error page, 404, skeleton loading screens.
+
+### Phase R2 — Homepage, Log & Products
+
+- [ ] R2.1 Today cards.
+- [ ] R2.2 Add food block with AI count; out-of-AI state.
+- [ ] R2.3 Describe card.
+- [ ] R2.4 Analyzing card with the live seconds counter.
+- [ ] R2.5 Estimate card and corrections card.
+- [ ] R2.6 Logged state (toast with Undo, highlight).
+- [ ] R2.7 Manual add sheet (moved from Log) and barcode product sheet.
+- [ ] R2.8 Eaten today list and ⋯ meal sheet.
+- [ ] R2.9 Weigh-in card: save in place, snooze sheet.
+- [ ] R2.10 Water row, empty day, desktop homepage.
+- [ ] R2.11 Log: day cards, expanding meals, edit sheet, desktop calendar rail, empty state.
+- [ ] R2.12 Products: rows, search, edit sheet without g/ml switch, Log it now, desktop grid, empty state.
+
+### Phase R3 — Setup, Stats & Settings
+
+- [ ] R3.1 Protein levels + goal-weight basis in `plan.ts`, with tests.
+- [ ] R3.2 SQL `plans.protein_per_kg`; save and validate the level.
+- [ ] R3.3 Plan step UI (maintenance, Custom plan card, P1 bar, paces).
+- [ ] R3.4 Setup steps 1–2 and desktop step 3.
+- [ ] R3.5 Stats section switch, range, days on track vs before (tests).
+- [ ] R3.6 Calendar component (month grids, large dates, tap to open the day).
+- [ ] R3.7 Average tiles, charts, insight checks (tests) and card.
+- [ ] R3.8 Weight section: journey + pace (tests), Log weight sheet, smooth trend (tests), weigh-ins.
+- [ ] R3.9 Water section, Stats empty state, desktop Stats.
+- [ ] R3.10 Settings list with plan card and grouped rows.
+- [ ] R3.11 Body details and Change plan screens.
+- [ ] R3.12 SQL `profiles.weigh_in_reminder_days`; reminder sheet wired to the homepage card.
+- [ ] R3.13 Water autosave, password and plan-history sheets, desktop Settings.
+
+### Phase R4 — Admin & finish
+
+- [ ] R4.1 Users: totals, cards / desktop table, cap sheet.
+- [ ] R4.2 Account detail (Read-only chip, key numbers, switch, read-only pages).
+- [ ] R4.3 Dead-code scan (old components, CSS, fonts, comments).
+- [ ] R4.4 README and full manual run-through.
+- [ ] R4.5 PR `feat/redesign` → `main` when asked.
+
 ## Pending manual checks
 
 Must be done before he gets his account (5.4).

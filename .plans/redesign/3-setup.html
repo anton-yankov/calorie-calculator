@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redesign 3 — Setup — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16; --surface: #24221C; --surface-raised: #2A281F; --ink: #EDEAE0; --ink-soft: #A5A195;
+    --accent: #E08A5C; --accent-soft: #3A2A20; --green: #7FBF92; --green-soft: #22312A; --line: #38352C;
+    --code-bg: #2d2d2d; --radius: 10px;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.65; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  .page.cont { padding-top: 0; padding-bottom: 0; }
+  .wide { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  ul.tight { margin: 8px 0; padding-left: 20px; } ul.tight li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px; }
+  th { text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px; }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill { font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 16px 46px; }
+  ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--bg); font-family: var(--mono); font-weight: 600; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  ol.steps > li:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 34px; bottom: 2px; width: 2px; background: var(--line); }
+  ol.steps strong { display: block; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+
+  /* ---------- Mock scaffolding ---------- */
+  .phones { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; align-items: flex-start; margin: 28px 0 8px; }
+  .pcol { display: flex; flex-direction: column; gap: 12px; width: 375px; max-width: 100%; }
+  .pcap { font-size: 14px; color: var(--ink-soft); }
+  .pcap b { display: block; color: var(--ink); font-size: 15.5px; margin-bottom: 2px; }
+  .phone { position: relative; width: 375px; height: 812px; max-width: 100%; border-radius: 46px; overflow: hidden; border: 10px solid #0c0b09; box-shadow: 0 0 0 1px #3a372e, 0 30px 60px -20px rgba(0,0,0,.7); }
+  .phone.tall { height: auto; }
+  .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 110px; height: 30px; border-radius: 20px; background: #000; z-index: 9; }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 14px; font-weight: 600; }
+  .status .dots { display: flex; gap: 5px; } .status .dots i { width: 16px; height: 9px; border-radius: 2px; background: currentColor; opacity: .9; } .status .dots i:first-child { width: 14px; opacity: .6; }
+  .home-ind { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; border-radius: 4px; background: currentColor; opacity: .5; z-index: 9; }
+  .fold { position: absolute; left: -10px; right: -10px; top: 792px; border-top: 2px dashed rgba(244,167,122,.7); z-index: 7; }
+  .fold span { position: absolute; right: 16px; top: -11px; font-size: 11px; font-weight: 700; color: #F4A77A; background: #1A1720; padding: 2px 8px; border-radius: 999px; }
+  svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .scroll-x { overflow-x: auto; padding-bottom: 12px; }
+  .split { display: grid; grid-template-columns: 375px 1fr; gap: 36px; align-items: start; margin: 26px 0; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+
+  /* =========================================================
+     Style C · Plate — the chosen look
+     ========================================================= */
+  .c {
+    --b: #1A1720; --s1: #24202C; --s2: #2F2A39; --s3: #3A3446; --tx: #F1ECF4; --mu: #A8A0B2;
+    --ac: #F4A77A; --acs: #3B2A2A; --gr: #86D3B0; --grs: #1F3330; --lose: #8DB4E8; --amb: #F2C66D;
+    --red: #F08A8A; --reds: #3A2228; --ln: #352F40;
+    background: var(--b); color: var(--tx); font-family: var(--sans);
+  }
+  .c .topnav { padding: 2px 18px 0; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--ln); background: var(--b); position: relative; z-index: 3; }
+  .c .topnav .row { display: flex; align-items: center; justify-content: space-between; }
+  .c .ttl { font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+  .c .ttl small { display: block; font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .c .avatar { width: 44px; height: 44px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .c .tabs { display: flex; margin: 0 -10px; }
+  .c .tabs a { flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--mu); position: relative; }
+  .c .tabs a.on { color: var(--tx); }
+  .c .tabs a.on::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 3px; border-radius: 3px; background: var(--ac); }
+  .c .body { padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+
+  .c .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .c .stat { background: var(--s1); border-radius: 20px; padding: 14px; }
+  .c .stat small { font-size: 12.5px; color: var(--mu); }
+  .c .stat b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .c .stat b span { font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .c .track { height: 6px; border-radius: 6px; background: var(--s3); margin-top: 10px; position: relative; overflow: hidden; }
+  .c .track i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; }
+  .c .track u { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(241,236,244,.6); }
+  .c .stat .msg { font-size: 12px; margin-top: 6px; color: var(--mu); }
+
+  .c .hero { background: var(--ac); color: #241a15; border-radius: 26px; padding: 18px; height: 150px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+  .c .hero .ic { width: 52px; height: 52px; border-radius: 18px; background: rgba(36,26,21,.12); display: flex; align-items: center; justify-content: center; }
+  .c .hero .ic svg { width: 28px; height: 28px; }
+  .c .hero b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; display: block; }
+  .c .hero small { font-size: 13px; opacity: .75; }
+  .c .hero .ai { position: absolute; top: 18px; right: 18px; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; background: rgba(36,26,21,.12); }
+  .c .hero.off { background: var(--s1); color: var(--mu); }
+  .c .hero.off .ic { background: var(--s2); }
+  .c .hero.off b { color: var(--tx); }
+  .c .hero.off .ai { background: var(--reds); color: var(--red); }
+  .c .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .c .sq { background: var(--s1); border-radius: 20px; height: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; font-weight: 700; font-size: 13.5px; }
+  .c .sq svg { color: var(--ac); }
+  .c .sq.off { color: var(--mu); } .c .sq.off svg { color: var(--mu); opacity: .6; }
+
+  .c .card { background: var(--s1); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .c .card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .c .card-h b { font-size: 16px; font-weight: 800; letter-spacing: -.01em; display: block; }
+  .c .card-h small { font-size: 13px; color: var(--mu); }
+  .c .x { width: 36px; height: 36px; border-radius: 12px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--mu); font-size: 15px; flex-shrink: 0; }
+
+  .c .field { height: 48px; border-radius: 14px; background: var(--b); border: 1.5px solid var(--ln); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: var(--mu); font-size: 15px; }
+  .c .field.focus { border-color: var(--ac); }
+  .c .field.val { color: var(--tx); }
+  .c .field .u { color: var(--mu); font-size: 14px; }
+  .c .flabel { font-size: 12.5px; color: var(--mu); margin-bottom: 5px; font-weight: 600; }
+  .c .area { min-height: 92px; border-radius: 16px; background: var(--b); border: 1.5px solid var(--ac); padding: 12px 14px; font-size: 15.5px; line-height: 1.45; }
+  .c .caret { display: inline-block; width: 2px; height: 18px; background: var(--ac); vertical-align: -3px; margin-left: 1px; }
+
+  .c .btn { white-space: nowrap; height: 48px; border-radius: 14px; padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 750; font-size: 15px; }
+  .c .btn svg { width: 19px; height: 19px; }
+  .c .btn-p { background: var(--ac); color: #241a15; }
+  .c .btn-t { background: var(--s2); color: var(--ac); }
+  .c .btn-o { border: 1.5px solid var(--s3); color: var(--tx); }
+  .c .btn-d { background: var(--reds); color: var(--red); }
+  .c .btn.full { width: 100%; }
+  .c .btn.sm { height: 44px; font-size: 14px; padding: 0 14px; }
+  .c .btn.dim { opacity: .4; }
+  .c .btns { display: flex; gap: 8px; }
+  .c .btns .grow { flex: 1; }
+
+  .c .sec { font-size: 17px; font-weight: 800; letter-spacing: -.02em; margin-top: 6px; display: flex; justify-content: space-between; align-items: baseline; }
+  .c .sec span { font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; }
+  .c .meal { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+  .c .thumb { width: 48px; height: 48px; border-radius: 16px; flex-shrink: 0; }
+  .c .thumb.txt { background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .c .meal-t { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 650; line-height: 1.25; }
+  .c .meal-t small { display: block; color: var(--mu); font-weight: 400; font-size: 12.5px; }
+  .c .kc { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .c .more { width: 40px; height: 40px; border-radius: 12px; border: 1.5px solid var(--s3); display: flex; align-items: center; justify-content: center; color: var(--mu); flex-shrink: 0; }
+  .c .meal.new { background: var(--grs); border-radius: 18px; padding: 8px; margin: 0 -8px; }
+
+  .c .water { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .c .water .chip { justify-content: center; }
+  .c .water .lbl { grid-column: 1 / -1; font-size: 13px; color: var(--mu); font-weight: 600; }
+  .c .chip { height: 44px; padding: 0 14px; border-radius: 14px; background: var(--s1); display: inline-flex; align-items: center; font-weight: 750; font-size: 14px; color: var(--lose); }
+
+  /* Analysis */
+  .c .photo { height: 150px; border-radius: 18px; background: radial-gradient(circle at 35% 40%, #e6c48a 0 18%, transparent 19%), radial-gradient(circle at 62% 55%, #8fbf7a 0 20%, transparent 21%), radial-gradient(circle at 50% 50%, #f1ece4 0 42%, #6b5a4a 43% 100%); position: relative; }
+  .c .photo.small { height: 90px; }
+  .c .photo .tag { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+  .c .photo .tag span { height: 34px; padding: 0 12px; border-radius: 11px; background: rgba(26,23,32,.8); display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; color: var(--tx); }
+  .c .timer { display: flex; align-items: center; gap: 14px; }
+  .c .timer .sec-n { font-size: 40px; font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .c .timer .sec-n span { font-size: 16px; color: var(--mu); font-weight: 600; letter-spacing: 0; margin-left: 2px; }
+  .c .timer .t { font-size: 13.5px; color: var(--mu); line-height: 1.4; }
+  .c .timer .t b { display: block; color: var(--tx); font-size: 15.5px; }
+  .c .indet { height: 6px; border-radius: 6px; background: var(--s3); overflow: hidden; position: relative; }
+  .c .indet i { position: absolute; top: 0; bottom: 0; width: 38%; border-radius: 6px; background: var(--ac); left: 0; animation: indet 1.6s ease-in-out infinite; }
+  @keyframes indet { 0% { left: -38%; } 100% { left: 100%; } }
+  @media (prefers-reduced-motion: reduce) { .c .indet i { animation: none; left: 31%; } }
+  .c .ghost { height: 14px; border-radius: 7px; background: var(--s2); }
+  .c .food { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--ln); }
+  .c .food:first-child { border-top: 0; }
+  .c .food .n { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 650; line-height: 1.3; }
+  .c .food .n small { display: block; color: var(--mu); font-weight: 400; font-size: 12.5px; }
+  .c .grams { width: 74px; height: 40px; border-radius: 12px; border: 1.5px solid var(--s3); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .c .conf { font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px; }
+  .c .conf.h { background: var(--grs); color: var(--gr); }
+  .c .conf.m { background: var(--acs); color: var(--ac); }
+  .c .totals { display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 2px solid var(--s3); }
+  .c .totals b { white-space: nowrap; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+  .c .totals span { color: var(--mu); font-size: 13.5px; }
+  .c .after { border-radius: 14px; background: var(--s2); padding: 10px 12px; font-size: 13.5px; color: var(--mu); display: flex; flex-direction: column; gap: 1px; }
+  .c .after > span:first-child { font-size: 12px; }
+  .c .after b { color: var(--tx); }
+  .c .bubble { align-self: flex-end; max-width: 85%; border-radius: 18px 18px 6px 18px; background: var(--s2); padding: 10px 14px; font-size: 14px; }
+  .c .hint { font-size: 12.5px; color: var(--mu); text-align: center; }
+  .c .toast { border-radius: 16px; background: var(--s3); padding: 10px 10px 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 650; box-shadow: 0 12px 30px -10px rgba(0,0,0,.7); }
+  .c .toast .ok { width: 26px; height: 26px; border-radius: 50%; background: var(--gr); color: var(--b); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; }
+  .c .toast .undo { margin-left: auto; height: 36px; padding: 0 12px; border-radius: 10px; background: var(--s2); color: var(--ac); display: inline-flex; align-items: center; font-weight: 750; font-size: 13.5px; }
+
+  /* Sheets */
+  .c .dim { position: absolute; inset: 0; background: rgba(10,8,14,.62); z-index: 5; }
+  .c .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--s1); border-radius: 28px 28px 0 0; padding: 10px 18px 34px; display: flex; flex-direction: column; gap: 12px; }
+  .c .grab { width: 40px; height: 5px; border-radius: 5px; background: var(--s3); margin: 0 auto 4px; }
+  .c .sheet h5 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.02em; display: flex; justify-content: space-between; align-items: center; }
+  .c .sheet h5 span { font-size: 12px; font-weight: 700; color: var(--gr); background: var(--grs); border-radius: 999px; padding: 3px 10px; letter-spacing: 0; }
+  .c .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .c .opt { font-weight: 400; }
+
+  /* Desktop */
+  .desk { width: 1180px; height: 820px; border-radius: 14px; overflow: hidden; border: 1px solid #3a372e; box-shadow: 0 30px 60px -24px rgba(0,0,0,.7); margin: 22px auto 0; display: flex; flex-direction: column; }
+  .desk .chrome { height: 34px; background: #0f0d13; display: flex; align-items: center; gap: 7px; padding: 0 14px; flex-shrink: 0; }
+  .desk .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #352F40; }
+  .desk .chrome span { margin-left: 16px; font-size: 12px; color: #6e6678; font-family: var(--mono); }
+  .desk .app { flex: 1; display: grid; grid-template-columns: 236px 1fr; min-height: 0; }
+  .c .side { background: #16131B; border-right: 1px solid var(--ln); padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .c .brand { font-size: 21px; font-weight: 800; letter-spacing: -.03em; padding: 0 10px 18px; }
+  .c .side a { display: flex; align-items: center; gap: 12px; padding: 0 12px; height: 46px; border-radius: 14px; font-size: 15px; font-weight: 700; color: var(--mu); }
+  .c .side a.on { background: var(--s1); color: var(--tx); }
+  .c .side a.on svg { color: var(--ac); }
+  .c .side .spacer { flex: 1; }
+  .c .side .ai { background: var(--s1); border-radius: 16px; padding: 12px; font-size: 12.5px; color: var(--mu); margin-bottom: 6px; }
+  .c .side .ai b { display: block; color: var(--tx); font-size: 18px; font-weight: 800; }
+  .c .dmain { padding: 26px 34px; overflow: hidden; display: grid; grid-template-columns: 360px minmax(0,1fr); gap: 26px; align-content: start; }
+  .c .dmain .head { grid-column: 1 / -1; }
+  .col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  /* ---------- Setup-specific ---------- */
+  .c .ob { padding: 6px 18px 0; display: flex; flex-direction: column; gap: 12px; }
+  .c .ob-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .c .iconbtn { width: 44px; height: 44px; border-radius: 14px; border: 1.5px solid var(--s3); display: flex; align-items: center; justify-content: center; color: var(--tx); }
+  .c .iconbtn.ghost { visibility: hidden; }
+  .c .stepn { font-size: 13px; font-weight: 700; color: var(--mu); }
+  .c .prog { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .c .prog i { height: 5px; border-radius: 5px; background: var(--s2); }
+  .c .prog i.on { background: var(--ac); }
+  .c .h1 { font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin-top: 6px; }
+  .c .lead { font-size: 14.5px; color: var(--mu); line-height: 1.45; }
+  .c .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .c .seg span { height: 48px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; justify-content: center; font-weight: 750; font-size: 15px; color: var(--mu); border: 2px solid transparent; }
+  .c .seg span.on { border-color: var(--ac); background: var(--acs); color: var(--tx); }
+  .c .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .c .choice { border-radius: 18px; background: var(--s1); padding: 12px 14px; display: flex; align-items: center; gap: 12px; border: 2px solid transparent; }
+  .c .choice .t { flex: 1; font-size: 15px; font-weight: 750; line-height: 1.3; }
+  .c .choice .t small { display: block; font-size: 12.5px; font-weight: 400; color: var(--mu); }
+  .c .choice .ic { width: 42px; height: 42px; border-radius: 14px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--ac); }
+  .c .radio { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--s3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .c .choice.on { border-color: var(--ac); background: var(--acs); }
+  .c .choice.on .radio { border-color: var(--ac); background: var(--ac); color: var(--b); }
+  .c .choice.on .radio svg { width: 14px; height: 14px; stroke-width: 3; }
+  .c .lbl2 { font-size: 15px; font-weight: 800; letter-spacing: -.01em; margin-top: 4px; display: flex; justify-content: space-between; align-items: baseline; }
+  .c .lbl2 span { font-size: 12.5px; font-weight: 500; color: var(--mu); }
+  .c .maint { background: var(--s1); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .c .maint-row { display: flex; justify-content: space-between; align-items: center; }
+  .c .maint-row small { font-size: 12.5px; color: var(--mu); display: block; }
+  .c .maint-row b { font-size: 24px; font-weight: 800; letter-spacing: -.03em; }
+  .c .work { border-radius: 14px; background: var(--b); padding: 10px 12px; font-size: 13px; line-height: 1.6; color: var(--mu); }
+  .c .work b { color: var(--tx); font-weight: 700; }
+  .c .pcards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .c .pcard { border-radius: 18px; background: var(--s1); padding: 12px 10px; text-align: center; border: 2px solid transparent; display: flex; flex-direction: column; gap: 1px; }
+  .c .pcard small { font-size: 12.5px; color: var(--mu); font-weight: 600; }
+  .c .pcard b { font-size: 24px; font-weight: 800; letter-spacing: -.03em; line-height: 1.2; }
+  .c .pcard em { font-style: normal; font-size: 11.5px; color: var(--mu); }
+  .c .pcard.on { border-color: var(--ac); background: var(--acs); }
+  .c .pcard.on small { color: var(--ac); }
+  .c .pnote { font-size: 13px; color: var(--mu); line-height: 1.45; background: var(--s1); border-radius: 14px; padding: 10px 12px; }
+  .c .pnote b { color: var(--tx); }
+  .c .slider { background: var(--s1); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .c .readout { display: flex; justify-content: space-between; align-items: baseline; }
+  .c .readout b { font-size: 32px; font-weight: 800; letter-spacing: -.04em; }
+  .c .readout b span { font-size: 15px; color: var(--mu); font-weight: 600; letter-spacing: 0; }
+  .c .readout em { font-style: normal; font-size: 13px; font-weight: 750; color: var(--ac); background: var(--acs); border-radius: 999px; padding: 3px 10px; }
+  .c .rail { position: relative; height: 34px; }
+  .c .rail .bar { position: absolute; left: 12px; right: 12px; top: 14px; height: 6px; border-radius: 6px; background: var(--s3); }
+  .c .rail .fill { position: absolute; left: 12px; top: 14px; height: 6px; border-radius: 6px; background: var(--ac); }
+  .c .rail .stop { position: absolute; top: 12px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--s3); border: 2px solid var(--s1); }
+  .c .rail .thumb { position: absolute; top: 3px; width: 28px; height: 28px; margin-left: -14px; border-radius: 50%; background: var(--tx); box-shadow: 0 0 0 6px rgba(244,167,122,.25); }
+  .c .rail-l { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 12px; color: var(--mu); text-align: center; margin: -6px -6px 0; }
+  .c .rail-l span b { display: block; color: var(--tx); font-size: 12.5px; }
+  .c .rail-l span.on b { color: var(--ac); }
+  .c .plan { border-radius: 20px; background: var(--s1); padding: 14px 16px; border: 2px solid transparent; display: flex; flex-direction: column; gap: 8px; }
+  .c .plan.on { border-color: var(--ac); background: var(--acs); }
+  .c .plan-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .c .plan-h b { font-size: 16px; font-weight: 800; }
+  .c .plan-h .pace { font-size: 13px; font-weight: 700; color: var(--mu); }
+  .c .badge { font-size: 11.5px; font-weight: 750; color: var(--gr); background: var(--grs); border-radius: 999px; padding: 3px 9px; margin-left: 6px; vertical-align: 2px; }
+  .c .nums { display: flex; gap: 18px; }
+  .c .nums b { font-size: 22px; font-weight: 800; letter-spacing: -.03em; }
+  .c .nums > span > span { font-size: 12.5px; color: var(--mu); margin-left: 3px; }
+  .c .plan .when { font-size: 13px; color: var(--mu); }
+  .c .plan .when b { color: var(--tx); }
+  .c .custom { border-radius: 20px; border: 2px dashed var(--s3); padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .c .custom .ic { width: 42px; height: 42px; border-radius: 14px; background: var(--s2); display: flex; align-items: center; justify-content: center; color: var(--ac); }
+  .c .custom .t { flex: 1; font-size: 15.5px; font-weight: 800; }
+  .c .custom .t small { display: block; font-size: 12.5px; font-weight: 400; color: var(--mu); }
+  .c .custom.open { border-style: solid; border-color: var(--ac); background: var(--acs); flex-direction: column; align-items: stretch; }
+  .c .cta { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 18px 30px; background: linear-gradient(transparent, var(--b) 30%); z-index: 4; }
+  .c .cta-note { text-align: center; font-size: 12.5px; color: var(--mu); margin-top: 8px; }
+  .c .outlook { font-size: 13.5px; color: var(--mu); line-height: 1.45; }
+  .c .outlook b { color: var(--tx); }
+  .c .warn { border-radius: 14px; background: var(--reds); color: var(--red); padding: 10px 12px; font-size: 13.5px; font-weight: 650; }
+  .c .sum { background: var(--s1); border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+  .c .sum-r { display: flex; justify-content: space-between; color: var(--mu); }
+  .c .sum-r b { color: var(--tx); font-weight: 700; }
+  .c .plans3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .desk.ob { height: 640px; }
+  .c .dob { overflow: hidden; display: grid; grid-template-columns: 380px minmax(0,1fr); gap: 34px; padding: 34px 48px; align-content: start; }
+
+  /* Protein pickers, v2 */
+  .c .segp { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--s1); border-radius: 18px; padding: 4px; gap: 4px; }
+  .c .segp span { border-radius: 14px; padding: 9px 4px; text-align: center; display: flex; flex-direction: column; gap: 0; font-size: 12.5px; font-weight: 650; color: var(--mu); }
+  .c .segp span b { font-size: 19px; font-weight: 800; letter-spacing: -.02em; color: var(--tx); line-height: 1.25; }
+  .c .segp span.on { background: var(--ac); color: rgba(36,26,21,.75); }
+  .c .segp span.on b { color: #241a15; }
+  .c .sl2 { background: var(--s1); border-radius: 18px; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+  .c .sl2-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; color: var(--mu); }
+  .c .sl2-h b { font-size: 22px; font-weight: 800; color: var(--tx); letter-spacing: -.02em; }
+  .c .sl2-h b span { font-size: 13px; font-weight: 700; color: var(--ac); letter-spacing: 0; margin-left: 6px; }
+  .c .rail2 { position: relative; height: 18px; margin: 0 8px; }
+  .c .rail2 .bar { position: absolute; left: 0; right: 0; top: 7px; height: 4px; border-radius: 4px; background: var(--s3); }
+  .c .rail2 .fill { position: absolute; left: 0; top: 7px; height: 4px; border-radius: 4px; background: var(--ac); }
+  .c .rail2 .tick { position: absolute; top: 5px; width: 2px; height: 8px; margin-left: -1px; border-radius: 2px; background: var(--mu); opacity: .6; }
+  .c .rail2 .knob { position: absolute; top: 1px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--ac); box-shadow: 0 0 0 3px var(--s1); }
+  .c .rail2-l { display: flex; justify-content: space-between; font-size: 12px; color: var(--mu); font-weight: 600; margin: 0 -6px; }
+  .c .rail2-l .on { color: var(--ac); }
+  .c .step { background: var(--s1); border-radius: 18px; padding: 10px; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 8px; }
+  .c .step .pm { width: 48px; height: 48px; border-radius: 14px; background: var(--s2); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: var(--ac); }
+  .c .step .mid { text-align: center; line-height: 1.25; }
+  .c .step .mid b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+  .c .step .mid small { font-size: 12.5px; color: var(--mu); font-weight: 600; }
+  .c .step .mid small em { font-style: normal; color: var(--ac); }
+  .c .dots4 { display: flex; justify-content: center; gap: 6px; margin-top: 4px; }
+  .c .dots4 i { width: 6px; height: 6px; border-radius: 50%; background: var(--s3); }
+  .c .dots4 i.on { background: var(--ac); width: 16px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M4 8 12 4l8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/></symbol>
+    <symbol id="i-barcode" viewBox="0 0 24 24"><path d="M4 7V5h3M17 5h3v2M20 17v2h-3M7 19H4v-2M8 9v6M11 9v6M14 9v6M17 9v6"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M5 19h4L19 9l-4-4L5 15z"/><path d="m13 7 4 4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.5"/><path d="M5.5 19c1.2-3.2 3.6-4.8 6.5-4.8s5.3 1.6 6.5 4.8"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9.5a4 4 0 0 1 6 0M12 9.5l1.2-1.6"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M4 7l6 6 4-4 6 6M20 10v5h-5"/></symbol>
+    <symbol id="i-flat" viewBox="0 0 24 24"><path d="M4 12h16M16 8l4 4-4 4"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M4 17l6-6 4 4 6-6M20 14V9h-5"/></symbol>
+  </defs>
+</svg>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Redesign · mock 3 of 8 · v2</div>
+  <h1>Setup</h1>
+  <p class="subtitle">The three setup steps in style C, with the two things your friend ran into fixed: protein you can choose, and a Custom plan that looks like a real option instead of a line of orange text.</p>
+  <div class="meta">
+    <span><strong>Example person:</strong> born 1994, 180 cm, 84.6 kg, moderately active, losing to 78 kg</span>
+    <span><strong>Your pick:</strong> P1, P2 or P3 in section 03</span>
+  </div>
+</header>
+
+<div class="callout good"><b>Decided:</b> P1 (segmented bar) · protein from the goal weight when losing, current weight otherwise · levels Light 1.2 / Moderate 1.6 (recommended) / High 2.0 g per kg · Custom plan under the maintenance number.</div>
+
+<h2><span class="num">01</span>What changes</h2>
+<ul class="tight">
+  <li><b>Protein is a choice.</b> Three levels instead of a fixed 2.0 g per kg. Section 03 has two ways to show it.</li>
+  <li><b>Custom plan is a card right under your maintenance number</b>, before the protein and pace choices, so you see it straight away. Same size as the plan cards, with a pencil icon and a chevron.</li>
+  <li><b>"How we got this" is a button</b> on the maintenance card, not a grey link.</li>
+  <li><b>Back sits at the top left</b> as a button on every step, next to the step count. Log out (in case it's the wrong account) is an outline button at the top right.</li>
+  <li><b>The main button stays at the bottom of the screen</b> (Continue / Start this plan), so you never have to scroll to find it.</li>
+  <li>Settings → <b>Change plan</b> uses the same plan step, so it gets the protein choice too.</li>
+</ul>
+
+<h2><span class="num">02</span>Steps 1 and 2</h2>
+<p class="lede">Same questions as today, in the new look. Every option is a big card with a visible radio, so it's obvious what's selected.</p>
+</div>
+
+<div class="wide">
+<div class="phones">
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="ob">
+        <div class="ob-top"><span class="iconbtn ghost"></span><span class="stepn">Step 1 of 3</span><span class="btn btn-o sm" style="height:40px">Log out</span></div>
+        <div class="prog"><i class="on"></i><i></i><i></i></div>
+        <div class="h1">About you</div>
+        <div class="lead">We use this to estimate how many calories your body burns in a day.</div>
+        <div class="seg"><span class="on">Male</span><span>Female</span></div>
+        <div class="g3">
+          <div><div class="flabel">Birth year</div><div class="field val"><span>1994</span></div></div>
+          <div><div class="flabel">Height</div><div class="field val"><span>180</span><span class="u">cm</span></div></div>
+          <div><div class="flabel">Weight</div><div class="field val focus"><span>84.6<span class="caret"></span></span><span class="u">kg</span></div></div>
+        </div>
+        <div class="lbl2">How active are you?</div>
+        <div class="choice"><div class="t">Sedentary<small>Desk job, little or no exercise</small></div><span class="radio"></span></div>
+        <div class="choice"><div class="t">Lightly active<small>Exercise 1–3 days a week</small></div><span class="radio"></span></div>
+        <div class="choice on"><div class="t">Moderately active<small>Exercise 3–5 days a week</small></div><span class="radio"><svg class="i"><use href="#i-check"/></svg></span></div>
+        <div class="choice"><div class="t">Very active<small>Hard exercise 6–7 days a week</small></div><span class="radio"></span></div>
+      </div>
+      <div class="cta"><span class="btn btn-p full">Continue</span></div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>Step 1 · About you</b>The fifth activity level (Extra active) is just below the fold. The Continue button stays put while you scroll.</div>
+  </div>
+
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="ob">
+        <div class="ob-top"><span class="iconbtn"><svg class="i"><use href="#i-left"/></svg></span><span class="stepn">Step 2 of 3</span><span class="btn btn-o sm" style="height:40px">Log out</span></div>
+        <div class="prog"><i class="on"></i><i class="on"></i><i></i></div>
+        <div class="h1">What's your goal?</div>
+        <div class="choice on"><span class="ic"><svg class="i"><use href="#i-down"/></svg></span><div class="t">Lose weight<small>Eat a little under maintenance</small></div><span class="radio"><svg class="i"><use href="#i-check"/></svg></span></div>
+        <div class="choice"><span class="ic"><svg class="i"><use href="#i-flat"/></svg></span><div class="t">Maintain weight<small>Eat around maintenance</small></div><span class="radio"></span></div>
+        <div class="choice"><span class="ic"><svg class="i"><use href="#i-up"/></svg></span><div class="t">Gain weight<small>Eat a little over maintenance</small></div><span class="radio"></span></div>
+        <div style="margin-top:4px"><div class="flabel">Goal weight</div><div class="field val focus"><span>78<span class="caret"></span></span><span class="u">kg</span></div></div>
+        <div class="lead" style="font-size:13.5px">6.6 kg to lose from 84.6 kg</div>
+      </div>
+      <div class="cta"><span class="btn btn-p full">Continue</span></div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>Step 2 · Goal</b>Back is now a button at the top left. Maintain hides the goal-weight field, as it does today.</div>
+  </div>
+</div>
+</div>
+
+<div class="page cont">
+<h2><span class="num">03</span>Step 3 · protein: pick P1, P2 or P3</h2>
+<p class="lede">Protein comes first on this step, because the plan cards below it show the result. All three options offer the same three levels. The Custom plan card now sits right under your maintenance number in each of them.</p>
+<table>
+  <tr><th>Level</th><th>Per kg</th><th>For the example</th><th>Who it's for</th></tr>
+  <tr><td>Light</td><td>1.2 g</td><td>94 g</td><td>Enough for most people who don't train</td></tr>
+  <tr><td>Moderate · recommended</td><td>1.6 g</td><td>125 g</td><td>Most people, including while losing weight</td></tr>
+  <tr><td>High</td><td>2.0 g</td><td>156 g</td><td>Lifting weights 3+ times a week (today's fixed value)</td></tr>
+</table>
+<p>When losing weight, the grams are worked out from your <b>goal weight</b> (78 kg), not your current weight. That's why High shows 156 g here instead of today's 169 g. Maintain and gain use your current weight. Anything else can be typed in through Custom plan.</p>
+</div>
+
+<div class="wide">
+<div class="phones">
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="ob">
+        <div class="ob-top"><span class="iconbtn"><svg class="i"><use href="#i-left"/></svg></span><span class="stepn">Step 3 of 3</span><span class="btn btn-o sm" style="height:40px">Log out</span></div>
+        <div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+        <div class="h1">Pick your plan</div>
+        <div class="maint">
+          <div class="maint-row"><div><small>Your maintenance</small><b>≈ 2,815 kcal</b></div><span class="btn btn-t sm">How we got this</span></div>
+        </div>
+        <div class="custom">
+          <span class="ic"><svg class="i"><use href="#i-pencil"/></svg></span>
+          <div class="t">Custom plan<small>Enter your own calories and protein</small></div>
+          <svg class="i" style="color:var(--mu)"><use href="#i-chev"/></svg>
+        </div>
+        <div class="lbl2">Protein per day <span>from your goal weight</span></div>
+        <div class="segp">
+          <span>Light<b>94 g</b>1.2 g/kg</span>
+          <span class="on">Moderate<b>125 g</b>1.6 g/kg</span>
+          <span>High<b>156 g</b>2.0 g/kg</span>
+        </div>
+        <div class="lead" style="font-size:13px;margin-top:-4px"><b style="color:var(--tx)">Moderate:</b> recommended for most people, including while losing weight.</div>
+        <div class="lbl2">Pace</div>
+        <div class="plan on">
+          <div class="plan-h"><b>Steady<span class="badge">Recommended</span></b><span class="pace">−0.5 kg/wk</span></div>
+          <div class="nums"><span style="margin:0"><b>2,265</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+          <div class="when">78 kg in ≈ 13 weeks · <b>3 Jan 2027</b></div>
+        </div>
+        <div class="plan">
+          <div class="plan-h"><b>Gentle</b><span class="pace">−0.25 kg/wk</span></div>
+          <div class="nums"><span style="margin:0"><b>2,540</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+        </div>
+      </div>
+      <div class="cta"><span class="btn btn-p full">Start Steady plan</span></div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>P1 · Segmented bar</b>The three levels in one bar, like the tabs, with the grams in each. Tap one; the selected level is filled in peach. Everything is visible at once, and it's the most compact.</div>
+  </div>
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="ob">
+        <div class="ob-top"><span class="iconbtn"><svg class="i"><use href="#i-left"/></svg></span><span class="stepn">Step 3 of 3</span><span class="btn btn-o sm" style="height:40px">Log out</span></div>
+        <div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+        <div class="h1">Pick your plan</div>
+        <div class="maint">
+          <div class="maint-row"><div><small>Your maintenance</small><b>≈ 2,815 kcal</b></div><span class="btn btn-t sm">How we got this</span></div>
+        </div>
+        <div class="custom">
+          <span class="ic"><svg class="i"><use href="#i-pencil"/></svg></span>
+          <div class="t">Custom plan<small>Enter your own calories and protein</small></div>
+          <svg class="i" style="color:var(--mu)"><use href="#i-chev"/></svg>
+        </div>
+        <div class="lbl2">Protein per day <span>from your goal weight</span></div>
+        <div class="sl2">
+          <div class="sl2-h"><b>125 g<span>Moderate</span></b><span>1.6 g per kg</span></div>
+          <div class="rail2">
+            <div class="bar"></div><div class="fill" style="width:50%"></div>
+            <span class="tick" style="left:0"></span><span class="tick" style="left:50%"></span><span class="tick" style="left:100%"></span>
+            <span class="knob" style="left:50%"></span>
+          </div>
+          <div class="rail2-l"><span>Light</span><span class="on">Moderate</span><span>High</span></div>
+        </div>
+        <div class="lead" style="font-size:13px;margin-top:-4px">Recommended for most people, including while losing weight.</div>
+        <div class="lbl2">Pace</div>
+        <div class="plan on">
+          <div class="plan-h"><b>Steady<span class="badge">Recommended</span></b><span class="pace">−0.5 kg/wk</span></div>
+          <div class="nums"><span style="margin:0"><b>2,265</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+          <div class="when">78 kg in ≈ 13 weeks · <b>3 Jan 2027</b></div>
+        </div>
+        <div class="plan">
+          <div class="plan-h"><b>Gentle</b><span class="pace">−0.25 kg/wk</span></div>
+          <div class="nums"><span style="margin:0"><b>2,540</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+        </div>
+      </div>
+      <div class="cta"><span class="btn btn-p full">Start Steady plan</span></div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>P2 · Slim slider</b>A thin track with a small peach dot instead of the big white circle, and three stops only (no Max). The number and level sit above it. Tap a level name or drag.</div>
+  </div>
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="ob">
+        <div class="ob-top"><span class="iconbtn"><svg class="i"><use href="#i-left"/></svg></span><span class="stepn">Step 3 of 3</span><span class="btn btn-o sm" style="height:40px">Log out</span></div>
+        <div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+        <div class="h1">Pick your plan</div>
+        <div class="maint">
+          <div class="maint-row"><div><small>Your maintenance</small><b>≈ 2,815 kcal</b></div><span class="btn btn-t sm">How we got this</span></div>
+        </div>
+        <div class="custom">
+          <span class="ic"><svg class="i"><use href="#i-pencil"/></svg></span>
+          <div class="t">Custom plan<small>Enter your own calories and protein</small></div>
+          <svg class="i" style="color:var(--mu)"><use href="#i-chev"/></svg>
+        </div>
+        <div class="lbl2">Protein per day <span>from your goal weight</span></div>
+        <div class="step">
+          <span class="pm">−</span>
+          <div class="mid"><b>125 g</b><small><em>Moderate</em> · 1.6 g per kg</small></div>
+          <span class="pm">+</span>
+        </div>
+        <div class="dots4" style="margin-top:-4px"><i></i><i class="on"></i><i></i></div>
+        <div class="lead" style="font-size:13px;margin-top:-6px;text-align:center">Recommended for most people, including while losing weight.</div>
+        <div class="lbl2">Pace</div>
+        <div class="plan on">
+          <div class="plan-h"><b>Steady<span class="badge">Recommended</span></b><span class="pace">−0.5 kg/wk</span></div>
+          <div class="nums"><span style="margin:0"><b>2,265</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+          <div class="when">78 kg in ≈ 13 weeks · <b>3 Jan 2027</b></div>
+        </div>
+        <div class="plan">
+          <div class="plan-h"><b>Gentle</b><span class="pace">−0.25 kg/wk</span></div>
+          <div class="nums"><span style="margin:0"><b>2,540</b><span>kcal</span></span><span style="margin:0"><b>125</b><span>g protein</span></span></div>
+        </div>
+      </div>
+      <div class="cta"><span class="btn btn-p full">Start Steady plan</span></div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>P3 · Stepper</b>One big number with − and + on either side; each tap moves one level. The dots show where you are. Calm and very compact, but you only see one level at a time.</div>
+  </div>
+</div>
+</div>
+
+<div class="page cont">
+<h2><span class="num">04</span>Custom plan and "How we got this"</h2>
+<p class="lede">Both expand in place, so the page never jumps somewhere else.</p>
+</div>
+
+<div class="wide">
+<div class="phones">
+  <div class="pcol">
+    <div class="phone c">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="ob">
+        <div class="ob-top"><span class="iconbtn"><svg class="i"><use href="#i-left"/></svg></span><span class="stepn">Step 3 of 3</span><span class="btn btn-o sm" style="height:40px">Log out</span></div>
+        <div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+        <div class="h1">Pick your plan</div>
+        <div class="maint">
+          <div class="maint-row"><div><small>Your maintenance</small><b>≈ 2,815 kcal</b></div><span class="btn btn-o sm">Hide</span></div>
+          <div class="work">
+            Resting burn (BMR)<br><b>10 × 84.6 + 6.25 × 180 − 5 × 32 + 5 = 1,816</b><br>
+            Moderately active<br><b>1,816 × 1.55 ≈ 2,815 kcal</b>
+          </div>
+        </div>
+        <div class="custom open">
+          <div style="display:flex;align-items:center;gap:12px"><span class="ic"><svg class="i"><use href="#i-pencil"/></svg></span><div class="t" style="flex:1;font-size:15.5px;font-weight:800">Custom plan<small style="display:block;font-size:12.5px;font-weight:400;color:var(--mu)">Your own numbers</small></div></div>
+          <div class="g2">
+            <div><div class="flabel">Calories</div><div class="field val focus"><span>2,000<span class="caret"></span></span><span class="u">kcal</span></div></div>
+            <div><div class="flabel">Protein</div><div class="field val"><span>140</span><span class="u">g</span></div></div>
+          </div>
+          <div class="outlook">About <b>0.74 kg a week</b> · reach 78 kg around <b>4 Dec 2026</b></div>
+        </div>
+        <span class="btn btn-o full">Back to the suggested plans</span>
+      </div>
+      <div class="cta"><span class="btn btn-p full">Start custom plan</span></div>
+      <div class="home-ind"></div>
+    </div>
+    <div class="pcap"><b>Both open</b>The workings are written out in words and numbers. The Custom plan card opens with the two fields and a live outlook. Going back is an outline button, not text.</div>
+  </div>
+
+  <div class="pcol">
+    <div class="phone c" style="height:520px">
+      <div class="notch"></div>
+      <div class="status"><span>9:41</span><span class="dots"><i></i><i></i></span></div>
+      <div class="ob" style="padding-top:20px">
+        <div class="custom open">
+          <div style="display:flex;align-items:center;gap:12px"><span class="ic"><svg class="i"><use href="#i-pencil"/></svg></span><div class="t" style="flex:1;font-size:15.5px;font-weight:800">Custom plan</div></div>
+          <div class="g2">
+            <div><div class="flabel">Calories</div><div class="field val focus"><span>2,900</span><span class="u">kcal</span></div></div>
+            <div><div class="flabel">Protein</div><div class="field val"><span>140</span><span class="u">g</span></div></div>
+          </div>
+          <div class="warn">At 2,900 kcal you'd gain weight, so you won't reach 78 kg. Try less than 2,815.</div>
+        </div>
+      </div>
+    </div>
+    <div class="pcap"><b>When it can't work</b>The red message now says why and what to try, instead of only "impossible".</div>
+  </div>
+</div>
+</div>
+
+<div class="page cont">
+<h2><span class="num">05</span>Desktop</h2>
+<p class="lede">Step 3 in two columns: your details and maintenance stay on the left, the choices fill the right. Shown with P1; Custom plan sits under maintenance in the left column. Steps 1 and 2 are a single centred column, since they're short forms.</p>
+</div>
+
+<div class="wide scroll-x">
+  <div class="desk ob c">
+    <div class="chrome"><i></i><i></i><i></i><span>calorie-calculator.app/onboarding</span></div>
+    <div class="dob">
+      <div class="col">
+        <div class="ob-top" style="justify-content:flex-start;gap:14px"><span class="iconbtn"><svg class="i"><use href="#i-left"/></svg></span><span class="stepn">Step 3 of 3</span></div>
+        <div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+        <div class="h1" style="font-size:34px">Pick your plan</div>
+        <div class="sum">
+          <div class="sum-r"><span>You</span><b>Male · 32 · 180 cm · 84.6 kg</b></div>
+          <div class="sum-r"><span>Activity</span><b>Moderately active</b></div>
+          <div class="sum-r"><span>Goal</span><b>Lose to 78 kg</b></div>
+        </div>
+        <div class="maint">
+          <div class="maint-row"><div><small>Your maintenance</small><b>≈ 2,815 kcal</b></div></div>
+          <div class="work">Resting burn (BMR)<br><b>10 × 84.6 + 6.25 × 180 − 5 × 32 + 5 = 1,816</b><br>Moderately active<br><b>1,816 × 1.55 ≈ 2,815 kcal</b></div>
+        </div>
+        <div class="custom"><span class="ic"><svg class="i"><use href="#i-pencil"/></svg></span><div class="t">Custom plan<small>Enter your own calories and protein</small></div><svg class="i" style="color:var(--mu)"><use href="#i-chev"/></svg></div>
+        <span class="btn btn-o sm" style="align-self:flex-start">Log out</span>
+      </div>
+      <div class="col" style="gap:14px">
+        <div class="lbl2" style="margin-top:0">Protein per day <span>from your goal weight</span></div>
+        <div class="segp">
+          <span>Light<b>94 g</b>1.2 g/kg · if you don't train</span>
+          <span class="on">Moderate · recommended<b>125 g</b>1.6 g/kg · most people</span>
+          <span>High<b>156 g</b>2.0 g/kg · lifting 3+ times a week</span>
+        </div>
+        <div class="lbl2">Pace</div>
+        <div class="plans3">
+          <div class="plan"><div class="plan-h"><b>Gentle</b><span class="pace">−0.25 kg/wk</span></div><div class="nums"><span style="margin:0"><b>2,540</b><span>kcal</span></span></div><div class="when">≈ 26 weeks · <b>5 Apr 2027</b></div></div>
+          <div class="plan on"><div class="plan-h"><b>Steady<span class="badge">Recommended</span></b></div><div class="plan-h"><span class="nums"><span style="margin:0"><b>2,265</b><span>kcal</span></span></span><span class="pace">−0.5 kg/wk</span></div><div class="when">≈ 13 weeks · <b>3 Jan 2027</b></div></div>
+          <div class="plan"><div class="plan-h"><b>Faster</b><span class="pace">−0.75 kg/wk</span></div><div class="nums"><span style="margin:0"><b>1,990</b><span>kcal</span></span></div><div class="when">≈ 9 weeks · <b>3 Dec 2026</b></div></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:6px"><span class="btn btn-p" style="min-width:260px">Start Steady plan · 2,265 kcal, 125 g</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" style="padding-top:0">
+<h2><span class="num">06</span>What I need from you</h2>
+<ol class="steps">
+  <li><strong>Protein: P1 (segmented bar), P2 (slim slider) or P3 (stepper)?</strong><span class="step-note">My pick is P1: every level and its grams are visible at once, and it's one tap. That's the easiest for someone setting up for the first time.</span></li>
+  <li><strong>Base protein on the goal weight when losing?</strong><span class="step-note">Recommended: it keeps the target realistic for people with more to lose. The alternative is always using the current weight, as today.</span></li>
+  <li><strong>Are the levels and wording right?</strong><span class="step-note">Light 1.2 · Moderate 1.6 (recommended) · High 2.0 g per kg.</span></li>
+</ol>
+<p>Next up: <b>mock 4: Stats</b>.</p>
+
+<footer class="doc">
+  Calorie Calculator · redesign mock 3 of 8 · numbers worked out with the app's own formula (Mifflin-St Jeor × activity, 7,700 kcal per kg)
+</footer>
+</div>
+</body>
+</html>
