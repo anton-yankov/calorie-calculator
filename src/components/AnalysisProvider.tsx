@@ -21,11 +21,24 @@ interface HistoryEntry {
    * ratios (0 × anything stays 0 when scaling the current values).
    */
   baseline: MealAnalysis;
+  /** How long the request took, for "Done in 14 s"; null for barcode-only plates */
+  durationMs: number | null;
+}
+
+/** What handleLog saved, so the page can offer Undo and point at the new meal. */
+interface LoggedPlate {
+  id: string;
+  /** The day it landed on (YYYY-MM-DD) */
+  day: string;
 }
 
 interface AnalysisState {
   quickWaterPending: boolean;
   progressVersion: number;
+  /** Re-read the day's totals and meals, e.g. after a meal was edited or deleted */
+  refreshDay: () => void;
+  /** When the running analysis started (ms since epoch); null when none is running */
+  loadingSince: number | null;
   quickAddWater: (ml: number) => Promise<void>;
   handleDrinkTypeChange: (index: number, type: DrinkType | null) => void;
   sourceBlob: Blob | null;
@@ -38,7 +51,6 @@ interface AnalysisState {
   loading: boolean;
   logging: boolean;
   error: string | null;
-  loggedAtLength: number | null;
   /** YYYY-MM-DD day the next log lands on; null means today */
   logDate: string | null;
   setLogDate: (key: string | null) => void;
@@ -51,7 +63,8 @@ interface AnalysisState {
   handleSelect: (selected: File) => Promise<void>;
   /** Reset everything on the page: photo, description, estimates, barcode panel, log day */
   handleClear: () => void;
-  handleLog: () => Promise<void>;
+  /** Logs the plate and resets the page; null when nothing was saved */
+  handleLog: () => Promise<LoggedPlate | null>;
   addScannedFood: (food: FoodItem) => void;
   analyze: (correction?: string) => Promise<void>;
   handleGramsChange: (foodIndex: number, grams: number) => void;
@@ -78,10 +91,9 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [pendingCorrection, setPendingCorrection] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingSince, setLoadingSince] = useState<number | null>(null);
   const [logging, setLogging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // History length at the moment of logging — logging re-enables after a correction
-  const [loggedAtLength, setLoggedAtLength] = useState<number | null>(null);
   // Day the next log lands on; null = today. Backdating is the exception, not a
   // sticky mode, so this resets after a successful log and on clear.
   const [logDate, setLogDateState] = useState<string | null>(null);
@@ -177,7 +189,6 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         };
       }),
     );
-    setLoggedAtLength(null);
   }
 
   function handleClear() {
@@ -186,7 +197,6 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setDescription("");
     setHistory([]);
     setError(null);
-    setLoggedAtLength(null);
     setLogDateState(null);
     setSession((n) => n + 1);
     resizedRef.current = null;
@@ -219,17 +229,19 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     return { thumbnail: await makeThumbnail(image), photo: image };
   }
 
-  async function handleLog() {
-    if (!latest || logging) return;
+  async function handleLog(): Promise<LoggedPlate | null> {
+    if (!latest || logging) return null;
     setLogging(true);
     setError(null);
+    const id = crypto.randomUUID();
+    const day = logDate ?? dayKey(new Date());
     try {
       const { thumbnail, photo } = await makeCover(latest.analysis.foods);
       // When backdating, the server assigns the timestamp within the day's
       // bounds; the loggedAt sent here is only a placeholder
       const result = await logMealAction(
         {
-          id: crypto.randomUUID(),
+          id,
           loggedAt: new Date().toISOString(),
           description: description.trim(),
           analysis: latest.analysis,
@@ -240,29 +252,20 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       );
       if (result.error) throw new Error(result.error);
       if (result.warning) toast.warning(result.warning);
-      setLoggedAtLength(history.length);
+      // A logged plate is done: the page goes back to "add food"
+      handleClear();
       setProgressVersion((n) => n + 1);
-      setLogDateState(null);
+      return { id, day };
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save the meal");
+      return null;
     } finally {
       setLogging(false);
     }
   }
 
+  /** Adds a scanned product to the plate being put together. */
   function addScannedFood(food: FoodItem) {
-    // Scanning after the plate was logged starts a new meal: the scanned
-    // product replaces the logged one instead of joining it (and being
-    // logged twice). The barcode panel isn't re-keyed here so its "added"
-    // feedback still lands.
-    if (latest && loggedAtLength === history.length) {
-      setSourceBlob(null);
-      replacePreviewUrl(null);
-      setDescription("");
-      setHistory([]);
-      setLogDateState(null);
-      resizedRef.current = null;
-    }
     const note = "Packaged-product nutrition was added from a barcode.";
     const withBarcodeNote = (notes: string) =>
       notes.includes(note) ? notes : notes ? `${notes} ${note}` : note;
@@ -274,7 +277,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
           totals: sumTotals([food]),
           notes: note,
         };
-        return [{ correction: null, analysis, baseline: analysis }];
+        return [{ correction: null, analysis, baseline: analysis, durationMs: null }];
       }
 
       const analysisFoods = [...last.analysis.foods, food];
@@ -298,22 +301,22 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         },
       ];
     });
-    setLoggedAtLength(null);
     setError(null);
   }
 
   async function analyze(correction?: string) {
     // A photo, a description, or both — text-only analysis is fine
     if (!sourceBlob && !description.trim() && !(correction && latest)) return;
+    const started = Date.now();
     setLoading(true);
+    setLoadingSince(started);
     setError(null);
     if (correction) {
       setPendingCorrection(correction);
     } else {
       // First analysis or "Start over": the result replaces the whole thread,
-      // so clear it now — the skeleton takes its place, not a stale thread
+      // so clear it now; the analyzing card takes its place, not a stale thread
       setHistory([]);
-      setLoggedAtLength(null);
     }
     try {
       const form = new FormData();
@@ -341,15 +344,17 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         correction && latest
           ? { ...raw, foods: reattachFoodExtras(raw.foods, latest.analysis.foods) }
           : raw;
+      const durationMs = Date.now() - started;
       setHistory((prev) =>
         correction
-          ? [...prev, { correction, analysis: body, baseline: body }]
-          : [{ correction: null, analysis: body, baseline: body }],
+          ? [...prev, { correction, analysis: body, baseline: body, durationMs }]
+          : [{ correction: null, analysis: body, baseline: body, durationMs }],
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
+      setLoadingSince(null);
       setPendingCorrection(null);
       refreshAllowance();
     }
@@ -375,6 +380,8 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       value={{
         quickWaterPending,
         progressVersion,
+        refreshDay: () => setProgressVersion((n) => n + 1),
+        loadingSince,
         quickAddWater,
         handleDrinkTypeChange,
         sourceBlob,
@@ -387,7 +394,6 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         loading,
         logging,
         error,
-        loggedAtLength,
         logDate,
         setLogDate,
         latest,

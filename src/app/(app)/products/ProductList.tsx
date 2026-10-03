@@ -1,15 +1,21 @@
 "use client";
 
-import { useWaterTracking } from "@/components/WaterTracking";
-import { Barcode } from "lucide-react";
+import { Barcode, Ellipsis, PencilLine, Plus, Search, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteProductAction, saveProductAction } from "@/app/actions";
+import { Button, ButtonLink } from "@/components/Button";
 import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
-import { detectDrinkType, type DrinkType } from "@/lib/water";
+import { Field } from "@/components/fields";
 import { ZoomableImage } from "@/components/ImageLightbox";
+import { logFoodsNow, loggedToast } from "@/components/meals/logFood";
 import { ProductPhotoInput } from "@/components/ProductPhotoInput";
+import { ProductSheet } from "@/components/ProductSheet";
+import { Sheet } from "@/components/Sheet";
+import { useWaterTracking } from "@/components/WaterTracking";
+import { dayLabel } from "@/lib/day";
 import type { BarcodeProduct, ProductNutrition } from "@/lib/products";
+import { detectDrinkType, type DrinkType } from "@/lib/water";
 
 const fmt = (value: number) => (Number.isInteger(value) ? value.toString() : value.toFixed(1));
 
@@ -19,9 +25,14 @@ const KCAL_PER_GRAM = { protein: 4, carbs: 4, fat: 9 } as const;
 const MACROS = [
   { key: "protein_g", label: "protein", swatch: "bg-success", kcal: KCAL_PER_GRAM.protein },
   { key: "carbs_g", label: "carbs", swatch: "bg-accent", kcal: KCAL_PER_GRAM.carbs },
-  { key: "fat_g", label: "fat", swatch: "bg-muted", kcal: KCAL_PER_GRAM.fat },
+  { key: "fat_g", label: "fat", swatch: "bg-amber", kcal: KCAL_PER_GRAM.fat },
 ] as const;
 
+/** The unit a product is measured in: ml for drinks, g for everything else. */
+const unitOf = (product: BarcodeProduct) =>
+  product.portionUnit ?? (detectDrinkType(product.name) ? "ml" : "g");
+
+/** The product's picture (tap for full size), or a barcode icon when it has none. */
 function ProductImage({ product }: { product: BarcodeProduct }) {
   if (product.imageUrl) {
     return (
@@ -29,15 +40,18 @@ function ProductImage({ product }: { product: BarcodeProduct }) {
         src={product.imageUrl}
         alt={product.name}
         label={`View image of ${product.name}`}
-        className="h-[72px] w-[72px] shrink-0 rounded-lg border border-line bg-background"
-        imgClassName="object-contain"
+        className="h-14 w-14 shrink-0 rounded-[16px] bg-background"
+        imgClassName="h-full w-full object-contain"
       />
     );
   }
   return (
-    <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-background">
-      <Barcode className="h-7 w-7 text-muted/70" strokeWidth={1.75} aria-hidden />
-    </div>
+    <span
+      aria-hidden
+      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[16px] bg-surface-raised text-muted"
+    >
+      <Barcode className="h-6 w-6" strokeWidth={1.75} />
+    </span>
   );
 }
 
@@ -50,7 +64,7 @@ function MacroSplit({ per100g }: { per100g: ProductNutrition }) {
     <div>
       {total > 0 && (
         <div
-          className="flex h-1.5 w-full gap-px overflow-hidden rounded-full bg-line"
+          className="flex h-2 w-full gap-0.5 overflow-hidden rounded-full bg-line-strong"
           role="img"
           aria-label={MACROS.map(
             (macro, i) => `${macro.label} ${Math.round((energy[i]! / total) * 100)}% of energy`,
@@ -67,7 +81,7 @@ function MacroSplit({ per100g }: { per100g: ProductNutrition }) {
           )}
         </div>
       )}
-      <dl className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs tabular-nums">
+      <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] tabular-nums">
         {MACROS.map((macro) => (
           <div key={macro.key} className="flex items-center gap-1.5">
             <span className={`h-2 w-2 rounded-full ${macro.swatch}`} aria-hidden />
@@ -80,11 +94,7 @@ function MacroSplit({ per100g }: { per100g: ProductNutrition }) {
   );
 }
 
-const inputClass =
-  "w-full rounded-panel border border-line bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none";
-
 interface Draft {
-  portionUnit: "g" | "ml";
   drinkType: DrinkType | null;
   name: string;
   calories: string;
@@ -98,7 +108,6 @@ interface Draft {
 
 function draftFrom(product: BarcodeProduct): Draft {
   return {
-    portionUnit: product.portionUnit ?? (detectDrinkType(product.name) ? "ml" : "g"),
     drinkType: product.drinkType !== undefined ? product.drinkType : detectDrinkType(product.name),
     name: product.name,
     calories: fmt(product.per100g.calories),
@@ -131,16 +140,18 @@ function ProductEditor({
   const waterTracking = useWaterTracking();
   const [draft, setDraft] = useState<Draft>(() => draftFrom(product));
   const [error, setError] = useState<string | null>(null);
+  // The unit stays the product's own: ml for drinks, g for everything else
+  const unit = unitOf(product);
+  const set = (key: keyof Draft) => (value: string) =>
+    setDraft((current) => ({ ...current, [key]: value }));
+  const preview: ProductNutrition = {
+    calories: Number(draft.calories) || 0,
+    protein_g: Number(draft.protein) || 0,
+    carbs_g: Number(draft.carbs) || 0,
+    fat_g: Number(draft.fat) || 0,
+  };
 
-  const fields = [
-    ["calories", "Calories", "kcal"],
-    ["protein", "Protein", "g"],
-    ["carbs", "Carbs", "g"],
-    ["fat", "Fat", "g"],
-  ] as const;
-
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function submit() {
     const values = [draft.calories, draft.protein, draft.carbs, draft.fat];
     const complete =
       draft.name.trim() !== "" &&
@@ -149,11 +160,11 @@ function ProductEditor({
         return value.trim() !== "" && Number.isFinite(number) && number >= 0;
       });
     if (!complete) {
-      setError("Enter a name and all four values per 100 g or ml.");
+      setError(`Enter a name and all four values per 100 ${unit}.`);
       return;
     }
     if (servingFrom(draft) === undefined) {
-      setError("The default amount must be a positive number, or left empty.");
+      setError("The amount when scanned must be a positive number, or left empty.");
       return;
     }
     setError(null);
@@ -161,140 +172,112 @@ function ProductEditor({
   }
 
   return (
-    <form onSubmit={submit} className="border-t border-line bg-surface-raised">
-      <div className="flex flex-col gap-4 p-4">
-        <ProductPhotoInput
-          imageUrl={draft.imageUrl}
-          productName={draft.name.trim() || product.name}
+    <>
+      <ProductPhotoInput
+        imageUrl={draft.imageUrl}
+        productName={draft.name.trim() || product.name}
+        disabled={pending}
+        onChange={(imageUrl) => setDraft((current) => ({ ...current, imageUrl }))}
+      />
+      <Field label="Name" value={draft.name} onChange={set("name")} inputMode="text" />
+      {waterTracking && (
+        <DrinkTypeSelect
+          value={draft.drinkType}
+          name={draft.name}
           disabled={pending}
-          onChange={(imageUrl) => setDraft((current) => ({ ...current, imageUrl }))}
+          onChange={(drinkType) => setDraft((current) => ({ ...current, drinkType }))}
         />
-        <label className="block text-xs font-semibold text-muted">
-          Product name
-          <input
-            value={draft.name}
-            disabled={pending}
-            onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-            className={`mt-1 ${inputClass}`}
-          />
-        </label>
-        {waterTracking && (
-          <DrinkTypeSelect
-            value={draft.drinkType}
-            name={draft.name}
-            disabled={pending}
-            onChange={(drinkType) => setDraft((current) => ({ ...current, drinkType }))}
-          />
-        )}
-        <label className="flex items-center gap-2 text-xs text-muted">
-          Nutrition basis
-          <select
-            disabled={pending}
-            value={draft.portionUnit}
-            onChange={(e) =>
-              setDraft((current) => ({ ...current, portionUnit: e.target.value as "g" | "ml" }))
-            }
-            className="rounded-md border border-line bg-background px-2 py-1.5 text-foreground"
-          >
-            <option value="g">Per 100 g</option>
-            <option value="ml">Per 100 ml</option>
-          </select>
-        </label>
-        <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <legend className="mb-2 text-xs font-semibold text-muted">
-            Per 100 {draft.portionUnit}
-          </legend>
-          {fields.map(([key, label, unit]) => (
-            <label key={key} className="text-xs font-semibold text-muted">
-              {label}
-              <span className="mt-1 flex items-center rounded-panel border border-line bg-background focus-within:border-accent">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="any"
-                  value={draft[key]}
-                  disabled={pending}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, [key]: event.target.value }))
-                  }
-                  className="min-w-0 flex-1 bg-transparent px-3 py-2 font-mono text-sm tabular-nums text-foreground focus:outline-none"
-                />
-                <span className="pr-3 font-normal">{unit}</span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <label className="block text-xs font-semibold text-muted">
-          Default amount when scanned
-          <span className="mt-1 flex items-center rounded-panel border border-line bg-background focus-within:border-accent sm:w-48">
-            <input
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="any"
-              placeholder="100"
-              value={draft.serving}
-              disabled={pending}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, serving: event.target.value }))
-              }
-              className="min-w-0 flex-1 bg-transparent px-3 py-2 font-mono text-sm tabular-nums text-foreground focus:outline-none"
-            />
-            <span className="pr-3 font-normal">{draft.portionUnit}</span>
-          </span>
-          <span className="mt-1 block font-normal">
-            Leave empty to start from 100 {draft.portionUnit}. A whole package or one serving is
-            usually handiest.
-          </span>
-        </label>
-        {error && <p className="text-xs text-danger">{error}</p>}
+      )}
+      <p className="-mb-1 text-[12.5px] font-semibold text-muted">Per 100 {unit}</p>
+      <div className="grid grid-cols-2 gap-2.5">
+        <Field
+          label="Calories"
+          unit="kcal"
+          value={draft.calories}
+          onChange={set("calories")}
+          inputMode="decimal"
+        />
+        <Field
+          label="Protein"
+          unit="g"
+          value={draft.protein}
+          onChange={set("protein")}
+          inputMode="decimal"
+        />
+        <Field
+          label="Carbs"
+          unit="g"
+          value={draft.carbs}
+          onChange={set("carbs")}
+          inputMode="decimal"
+        />
+        <Field label="Fat" unit="g" value={draft.fat} onChange={set("fat")} inputMode="decimal" />
       </div>
-      <div className="flex gap-2 border-t border-line p-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="flex-1 rounded-panel bg-accent px-4 py-2.5 text-sm font-semibold text-background disabled:opacity-40"
-        >
-          {pending ? "Saving…" : "Save changes"}
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={onCancel}
-          className="rounded-panel border border-line px-4 py-2.5 text-sm font-semibold text-muted disabled:opacity-40"
-        >
+      <MacroSplit per100g={preview} />
+      <div>
+        <Field
+          label="Amount when scanned · optional"
+          unit={unit}
+          value={draft.serving}
+          onChange={set("serving")}
+          inputMode="decimal"
+        />
+        <p className="mt-1.5 text-xs text-muted">
+          Leave empty to start from 100 {unit}. A whole package or one serving is usually handiest.
+        </p>
+      </div>
+      {error && (
+        <p role="alert" className="text-sm font-semibold text-danger">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <Button variant="outline" disabled={pending} onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
+        <Button className="flex-1" pending={pending} onClick={submit}>
+          {pending ? "Saving…" : "Save product"}
+        </Button>
       </div>
-    </form>
+    </>
   );
 }
 
-function ProductCard({ product, readOnly }: { product: BarcodeProduct; readOnly: boolean }) {
+/** One saved product as a row; ⋯ opens Log it now, Edit and Delete. */
+function ProductRow({ product, readOnly }: { product: BarcodeProduct; readOnly: boolean }) {
   const [pending, startTransition] = useTransition();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-
-  function handleSave(draft: Draft) {
-    startTransition(async () => {
-      const result = await saveProductAction(product.barcode, {
-        name: draft.name.trim(),
-        portionUnit: draft.portionUnit,
-        drinkType: draft.drinkType,
-        per100g: {
+  const [logging, setLogging] = useState(false);
+  const unit = unitOf(product);
+  const fields = (draft: Draft | null) => ({
+    name: draft ? draft.name.trim() : product.name,
+    portionUnit: unit,
+    drinkType: draft
+      ? draft.drinkType
+      : product.drinkType !== undefined
+        ? product.drinkType
+        : detectDrinkType(product.name),
+    per100g: draft
+      ? {
           calories: Number(draft.calories),
           protein_g: Number(draft.protein),
           carbs_g: Number(draft.carbs),
           fat_g: Number(draft.fat),
-        },
-        imageUrl: draft.imageUrl,
-        servingGrams: servingFrom(draft) ?? null,
-      });
+        }
+      : product.per100g,
+    imageUrl: draft ? draft.imageUrl : product.imageUrl,
+    servingGrams: draft ? (servingFrom(draft) ?? null) : product.servingGrams,
+  });
+
+  function handleSave(draft: Draft) {
+    startTransition(async () => {
+      const result = await saveProductAction(product.barcode, fields(draft));
       if (result.error) {
         toast.error(result.error);
         return;
       }
-      toast.success("Product updated");
+      toast.success("Product saved");
       setEditing(false);
     });
   }
@@ -306,20 +289,12 @@ function ProductCard({ product, readOnly }: { product: BarcodeProduct; readOnly:
         toast.error(result.error);
         return;
       }
-      // Undo re-saves the exact same row — the client still holds all of it
-      toast(`${product.name} deleted`, {
+      // Undo re-saves the exact same row; the client still holds all of it
+      toast.success(`${product.name} deleted`, {
         action: {
           label: "Undo",
           onClick: () =>
-            void saveProductAction(product.barcode, {
-              portionUnit: product.portionUnit ?? (detectDrinkType(product.name) ? "ml" : "g"),
-              drinkType:
-                product.drinkType !== undefined ? product.drinkType : detectDrinkType(product.name),
-              name: product.name,
-              per100g: product.per100g,
-              imageUrl: product.imageUrl,
-              servingGrams: product.servingGrams,
-            }).then((r) => {
+            void saveProductAction(product.barcode, fields(null)).then((r) => {
               if (r.error) toast.error(r.error);
             }),
         },
@@ -330,70 +305,106 @@ function ProductCard({ product, readOnly }: { product: BarcodeProduct; readOnly:
   return (
     <article
       aria-label={product.name}
-      className={`overflow-hidden rounded-panel border border-line bg-surface transition-opacity ${pending ? "opacity-50" : ""}`}
+      className={`flex items-center gap-3 rounded-[20px] bg-surface p-2.5 transition-opacity ${pending ? "opacity-50" : ""}`}
     >
-      <div className="flex items-start gap-4 p-4">
-        {/* The editor shows its own photo control, so the tile would be a duplicate */}
-        {!editing && <ProductImage product={product} />}
-        <div className="min-w-0 flex-1">
-          <h2 className="break-words font-serif text-lg font-semibold leading-tight">
-            {product.name}
-          </h2>
-          <p className="mt-1 font-mono text-xs tabular-nums text-muted">
-            {product.barcode}
-            {product.servingGrams !== null &&
-              ` · ${fmt(product.servingGrams)} ${product.portionUnit ?? "g"} per scan`}
-          </p>
-        </div>
-        <p className="shrink-0 text-right font-mono tabular-nums">
-          <span className="block text-xl font-bold leading-none">
-            {Math.round(product.per100g.calories)}
-          </span>
-          <span className="mt-1 block text-[10px] text-muted">
-            kcal / 100 {product.portionUnit ?? "g"}
-          </span>
+      <ProductImage product={product} />
+      <div className="min-w-0 flex-1">
+        <h2 className="text-[14.5px] leading-snug font-bold break-words">{product.name}</h2>
+        <p className="text-[12.5px] text-muted tabular-nums">
+          {Math.round(product.per100g.calories)} kcal · {fmt(product.per100g.protein_g)} g protein
+          per 100 {unit}
         </p>
+        {product.servingGrams !== null && (
+          <span className="mt-1 inline-block rounded-full bg-accent-soft px-2 py-px text-[11.5px] font-bold text-accent">
+            {fmt(product.servingGrams)} {unit} per scan
+          </span>
+        )}
       </div>
-
-      {editing ? (
-        <ProductEditor
-          product={product}
-          pending={pending}
-          onSave={handleSave}
-          onCancel={() => setEditing(false)}
-        />
-      ) : (
+      {!readOnly && (
         <>
-          <div className="px-4 pb-4">
-            <MacroSplit per100g={product.per100g} />
-          </div>
-          {!readOnly && (
-            <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs font-semibold">
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => setEditing(true)}
-                className="text-accent hover:underline disabled:text-muted"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={handleDelete}
-                className="ml-auto text-danger hover:underline disabled:text-muted"
-              >
-                {pending ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          )}
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={`More for ${product.name}`}
+            disabled={pending}
+            onClick={() => setMenuOpen(true)}
+          >
+            <Ellipsis className="h-5 w-5" strokeWidth={2} aria-hidden />
+          </Button>
+          <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title={product.name}>
+            <Button
+              className="w-full justify-start"
+              onClick={() => {
+                setMenuOpen(false);
+                setLogging(true);
+              }}
+            >
+              <Plus className="h-[19px] w-[19px]" strokeWidth={2.25} aria-hidden />
+              Log it now
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => {
+                setMenuOpen(false);
+                setEditing(true);
+              }}
+            >
+              <PencilLine className="h-[19px] w-[19px]" strokeWidth={2} aria-hidden />
+              Edit product
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full justify-start"
+              onClick={() => {
+                setMenuOpen(false);
+                handleDelete();
+              }}
+            >
+              <Trash2 className="h-[19px] w-[19px]" strokeWidth={2} aria-hidden />
+              Delete product
+            </Button>
+          </Sheet>
+          <Sheet open={editing} onClose={() => setEditing(false)} title="Edit product">
+            {editing && (
+              <ProductEditor
+                product={product}
+                pending={pending}
+                onSave={handleSave}
+                onCancel={() => setEditing(false)}
+              />
+            )}
+          </Sheet>
+          <ProductSheet
+            product={{ ...product, source: "saved" }}
+            open={logging}
+            onClose={() => setLogging(false)}
+            target="now"
+            onAdd={async (food, day) => {
+              const result = await logFoodsNow([food], day);
+              if ("error" in result) {
+                toast.error(result.error);
+                return;
+              }
+              setLogging(false);
+              loggedToast(
+                `${food.name} logged to ${day ? dayLabel(day) : "today"}`,
+                result.id,
+                () => {},
+              );
+            }}
+          />
         </>
       )}
     </article>
   );
 }
 
-/** `readOnly` (the admin's view of another account) hides Edit and Delete. */
+/**
+ * Every product saved from a barcode, A to Z, with a search field once the
+ * list gets long. `readOnly` (the admin's view of another account) hides the
+ * ⋯ menus.
+ */
 export function ProductList({
   products,
   readOnly = false,
@@ -405,13 +416,21 @@ export function ProductList({
 
   if (products.length === 0) {
     return (
-      <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted">
-        <p className="font-serif text-xl font-semibold text-foreground">No saved products yet</p>
+      <div className="flex flex-col items-center gap-2.5 rounded-[22px] bg-surface px-5 py-7 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-surface-raised text-accent">
+          <Barcode className="h-7 w-7" strokeWidth={1.9} aria-hidden />
+        </span>
+        <p className="text-[17px] font-extrabold">No saved products yet</p>
+        <p className="max-w-xs text-[13.5px] text-muted">
+          {readOnly
+            ? "Nothing has been scanned on this account."
+            : "Scan a barcode on Home. Every product you scan is saved here, so next time it's one tap."}
+        </p>
         {!readOnly && (
-          <p className="mx-auto mt-1 max-w-sm text-sm">
-            Scan a barcode on Home and log the meal. The product and its nutrition will be saved
-            here for next time.
-          </p>
+          <ButtonLink href="/?scan=1">
+            <Barcode className="h-[19px] w-[19px]" strokeWidth={2} aria-hidden />
+            Scan a barcode
+          </ButtonLink>
         )}
       </div>
     );
@@ -427,33 +446,29 @@ export function ProductList({
 
   return (
     <section aria-label="Saved products" className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">
-          <span className="font-mono font-semibold tabular-nums text-foreground">
-            {products.length}
-          </span>{" "}
-          {products.length === 1 ? "product" : "products"}, A to Z
-        </p>
-        {products.length > 5 && (
+      {products.length > 5 && (
+        <label className="flex h-12 items-center gap-2.5 rounded-panel bg-surface px-4 text-muted focus-within:ring-2 focus-within:ring-accent lg:max-w-sm">
+          <Search className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Find by name or barcode"
-            aria-label="Find a product by name or barcode"
-            className="w-full rounded-panel border border-line bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none sm:w-64"
+            placeholder="Search your products"
+            aria-label="Search your products by name or barcode"
+            className="w-full min-w-0 bg-transparent text-[15px] text-foreground placeholder:text-muted focus:outline-none"
           />
-        )}
-      </div>
-
+        </label>
+      )}
       {visible.length === 0 ? (
-        <p className="rounded-panel border border-dashed border-line px-5 py-8 text-center text-sm text-muted">
+        <p className="rounded-[20px] bg-surface px-5 py-8 text-center text-sm text-muted">
           Nothing matches “{query.trim()}”.
         </p>
       ) : (
-        visible.map((product) => (
-          <ProductCard key={product.barcode} product={product} readOnly={readOnly} />
-        ))
+        <div className="grid gap-2.5 lg:grid-cols-2 xl:grid-cols-3">
+          {visible.map((product) => (
+            <ProductRow key={product.barcode} product={product} readOnly={readOnly} />
+          ))}
+        </div>
       )}
     </section>
   );

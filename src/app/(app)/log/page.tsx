@@ -29,7 +29,7 @@ export default async function LogPage() {
   }
 
   return (
-    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-5 px-4 pt-4 pb-12 lg:px-8 lg:pt-2 lg:grid lg:max-w-5xl lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:content-start lg:items-start lg:gap-x-10">
+    <main className="page-enter mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-3 px-4 pt-4 pb-12 lg:px-8 lg:pt-2 lg:grid lg:max-w-5xl lg:grid-cols-[320px_minmax(0,1fr)] lg:content-start lg:items-start lg:gap-x-6">
       {loadError ? (
         <p className="rounded-panel border-l-4 border-danger bg-danger-soft px-4 py-3 text-sm text-danger lg:col-span-2">
           {loadError} — check your connection and reload.

@@ -97,18 +97,18 @@ Decisions and mocks: `.plans/redesign/0-decisions-and-build-plan.html` ([postpla
 
 ### Phase R2 — Homepage, Log & Products
 
-- [ ] R2.1 Today cards.
-- [ ] R2.2 Add food block with AI count; out-of-AI state.
-- [ ] R2.3 Describe card.
-- [ ] R2.4 Analyzing card with the live seconds counter.
-- [ ] R2.5 Estimate card and corrections card.
-- [ ] R2.6 Logged state (toast with Undo, highlight).
-- [ ] R2.7 `Sheet` component (bottom sheet on phones, dialog on desktop; was R1.4), then the manual add sheet (moved from Log) and barcode product sheet.
-- [ ] R2.8 Eaten today list and ⋯ meal sheet.
-- [ ] R2.9 Weigh-in card: save in place, snooze sheet.
-- [ ] R2.10 Water row, empty day, desktop homepage.
-- [ ] R2.11 Log: day cards, expanding meals, edit sheet, desktop calendar rail, empty state.
-- [ ] R2.12 Products: rows, search, edit sheet without g/ml switch, Log it now, desktop grid, empty state.
+- [x] R2.1 Today cards (`home/TodayCards.tsx`): calories and protein, headline from the new `dayChip` ("910 left", "Over by 140", "On track"; tests), 120% track with tick, maintain range shaded. Replaces the Today strip and `GoalBars`.
+- [x] R2.2 `AddFood`: Snap your meal with the AI count, Describe · Barcode · Manual; used-up and paused states grey out Photo/Describe only.
+- [x] R2.3 `ComposeCard`: description and/or photo (Change, Add photo), Enter analyzes, ✕ starts over.
+- [x] R2.4 `AnalyzingCard`: live seconds from `loadingSince` (kept in the provider, so it survives navigation), "Taking longer than usual" after 30 s, sliding bar. Failed analyses show in `FailedCard` with Try again.
+- [x] R2.5 `EstimateCard`: weights as fields, confidence chips, ▲/▼ vs the previous estimate, "Done in N s", totals, "After this meal", day picker + Log; earlier estimates fold into one line; `CorrectionCard` with Re-analyze / Start over.
+- [x] R2.6 Logging resets the page (`handleLog` returns the new meal), toast with Undo, the new meal tinted in the list. `loggedAtLength` and the old View log / New meal buttons are gone.
+- [x] R2.7 `Sheet` (native `<dialog>`: bottom sheet on phones, dialog on desktop, Escape/backdrop close; the date picker now opens inside it). `ManualSheet` (quick entry moved from Log), `BarcodeFlow` (scanner → `ProductSheet` or the new-product form with label scan; joins the meal being made, otherwise logs on its own).
+- [x] R2.8 `EatenToday` (from `todayProgressAction`, which now also returns the day's meals) with shared `MealRow`, `MealMenu` (Edit / Log again / Delete, Undo toasts) and `EditMealSheet`.
+- [x] R2.9 `WeighInCard`: save in place, "Saved · −0.4 kg since…", ✕ = snooze sheet (tomorrow / in 3 days, this browser). "Change how often" comes with R3.12.
+- [x] R2.10 `WaterRow` (only with water tracking), empty-day card, desktop: sticky add column + wide right column (same elements, reordered with `contents`/`order`).
+- [x] R2.11 Log rebuilt: day cards with status chip + slim bars, meals in eating order that open in place (photo, foods, macros, Edit / Log again / Delete), shared edit sheet, desktop `MonthCalendar` rail that jumps to a day, `/log#day-…` anchors for Stats, empty state with a button. Quick entry removed from the Log.
+- [x] R2.12 Products rebuilt: rows with the default amount, search (> 5 products), ⋯ sheet with Log it now (`ProductSheet`) / Edit / Delete, edit sheet without the g/ml switch (unit follows the product) and with the macro split, 2–3 column grid on desktop, empty state linking to `/?scan=1`.
 
 ### Phase R3 — Setup, Stats & Settings
 

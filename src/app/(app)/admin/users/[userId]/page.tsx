@@ -27,9 +27,11 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-// The same two-column grid the Log and Stats pages use, so their views drop in as-is
+// The same two-column grids the Log and Stats pages use, so their views drop in as-is
 const GRID =
   "flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:content-start lg:items-start lg:gap-x-10";
+const LOG_GRID =
+  "flex flex-col gap-3 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:content-start lg:items-start lg:gap-x-6";
 
 /**
  * Admin only: one account, read-only. Each tab reuses the page the user sees,
@@ -52,7 +54,7 @@ export default async function AdminUserPage(props: PageProps<"/admin/users/[user
   let content: React.ReactNode;
   if (tab === "log") {
     content = (
-      <div className={GRID}>
+      <div className={LOG_GRID}>
         <LogList
           meals={await listMeals(userId, db)}
           plans={plans}

@@ -172,6 +172,31 @@ textarea:focus-visible {
   }
 }
 
+/* The "still working" bar on the analyzing card: a segment sliding across, not a fake percentage */
+@keyframes indeterminate {
+  from {
+    left: -38%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+.indeterminate {
+  position: absolute;
+  inset-block: 0;
+  width: 38%;
+  border-radius: 9999px;
+  background: var(--accent);
+  left: 31%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .indeterminate {
+    animation: indeterminate 1.6s ease-in-out infinite;
+  }
+}
+
 @keyframes barcode-scan-horizontal {
   from {
     top: 9%;

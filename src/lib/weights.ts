@@ -29,18 +29,19 @@ export async function listWeights(userId: string, db?: Db): Promise<WeightEntry[
   return (data as WeightRow[]).map((row) => ({ day: row.day, weightKg: row.weight_kg }));
 }
 
-/** The day of the user's most recent weigh-in, or null if there are none. */
-export async function latestWeighInDay(userId: string): Promise<string | null> {
+/** The user's most recent weigh-in, or null if there are none. */
+export async function latestWeighIn(userId: string): Promise<WeightEntry | null> {
   const db = await createSessionClient();
   const { data, error } = await db
     .from("weight_entries")
-    .select("day")
+    .select("day, weight_kg")
     .eq("user_id", userId)
     .order("day", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) throw new Error(`Couldn't load the latest weigh-in: ${error.message}`);
-  return (data as { day: string } | null)?.day ?? null;
+  const row = data as WeightRow | null;
+  return row ? { day: row.day, weightKg: row.weight_kg } : null;
 }
 
 /**

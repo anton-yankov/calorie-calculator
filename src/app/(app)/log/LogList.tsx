@@ -1,409 +1,233 @@
 "use client";
 
-import { useWaterTracking } from "@/components/WaterTracking";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
-import {
-  deleteMealAction,
-  getMealPhotoAction,
-  logMealAction,
-  relogMealAction,
-  updateMealAction,
-} from "@/app/actions";
-import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
-import { foodAmount, foodUnit, formatWater, withDrinkType, type DrinkType } from "@/lib/water";
-import { DatePicker } from "@/components/DatePicker";
-import { GoalBars } from "@/components/GoalBars";
-import { SkeletonLog, SkeletonLogRail } from "@/components/loaders";
-import { useMounted } from "@/components/useMounted";
+import { NotebookText, PencilLine, RotateCcw, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button, ButtonLink } from "@/components/Button";
+import { statusColor } from "@/components/goal-colors";
 import { ZoomableImage } from "@/components/ImageLightbox";
-import { dayKey, dayLabel, timeLabel } from "@/lib/day";
+import { SkeletonLog } from "@/components/loaders";
+import { EditMealSheet } from "@/components/meals/EditMealSheet";
+import { MealMenu, useMealActions } from "@/components/meals/MealActions";
+import { mealName, MealRow } from "@/components/meals/MealRow";
+import { MonthCalendar, type CalendarDay } from "@/components/MonthCalendar";
+import { useMounted } from "@/components/useMounted";
+import { useWaterTracking } from "@/components/WaterTracking";
+import { getMealPhotoAction } from "@/app/actions";
+import { dayKey, dayLabel } from "@/lib/day";
+import { dayChip, goalStatus, type GoalStatus, type Metric } from "@/lib/goal-status";
 import type { LoggedMeal } from "@/lib/log";
 import type { StoredPlan } from "@/lib/plan-history";
-import { targetsForDay } from "@/lib/plan-targets";
-import { QuickEntry } from "./QuickEntry";
-import { scaleFood, sumTotals } from "@/lib/scale";
-import type { FoodItem, MealTotals } from "@/lib/schema";
+import { targetsForDay, type DayTargets } from "@/lib/plan-targets";
+import { sumTotals } from "@/lib/scale";
+import type { MealTotals } from "@/lib/schema";
+import { foodAmount, foodUnit, formatWater } from "@/lib/water";
 
-const fmt = (n: number) => (Number.isInteger(n) ? n.toString() : n.toFixed(1));
-const pad = (n: number) => String(n).padStart(2, "0");
+/** The track runs to 120% of the target, with a tick at the target itself. */
+const TRACK_SCALE = 1.2;
+const n = (value: number) => Math.round(value).toLocaleString("en-US");
 
-/** Grams cell in edit mode — local draft so the field can be empty mid-edit. */
-function GramsInput({
-  food,
-  disabled,
-  onChange,
+const CHIP: Record<GoalStatus, string> = {
+  met: "bg-success-soft text-success",
+  over: "bg-danger-soft text-danger",
+  short: "bg-[#33291a] text-amber",
+  near: "bg-[#33291a] text-amber",
+  progress: "bg-surface-raised text-tint-lose",
+};
+
+/** The anchor each day's section gets, so the calendar (and Stats) can jump to it. */
+const dayAnchor = (key: string) => `day-${key}`;
+
+/** "Today" / "Yesterday" / "Thursday", plus the date beside it. */
+function dayTitle(key: string): { name: string; date: string } {
+  const label = dayLabel(key);
+  const d = new Date(`${key}T12:00:00`);
+  const date = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  if (label === "Today" || label === "Yesterday") {
+    return { name: label, date: `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${date}` };
+  }
+  return { name: d.toLocaleDateString("en-GB", { weekday: "long" }), date };
+}
+
+function MiniBar({
+  metric,
+  totals,
+  targets,
+  isToday,
 }: {
-  food: FoodItem;
-  disabled: boolean;
-  onChange: (grams: number) => void;
+  metric: Metric;
+  totals: MealTotals;
+  targets: DayTargets;
+  isToday: boolean;
 }) {
-  const [draft, setDraft] = useState<string | null>(null);
+  const value = metric === "calories" ? totals.calories : totals.protein_g;
+  const target = metric === "calories" ? targets.calorieTarget : targets.proteinTarget;
+  const color = statusColor(targets.goal, goalStatus(targets.goal, metric, value, target, isToday));
   return (
-    <label className="inline-flex items-center gap-1">
-      <input
-        type="number"
-        inputMode="numeric"
-        min={0}
-        value={draft ?? Math.round(foodAmount(food)).toString()}
-        disabled={disabled}
-        aria-label={`${foodUnit(food)} of ${food.name}`}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          const grams = Number(e.target.value);
-          if (e.target.value.trim() !== "" && Number.isFinite(grams) && grams >= 0) {
-            onChange(grams);
-          }
-        }}
-        onBlur={() => setDraft(null)}
-        className="w-14 rounded-md border border-line bg-background px-1 py-0.5 text-right font-mono text-xs tabular-nums text-foreground focus:border-accent focus:outline-none"
-      />
-      {foodUnit(food)}
-    </label>
+    <div className="min-w-0">
+      <div className="flex justify-between gap-2 text-xs text-muted">
+        {metric === "calories" ? "Calories" : "Protein"}
+        <span className="tabular-nums">
+          <b className="font-bold text-foreground">{n(value)}</b> / {n(target)}
+          {metric === "protein" && " g"}
+        </span>
+      </div>
+      <div className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-line-strong">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{
+            width: `${Math.min(value / (target * TRACK_SCALE), 1) * 100}%`,
+            background: color,
+          }}
+        />
+        <div
+          className="absolute inset-y-0 w-0.5 bg-foreground/60"
+          style={{ left: `${100 / TRACK_SCALE}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
-function MealEntry({ meal, readOnly }: { meal: LoggedMeal; readOnly: boolean }) {
+/** A day's header: its name, how it went (or what's left today) and two slim bars. */
+function DayCard({
+  dayKeyValue,
+  totals,
+  targets,
+  isToday,
+}: {
+  dayKeyValue: string;
+  totals: MealTotals;
+  targets: DayTargets | null;
+  isToday: boolean;
+}) {
   const waterTracking = useWaterTracking();
-  const [pending, startTransition] = useTransition();
+  const { name, date } = dayTitle(dayKeyValue);
+  const status = targets
+    ? goalStatus(targets.goal, "calories", totals.calories, targets.calorieTarget, isToday)
+    : null;
+  return (
+    <div className="flex flex-col gap-2.5 rounded-[20px] bg-surface p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-[17px] font-extrabold tracking-tight">
+          {name}
+          <span className="ml-1.5 text-[12.5px] font-medium tracking-normal text-muted">
+            {date}
+          </span>
+        </h2>
+        {targets && status ? (
+          <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold ${CHIP[status]}`}>
+            {dayChip(targets.goal, "calories", status, totals.calories, targets.calorieTarget)}
+          </span>
+        ) : (
+          <span className="text-[13px] font-bold tabular-nums">{n(totals.calories)} kcal</span>
+        )}
+      </div>
+      {targets && (
+        <div className="grid grid-cols-2 gap-3">
+          <MiniBar metric="calories" totals={totals} targets={targets} isToday={isToday} />
+          <MiniBar metric="protein" totals={totals} targets={targets} isToday={isToday} />
+        </div>
+      )}
+      {waterTracking && totals.water_ml !== undefined && totals.water_ml > 0 && (
+        <p className="text-xs text-muted">
+          Water {formatWater(totals.water_ml)}
+          {targets?.waterGoalMl ? ` of ${formatWater(targets.waterGoalMl)}` : ""}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** One meal: a row that opens in place to show what's in it and what you can do with it. */
+function LogMeal({ meal, readOnly }: { meal: LoggedMeal; readOnly: boolean }) {
+  const waterTracking = useWaterTracking();
+  const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  // Edit drafts; grams edits rescale from the saved analysis (the baseline)
-  const [draftFoods, setDraftFoods] = useState<FoodItem[] | null>(null);
-  const [dateDraft, setDateDraft] = useState("");
-  const [timeDraft, setTimeDraft] = useState("");
+  const { pending, relog, remove } = useMealActions(meal);
+  const totals = meal.analysis.totals;
 
-  const foods = draftFoods ?? meal.analysis.foods;
-  const totals: MealTotals = draftFoods ? sumTotals(draftFoods) : meal.analysis.totals;
-  const names = meal.analysis.foods.map((f) => f.name).join(", ");
-  const quickEntry = foods.length > 0 && foods.every((food) => food.quickEntry);
-  const time = timeLabel(meal.loggedAt);
-
-  function startEdit() {
-    const d = new Date(meal.loggedAt);
-    setDateDraft(dayKey(d));
-    setTimeDraft(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
-    setDraftFoods(meal.analysis.foods.map((f) => ({ ...f })));
-    setEditing(true);
-  }
-
-  function cancelEdit() {
-    setEditing(false);
-    setDraftFoods(null);
-  }
-
-  function handleGramsChange(index: number, grams: number) {
-    setDraftFoods((prev) => {
-      if (!prev) return prev;
-      const original = meal.analysis.foods[index];
-      const current = prev[index];
-      const base =
-        original && current && original.drink_type !== current.drink_type
-          ? withDrinkType(original, current.drink_type ?? null)
-          : original;
-      return prev.map((f, i) =>
-        i === index ? (base ? scaleFood(base, grams) : { ...f, grams }) : f,
-      );
-    });
-  }
-
-  function handleDrinkTypeChange(index: number, type: DrinkType | null) {
-    setDraftFoods(
-      (prev) => prev?.map((food, i) => (i === index ? withDrinkType(food, type) : food)) ?? null,
+  if (!open) {
+    return (
+      <MealRow
+        meal={meal}
+        readOnly={readOnly}
+        expanded={false}
+        onSelect={() => setOpen(true)}
+        end={readOnly ? undefined : <MealMenu meal={meal} />}
+      />
     );
   }
-
-  function handleSave() {
-    if (!draftFoods) return;
-    // Edited local date and wall-clock time; either draft falls back to the original
-    const when = new Date(meal.loggedAt);
-    const [y, mo, d] = dateDraft.split("-").map(Number);
-    if (y && mo && d) when.setFullYear(y, mo - 1, d);
-    const [h, m] = timeDraft.split(":").map(Number);
-    if (Number.isFinite(h) && Number.isFinite(m)) when.setHours(h!, m!, 0, 0);
-    const analysis = { ...meal.analysis, foods: draftFoods, totals: sumTotals(draftFoods) };
-    startTransition(async () => {
-      const result = await updateMealAction(meal.id, { analysis, loggedAt: when.toISOString() });
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("Meal updated");
-      setEditing(false);
-      setDraftFoods(null);
-    });
-  }
-
-  function handleRelog() {
-    startTransition(async () => {
-      const result = await relogMealAction(meal.id);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      const newId = result.newId;
-      toast.success("Logged to today", {
-        action: newId
-          ? {
-              label: "Undo",
-              onClick: () =>
-                void deleteMealAction(newId).then((r) => {
-                  if (r.error) toast.error(r.error);
-                }),
-            }
-          : undefined,
-      });
-    });
-  }
-
-  function handleDelete() {
-    startTransition(async () => {
-      const result = await deleteMealAction(meal.id);
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
-      // Undo re-inserts the row the server returned: the list copy held here
-      // never includes the large photo, the deleted row does
-      const removed = result.meal ?? meal;
-      toast("Meal deleted", {
-        action: {
-          label: "Undo",
-          onClick: () =>
-            void logMealAction(removed).then((r) => {
-              if (r.error) toast.error(r.error);
-            }),
-        },
-      });
-    });
-  }
-
   return (
-    <details
-      className={`group overflow-hidden rounded-panel border border-line bg-surface transition-colors open:bg-surface-raised ${pending ? "opacity-50" : ""}`}
+    <div
+      className={`flex flex-col gap-3 rounded-[22px] bg-surface p-3 ${pending ? "opacity-60" : ""}`}
     >
-      <summary className="block cursor-pointer select-none [&::-webkit-details-marker]:hidden">
-        <div className="flex items-center gap-3 px-4 py-3">
-          {meal.thumbnail ? (
-            // Opens on the thumbnail at once, then swaps in the large photo.
-            // Meals logged before photos were kept just stay on the thumbnail.
-            <ZoomableImage
-              src={meal.thumbnail}
-              alt={names || "Meal"}
-              label={`View photo of ${names || "meal"}`}
-              // The large photo is fetched as the viewer, so a read-only view keeps the thumbnail
-              load={
-                readOnly
-                  ? undefined
-                  : async () => {
-                      const result = await getMealPhotoAction(meal.id);
-                      return result.photo ?? null;
-                    }
-              }
-              className="h-12 w-12 shrink-0 rounded-panel border border-transparent"
-            />
-          ) : (
-            <span
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-panel border border-line bg-background text-lg"
-              aria-hidden
-            >
-              {quickEntry ? "✍" : foods.every((food) => food.drink_type) ? "💧" : "🍽"}
-            </span>
-          )}
-          <span className="min-w-0 flex-1">
-            <span className="line-clamp-2 text-sm font-medium">{names || "Meal"}</span>
-            <span className="font-mono text-xs text-muted">
-              {time}
-              {quickEntry && " · manual"}
-            </span>
-          </span>
-          <span className="shrink-0 font-mono tabular-nums">
-            <span className="text-[15px] font-bold">{Math.round(totals.calories)}</span>
-            <span className="ml-1 text-xs text-muted">kcal</span>
-          </span>
-        </div>
-        <div className="grid grid-cols-3 divide-x divide-line border-t border-line">
-          {(
-            [
-              ["protein", totals.protein_g],
-              ["carbs", totals.carbs_g],
-              ["fat", totals.fat_g],
-            ] as const
-          ).map(([label, value]) => (
-            <div key={label} className="px-2 py-1.5 text-center">
-              <span className="block font-mono text-[13px] tabular-nums">{fmt(value)} g</span>
-              <span className="block text-[10px] uppercase tracking-[0.08em] text-muted">
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </summary>
-
-      <div className="overflow-x-auto border-t border-line">
-        <table className="w-full min-w-[420px] border-collapse">
-          <thead>
-            <tr className="text-[10px] uppercase tracking-[0.08em] text-muted">
-              <th className="px-4 py-2 text-left font-semibold">Food</th>
-              <th className="px-2 py-2 text-right font-semibold">Amount</th>
-              <th className="px-2 py-2 text-right font-semibold">kcal</th>
-              <th className="px-2 py-2 text-right font-semibold">P</th>
-              <th className="px-2 py-2 text-right font-semibold">C</th>
-              <th className="py-2 pl-2 pr-4 text-right font-semibold">F</th>
-            </tr>
-          </thead>
-          <tbody className="font-mono text-xs tabular-nums text-muted">
-            {foods.map((food, i) => (
-              <tr key={`${food.name}-${i}`} className="border-t border-line/60">
-                <td className="px-4 py-1.5 font-sans text-[13px] font-medium text-foreground">
-                  <span className="flex items-center gap-2">
-                    {food.imageUrl && (
-                      <ZoomableImage
-                        src={food.imageUrl}
-                        alt={food.name}
-                        label={`View image of ${food.name}`}
-                        className="h-6 w-6 shrink-0 rounded border border-line bg-background"
-                        imgClassName="object-contain"
-                      />
-                    )}
-                    {food.name}
-                  </span>
-                  {editing && waterTracking && !food.quickEntry && (
-                    <div className="mt-2">
-                      <DrinkTypeSelect
-                        name={food.name}
-                        value={food.drink_type ?? null}
-                        disabled={pending}
-                        onChange={(type) => handleDrinkTypeChange(i, type)}
-                      />
-                    </div>
-                  )}
-                </td>
-                <td className="px-2 py-1.5 text-right">
-                  {/* Typed-in foods have no portion to show or scale */}
-                  {food.quickEntry ? (
-                    "—"
-                  ) : editing ? (
-                    <GramsInput
-                      food={food}
-                      disabled={pending}
-                      onChange={(grams) => handleGramsChange(i, grams)}
-                    />
-                  ) : (
-                    `${Math.round(foodAmount(food))} ${foodUnit(food)}`
-                  )}
-                </td>
-                <td className="px-2 py-1.5 text-right">{Math.round(food.calories)}</td>
-                <td className="px-2 py-1.5 text-right">{fmt(food.protein_g)}</td>
-                <td className="px-2 py-1.5 text-right">{fmt(food.carbs_g)}</td>
-                <td className="py-1.5 pl-2 pr-4 text-right">{fmt(food.fat_g)}</td>
-              </tr>
-            ))}
-            <tr className="border-t border-line font-semibold text-foreground">
-              <td className="px-4 py-2 font-sans text-[13px]">Total</td>
-              <td className="px-2 py-2 text-right">
-                {foods.every((food) => food.volume_ml == null && !food.quickEntry)
-                  ? `${Math.round(foods.reduce((sum, food) => sum + food.grams, 0))} g`
-                  : "—"}
-              </td>
-              <td className="px-2 py-2 text-right">{Math.round(totals.calories)}</td>
-              <td className="px-2 py-2 text-right">{fmt(totals.protein_g)}</td>
-              <td className="px-2 py-2 text-right">{fmt(totals.carbs_g)}</td>
-              <td className="py-2 pl-2 pr-4 text-right">{fmt(totals.fat_g)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {waterTracking && totals.water_ml !== undefined && (
-        <p className="border-t border-line px-4 py-2 text-xs font-semibold text-muted">
-          Water · {formatWater(totals.water_ml)}
-        </p>
+      <MealRow meal={meal} readOnly={readOnly} expanded onSelect={() => setOpen(false)} />
+      {meal.thumbnail && (
+        <ZoomableImage
+          src={meal.thumbnail}
+          alt={mealName(meal)}
+          label={`View photo of ${mealName(meal)}`}
+          load={
+            readOnly ? undefined : async () => (await getMealPhotoAction(meal.id)).photo ?? null
+          }
+          className="h-[130px] w-full rounded-[16px]"
+          imgClassName="h-full w-full object-cover"
+        />
       )}
-
-      {meal.description && (
-        <p className="border-t border-line/60 px-4 py-2 text-xs text-muted">
-          Note: {meal.description}
-        </p>
-      )}
-
+      <ul>
+        {meal.analysis.foods.map((food, i) => (
+          <li
+            key={`${food.name}-${i}`}
+            className="flex justify-between gap-3 border-t border-line py-2 text-sm first:border-t-0"
+          >
+            <b className="min-w-0 font-semibold">{food.name}</b>
+            <span className="shrink-0 text-muted tabular-nums">
+              {/* Typed-in foods have no portion */}
+              {food.quickEntry ? "" : `${Math.round(foodAmount(food))} ${foodUnit(food)} · `}
+              {n(food.calories)} kcal
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[12.5px] text-muted tabular-nums">
+        {Math.round(totals.protein_g)} g protein · {Math.round(totals.carbs_g)} g carbs ·{" "}
+        {Math.round(totals.fat_g)} g fat
+        {waterTracking &&
+          totals.water_ml !== undefined &&
+          ` · water ${formatWater(totals.water_ml)}`}
+      </p>
+      {meal.description && <p className="text-[12.5px] text-muted">Note: {meal.description}</p>}
       {!readOnly && (
-        <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 text-xs font-semibold">
-          {editing ? (
-            <>
-              <span className="flex items-center gap-1.5 font-normal text-muted">
-                When
-                <DatePicker
-                  value={dateDraft}
-                  max={dayKey(new Date())}
-                  disabled={pending}
-                  onChange={setDateDraft}
-                  className="rounded-md border-line bg-background px-1.5 py-0.5 text-xs"
-                />
-                <input
-                  type="time"
-                  value={timeDraft}
-                  disabled={pending}
-                  aria-label="Time"
-                  onChange={(e) => setTimeDraft(e.target.value)}
-                  className="rounded-md border border-line bg-background px-1.5 py-0.5 font-mono text-xs text-foreground focus:border-accent focus:outline-none"
-                />
-              </span>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={handleSave}
-                className="ml-auto text-success hover:underline disabled:text-muted"
-              >
-                {pending ? "Saving…" : "Save"}
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={cancelEdit}
-                className="text-muted hover:underline"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={startEdit}
-                className="text-accent hover:underline disabled:text-muted"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={handleRelog}
-                className="text-success hover:underline disabled:text-muted"
-              >
-                {pending ? "Logging…" : "Log again"}
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={handleDelete}
-                className="ml-auto text-danger hover:underline disabled:text-muted"
-              >
-                Delete
-              </button>
-            </>
-          )}
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+          <Button variant="outline" size="sm" disabled={pending} onClick={() => setEditing(true)}>
+            <PencilLine className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+            Edit
+          </Button>
+          <Button variant="secondary" size="sm" disabled={pending} onClick={relog}>
+            <RotateCcw className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+            Log again
+          </Button>
+          <Button
+            variant="destructive"
+            size="icon"
+            aria-label={`Delete ${mealName(meal)}`}
+            disabled={pending}
+            onClick={remove}
+          >
+            <Trash2 className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+          </Button>
         </div>
       )}
-    </details>
+      <EditMealSheet meal={meal} open={editing} onClose={() => setEditing(false)} />
+    </div>
   );
 }
 
 /**
- * The Log's two columns: a rail with today's bars (desktop only) and the quick
- * entry, then the days. On desktop the rail sticks while the days scroll, and
- * today's bars live in the rail instead of above today's meals. `readOnly`
- * (the admin's view of another account) drops the quick entry and every edit.
+ * The Log: every day newest first, as a day card with its meals underneath.
+ * On desktop, month calendars stay in a column on the left; tapping a day
+ * scrolls to it. Each day is judged by the plan that applied on it.
+ * `readOnly` (the admin's view of another account) hides every action.
  */
 export function LogList({
   meals,
@@ -416,88 +240,112 @@ export function LogList({
   waterGoalMl: number | null;
   readOnly?: boolean;
 }) {
-  const waterTracking = useWaterTracking();
   // Days and times follow the viewer's timezone, so they're rendered only in the browser
   const mounted = useMounted();
-  if (!mounted) {
-    return (
-      <>
-        <SkeletonLogRail />
-        <SkeletonLog />
-      </>
-    );
-  }
+  const [selected, setSelected] = useState<string | null>(null);
+
+  // Stats' calendar links here as /log#day-YYYY-MM-DD; the days render after
+  // mounting, so the browser's own jump to the anchor finds nothing
+  useEffect(() => {
+    if (!mounted || !window.location.hash.startsWith("#day-")) return;
+    document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "start" });
+  }, [mounted]);
+
+  if (!mounted) return <SkeletonLog />;
 
   const todayKey = dayKey(new Date());
   const days = new Map<string, LoggedMeal[]>();
-  for (const meal of meals) {
+  // The list arrives newest first; within a day, meals read in eating order
+  for (const meal of [...meals].reverse()) {
     const key = dayKey(meal.loggedAt);
     days.set(key, [...(days.get(key) ?? []), meal]);
   }
-  const todayTargets = targetsForDay(plans, todayKey, waterGoalMl);
-  const todayTotals = sumTotals((days.get(todayKey) ?? []).map((m) => m.analysis.totals));
+  const dayKeys = [...days.keys()].reverse();
+  const totalsOf = (key: string) => sumTotals((days.get(key) ?? []).map((m) => m.analysis.totals));
+
+  function dayStatus(key: string): CalendarDay {
+    if (key > todayKey) return "none";
+    const dayMeals = days.get(key);
+    const targets = targetsForDay(plans, key, waterGoalMl);
+    if (!dayMeals) return key === todayKey ? "today" : "empty";
+    if (!targets) return "met";
+    const status = goalStatus(
+      targets.goal,
+      "calories",
+      totalsOf(key).calories,
+      targets.calorieTarget,
+      key === todayKey,
+    );
+    return status === "progress" ? "today" : status;
+  }
+
+  // This month and the one before, newest first
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const months: [number, number][] = [
+    [now.getFullYear(), now.getMonth()],
+    [prev.getFullYear(), prev.getMonth()],
+  ];
+
+  function jumpTo(key: string) {
+    setSelected(key);
+    document.getElementById(dayAnchor(key))?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  if (meals.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2.5 rounded-[22px] bg-surface px-5 py-7 text-center lg:col-span-2">
+        <span className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-surface-raised text-accent">
+          <NotebookText className="h-7 w-7" strokeWidth={1.9} aria-hidden />
+        </span>
+        <p className="text-[17px] font-extrabold">No meals logged yet</p>
+        <p className="max-w-xs text-[13.5px] text-muted">
+          {readOnly
+            ? "Nothing has been logged on this account."
+            : "Everything you log on Home shows up here, grouped by day."}
+        </p>
+        {!readOnly && <ButtonLink href="/">Add your first meal</ButtonLink>}
+      </div>
+    );
+  }
 
   return (
     <>
-      <div className="flex flex-col gap-4 lg:sticky lg:top-6">
-        {todayTargets && (
-          <div className="hidden flex-col gap-2 rounded-panel border border-line bg-surface px-4 py-3 lg:flex">
-            <span className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Today</span>
-            <GoalBars totals={todayTotals} targets={todayTargets} isToday />
-          </div>
-        )}
-        {!readOnly && <QuickEntry />}
-      </div>
-
-      <div className="flex flex-col gap-5">
-        {meals.length === 0 ? (
-          <div className="rounded-panel border-2 border-dashed border-line bg-surface/40 px-5 py-14 text-center text-muted">
-            <p className="font-serif text-xl font-semibold text-foreground">No meals logged yet</p>
-            {!readOnly && (
-              <p className="mt-1 text-sm">
-                Analyze a photo and tap “Log meal”, or add a food manually, to start tracking your
-                day.
-              </p>
-            )}
-          </div>
-        ) : (
-          [...days.entries()].map(([key, dayMeals]) => {
-            const totals = sumTotals(dayMeals.map((m) => m.analysis.totals));
-            // Each day is judged by the plan that applied on it, not today's plan
-            const targets = targetsForDay(plans, key, waterGoalMl);
-            return (
-              <section key={key} className="flex flex-col gap-2">
-                <header className="flex flex-col gap-1.5 px-1 pt-3">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                    <h2 className="font-serif text-xl font-semibold text-foreground">
-                      {dayLabel(key)}
-                    </h2>
-                    <span className="font-mono text-sm tabular-nums">
-                      <span className="font-bold">{Math.round(totals.calories)}</span>
-                      <span className="text-xs text-muted">
-                        {" "}
-                        kcal · P {fmt(totals.protein_g)} · C {fmt(totals.carbs_g)} · F{" "}
-                        {fmt(totals.fat_g)}
-                        {waterTracking &&
-                          totals.water_ml !== undefined &&
-                          ` · Water ${formatWater(totals.water_ml)}`}
-                      </span>
-                    </span>
-                  </div>
-                  {targets && (
-                    // On desktop, today's bars are already in the rail
-                    <div className={key === todayKey ? "lg:hidden" : undefined}>
-                      <GoalBars totals={totals} targets={targets} isToday={key === todayKey} />
-                    </div>
-                  )}
-                </header>
-                {dayMeals.map((meal) => (
-                  <MealEntry key={meal.id} meal={meal} readOnly={readOnly} />
-                ))}
-              </section>
-            );
-          })
-        )}
+      <aside className="hidden rounded-[22px] bg-surface p-4 lg:sticky lg:top-6 lg:block">
+        <p className="mb-3 text-[12.5px] text-muted">Tap a day to jump to it</p>
+        <MonthCalendar
+          months={months}
+          today={todayKey}
+          dayStatus={dayStatus}
+          onSelect={jumpTo}
+          selected={selected}
+        />
+      </aside>
+      <div className="flex min-w-0 flex-col gap-2">
+        {dayKeys.map((key) => (
+          <section
+            key={key}
+            id={dayAnchor(key)}
+            aria-label={dayLabel(key)}
+            // Clears the sticky top bar on phones when jumped to
+            className="flex scroll-mt-32 flex-col gap-2 pb-3 lg:scroll-mt-6"
+          >
+            <DayCard
+              dayKeyValue={key}
+              totals={totalsOf(key)}
+              targets={targetsForDay(plans, key, waterGoalMl)}
+              isToday={key === todayKey}
+            />
+            <div className="flex flex-col gap-2 px-0.5">
+              {days.get(key)!.map((meal) => (
+                <LogMeal key={meal.id} meal={meal} readOnly={readOnly} />
+              ))}
+            </div>
+          </section>
+        ))}
+        <p className="py-2 text-center text-xs text-muted">
+          First meal logged {dayLabel(dayKeys.at(-1)!)}
+        </p>
       </div>
     </>
   );

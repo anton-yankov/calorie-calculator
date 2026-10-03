@@ -48,6 +48,9 @@ export function DatePicker({
     return [d.getFullYear(), d.getMonth()];
   });
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
+  // Where the calendar renders: inside a sheet (a modal <dialog>) everything
+  // outside it is inert, so there it has to open inside the dialog
+  const [container, setContainer] = useState<Element | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +74,7 @@ export function DatePicker({
     const d = new Date(`${value}T12:00:00`);
     setView([d.getFullYear(), d.getMonth()]);
     place();
+    setContainer(triggerRef.current?.closest("dialog") ?? document.body);
     setOpen(true);
   }
 
@@ -132,6 +136,7 @@ export function DatePicker({
 
       {open &&
         pos &&
+        container &&
         createPortal(
           <div
             ref={popRef}
@@ -201,7 +206,7 @@ export function DatePicker({
               })}
             </div>
           </div>,
-          document.body,
+          container,
         )}
     </>
   );

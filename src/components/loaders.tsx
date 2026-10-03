@@ -19,85 +19,38 @@ function GhostBar({ className, style }: { className: string; style?: React.CSSPr
   );
 }
 
-/** Ghost version of the meal-log list: one day header + a few entry rows. */
+/**
+ * Ghost version of the Log: the calendar column (desktop only), then a day
+ * card with a few meal rows, the same shapes the real list fills in.
+ */
 export function SkeletonLog() {
   return (
-    <div role="status" aria-label="Meal log loading" className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between px-1" aria-hidden>
-        <GhostBar className="h-3.5 w-16" />
-        <GhostBar className="h-3.5 w-36" />
-      </div>
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          aria-hidden
-          className="flex items-center gap-3 rounded-[20px] bg-surface px-4 py-3"
-        >
-          <GhostBar className="h-12 w-12 rounded-lg" />
-          <div className="min-w-0 flex-1">
-            <GhostBar className={`h-4 ${i === 1 ? "w-40" : "w-28"}`} />
-            <GhostBar className="mt-1.5 h-3 w-12" />
+    <>
+      <div aria-hidden className="hidden h-[540px] rounded-[22px] bg-surface lg:block" />
+      <div role="status" aria-label="Meal log loading" className="flex flex-col gap-2">
+        <div aria-hidden className="flex flex-col gap-2.5 rounded-[20px] bg-surface p-3.5">
+          <div className="flex justify-between">
+            <GhostBar className="h-4 w-32" />
+            <GhostBar className="h-4 w-16 rounded-full" />
           </div>
-          <div className="flex flex-col items-end">
-            <GhostBar className="h-4 w-16" />
-            <GhostBar className="mt-1.5 h-3 w-24" />
+          <div className="grid grid-cols-2 gap-3">
+            <GhostBar className="h-6" />
+            <GhostBar className="h-6" />
           </div>
         </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Ghost version of GoalBars: same grid and cell footprint (label and numbers,
- * track, message), so the real bars fill in without the page shifting.
- */
-export function SkeletonGoalBars({ water }: { water: boolean }) {
-  return (
-    <div
-      role="status"
-      aria-label="Targets loading"
-      className={`grid gap-x-5 gap-y-3 ${water ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2"}`}
-    >
-      {(water ? [0, 1, 2] : [0, 1]).map((i) => (
-        <div key={i} aria-hidden className="flex min-w-0 flex-col gap-1">
-          <div className="flex h-4 items-center justify-between gap-2">
-            <GhostBar className="h-2.5 w-14" />
-            <GhostBar className="h-3 w-20" />
-          </div>
-          <GhostBar className="h-1.5 w-full rounded-full" />
-          <div className="flex h-[15px] items-center">
-            <GhostBar className="h-2.5 w-24" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * Ghost version of the Log's rail: the "Add food manually" button on phones;
- * today's bars and the open form on desktop.
- */
-export function SkeletonLogRail() {
-  return (
-    <div aria-hidden className="flex flex-col gap-4">
-      <GhostBar className="h-[42px] w-full rounded-panel lg:hidden" />
-      <div className="hidden flex-col gap-2 rounded-[20px] bg-surface px-4 py-3 lg:flex">
-        <GhostBar className="h-3.5 w-12" />
-        <SkeletonGoalBars water={false} />
-      </div>
-      <div className="hidden flex-col gap-3 rounded-[20px] bg-surface p-4 lg:flex">
-        <GhostBar className="h-3.5 w-36" />
         {[0, 1, 2].map((i) => (
-          <div key={i} className="grid grid-cols-2 gap-3">
-            <GhostBar className={`h-[46px] rounded-panel ${i === 0 ? "col-span-2" : ""}`} />
-            {i > 0 && <GhostBar className="h-[46px] rounded-panel" />}
+          <div key={i} aria-hidden className="flex items-center gap-3 px-0.5 py-1">
+            <GhostBar className="h-12 w-12 rounded-[16px]" />
+            <div className="min-w-0 flex-1">
+              <GhostBar className={`h-4 ${i === 1 ? "w-40" : "w-28"}`} />
+              <GhostBar className="mt-1.5 h-3 w-24" />
+            </div>
+            <GhostBar className="h-4 w-10" />
+            <GhostBar className="h-11 w-11 rounded-panel" />
           </div>
         ))}
-        <GhostBar className="h-[42px] w-full rounded-panel" />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -124,73 +77,29 @@ export function SkeletonPanels({ label, heights }: { label: string; heights: num
   );
 }
 
-/** Ghost version of the product library: a count line + a few product cards. */
+/** Ghost version of the product list: a few product rows. */
 export function SkeletonProducts() {
   return (
-    <div role="status" aria-label="Products loading" className="flex flex-col gap-3">
-      <div aria-hidden>
-        <GhostBar className="h-3.5 w-20" />
-      </div>
-      {[0, 1, 2].map((i) => (
-        <div key={i} aria-hidden className="overflow-hidden rounded-[20px] bg-surface">
-          <div className="flex items-start gap-4 p-4">
-            <GhostBar className="h-[72px] w-[72px] rounded-lg" />
-            <div className="min-w-0 flex-1">
-              <GhostBar className={`h-5 ${i === 1 ? "w-48" : "w-36"}`} />
-              <GhostBar className="mt-2 h-3 w-28" />
-            </div>
-            <GhostBar className="h-7 w-14" />
+    <div
+      role="status"
+      aria-label="Products loading"
+      className="grid gap-2.5 lg:grid-cols-2 xl:grid-cols-3"
+    >
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          aria-hidden
+          className="flex items-center gap-3 rounded-[20px] bg-surface p-2.5"
+        >
+          <GhostBar className="h-14 w-14 rounded-[16px]" />
+          <div className="min-w-0 flex-1">
+            <GhostBar className={`h-4 ${i % 2 ? "w-40" : "w-28"}`} />
+            <GhostBar className="mt-1.5 h-3 w-44" />
           </div>
-          <div className="px-4 pb-4">
-            <GhostBar className="h-1.5 w-full" />
-            <GhostBar className="mt-2.5 h-3 w-56" />
-          </div>
+          <GhostBar className="h-11 w-11 rounded-panel" />
         </div>
       ))}
     </div>
-  );
-}
-
-/**
- * Ghost version of AnalysisCard, shown wherever an estimate is about to land —
- * first analysis and correction re-analysis alike. Same footprint as the real
- * card so the result "fills in" instead of popping from nowhere.
- */
-export function SkeletonEstimate({ label }: { label: string }) {
-  return (
-    <section
-      role="status"
-      aria-label={`${label} loading`}
-      className="overflow-hidden rounded-[20px] bg-surface"
-    >
-      <header className="flex items-center gap-2 border-b border-line bg-surface-raised px-4 py-2.5">
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">
-          {label}
-        </span>
-      </header>
-      <ul className="divide-y divide-line" aria-hidden>
-        {[0, 1, 2].map((i) => (
-          <li key={i} className="px-4 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <GhostBar className={`h-4 ${i === 1 ? "w-44" : "w-32"}`} />
-              <GhostBar className="h-7 w-14 rounded-md" />
-            </div>
-            <GhostBar className="mt-1.5 h-3 w-40" />
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <GhostBar className="h-3.5 w-16" />
-              <GhostBar className="h-3 w-28" />
-            </div>
-          </li>
-        ))}
-      </ul>
-      <footer
-        className="flex items-center justify-between gap-2 border-t-2 border-foreground px-4 py-3"
-        aria-hidden
-      >
-        <GhostBar className="h-5 w-24" />
-        <GhostBar className="h-3 w-28" />
-      </footer>
-    </section>
   );
 }
 
