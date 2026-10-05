@@ -142,8 +142,11 @@ textarea:focus-visible {
     animation: page-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  /* backwards, not both: a transform left applied after the animation would
+     turn each child into the containing block for position:fixed descendants
+     (the pinned plan button would stick to its section, not the screen) */
   .page-enter > * {
-    animation: content-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: content-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
   .page-enter > :nth-child(2) {
