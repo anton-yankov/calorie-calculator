@@ -11,7 +11,7 @@ import { ZoomableImage } from "@/components/ImageLightbox";
 import { useWaterTracking } from "@/components/WaterTracking";
 import { dayKey, dayLabel } from "@/lib/day";
 import type { Confidence, FoodItem, MealAnalysis, MealTotals } from "@/lib/schema";
-import { foodAmount, foodUnit, formatWater, type DrinkType } from "@/lib/water";
+import { foodAmount, foodUnit, formatWater, mealWeight, type DrinkType } from "@/lib/water";
 import { MealPhoto } from "./MealCards";
 
 const CONFIDENCE: Record<Confidence, string> = {
@@ -193,6 +193,7 @@ export function EstimateCard({
   const removed = previous?.foods.filter((f) => !names.has(norm(f.name))) ?? [];
   const after = progress ? afterThisMeal(progress, analysis.totals) : null;
   const t = analysis.totals;
+  const weight = mealWeight(analysis.foods);
 
   return (
     <section aria-label={label} className="flex flex-col gap-3 rounded-[22px] bg-surface p-4">
@@ -226,6 +227,7 @@ export function EstimateCard({
         <span className="text-[22px] font-extrabold tracking-tight tabular-nums">
           {n(t.calories)} kcal
           <Delta now={t.calories} before={previous?.totals.calories ?? null} />
+          {weight && <span className="text-muted"> · {weight}</span>}
         </span>
         <span className="text-[13.5px] text-muted tabular-nums">
           {Math.round(t.protein_g)} g protein · {Math.round(t.carbs_g)} g carbs ·{" "}

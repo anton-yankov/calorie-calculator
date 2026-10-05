@@ -5,6 +5,7 @@ import { getMealPhotoAction } from "@/app/actions";
 import { ZoomableImage } from "@/components/ImageLightbox";
 import { timeLabel } from "@/lib/day";
 import type { LoggedMeal } from "@/lib/log";
+import { mealWeight } from "@/lib/water";
 
 /** The foods in a meal as one name, e.g. "Fried eggs, Toast with butter". */
 export const mealName = (meal: LoggedMeal) =>
@@ -42,7 +43,7 @@ function MealThumb({ meal, readOnly }: { meal: LoggedMeal; readOnly: boolean }) 
 }
 
 /**
- * One meal as a row: picture, name, time and protein, calories, then whatever
+ * One meal as a row: picture, name, time, weight and protein, calories, then whatever
  * the page puts at the end (the ⋯ button). `onSelect` makes the middle of the
  * row a button, e.g. to open it on the Log.
  */
@@ -64,12 +65,14 @@ export function MealRow({
   end?: React.ReactNode;
 }) {
   const totals = meal.analysis.totals;
+  const weight = mealWeight(meal.analysis.foods);
   const body = (
     <>
       <span className="min-w-0 flex-1">
         <span className="line-clamp-1 text-[14.5px] leading-snug font-bold">{mealName(meal)}</span>
         <span className="block text-[12.5px] text-muted">
-          {timeLabel(meal.loggedAt)} · {Math.round(totals.protein_g)} g protein
+          {timeLabel(meal.loggedAt)} · {weight && `${weight} · `}
+          {Math.round(totals.protein_g)} g protein
           {isManual(meal) && " · manual"}
         </span>
       </span>

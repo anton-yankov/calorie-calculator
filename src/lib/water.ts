@@ -43,6 +43,26 @@ export function foodUnit(food: FoodItem): "g" | "ml" {
   return food.volume_ml != null ? "ml" : "g";
 }
 
+/**
+ * How much the meal weighs, e.g. "430 g", "430 g + 300 ml" or "300 ml". Drinks
+ * stay in ml rather than being added to the grams; typed-in foods have no
+ * portion and are left out. Null when nothing has an amount.
+ */
+export function mealWeight(foods: readonly FoodItem[]): string | null {
+  let grams = 0;
+  let ml = 0;
+  for (const food of foods) {
+    if (food.quickEntry) continue;
+    if (foodUnit(food) === "ml") ml += foodAmount(food);
+    else grams += food.grams;
+  }
+  const parts = [
+    Math.round(grams) > 0 ? `${Math.round(grams).toLocaleString("en-US")} g` : null,
+    Math.round(ml) > 0 ? `${Math.round(ml).toLocaleString("en-US")} ml` : null,
+  ].filter((part) => part !== null);
+  return parts.length > 0 ? parts.join(" + ") : null;
+}
+
 /** Conservative name fallback for products; analysis handles free-form meals. */
 export function detectDrinkType(name: string): DrinkType | null {
   const text = name.toLowerCase().replace(/[_-]/g, " ");

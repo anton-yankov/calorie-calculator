@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meal weight — mockups — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16; --surface: #24221C; --surface-raised: #2A281F; --ink: #EDEAE0; --ink-soft: #A5A195;
+    --accent: #E08A5C; --accent-soft: #3A2A20; --green: #7FBF92; --green-soft: #22312A; --line: #38352C;
+    --code-bg: #2d2d2d; --radius: 10px;
+    --serif: Georgia, 'Times New Roman', serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.65; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  ul.tight { margin: 8px 0; padding-left: 20px; } ul.tight li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px; }
+  th { text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 24px; margin: 18px 0; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px; }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill { font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------- Mock scaffolding ---------- */
+  .screens { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-start; margin: 26px 0 8px; }
+  .pcol { display: flex; flex-direction: column; gap: 12px; width: 375px; max-width: 100%; }
+  .pcap { font-size: 14px; color: var(--ink-soft); }
+  .pcap b { display: block; color: var(--ink); font-size: 15.5px; margin-bottom: 2px; }
+  .screen { border-radius: 34px; border: 10px solid #0c0b09; box-shadow: 0 0 0 1px #3a372e, 0 30px 60px -20px rgba(0,0,0,.7); overflow: hidden; }
+  .new-tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--green); background: var(--green-soft); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+
+  /* =========================================================
+     The app's look ("Plate") — mirrors globals.css tokens
+     ========================================================= */
+  .c {
+    --b: #1A1720; --s1: #24202C; --s2: #2F2A39; --s3: #3A3446; --tx: #F1ECF4; --mu: #A8A0B2;
+    --ac: #F4A77A; --acs: #3B2A2A; --gr: #86D3B0; --grs: #1F3330; --lose: #8DB4E8; --amb: #F2C66D;
+    --red: #F08A8A; --reds: #3A2228; --ln: #352F40;
+    background: var(--b); color: var(--tx); font-family: var(--sans); padding: 14px 12px 16px; line-height: 1.5;
+  }
+  .c .tn { font-variant-numeric: tabular-nums; }
+  .c .est { background: var(--s1); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .c .photo { height: 90px; border-radius: 18px; background:
+      radial-gradient(circle at 34% 50%, #d8b88a 0 15%, transparent 16%),
+      radial-gradient(circle at 60% 42%, #e9e2cf 0 17%, transparent 18%),
+      radial-gradient(circle at 70% 64%, #4f8a4a 0 10%, transparent 11%),
+      radial-gradient(ellipse at 50% 52%, #f3efe6 0 38%, #cfc8ba 39% 41%, transparent 42%),
+      linear-gradient(135deg, #5b4433, #3e2e24); }
+  .c .h b { font-size: 16px; font-weight: 800; letter-spacing: -.01em; display: block; }
+  .c .h small { font-size: 13px; color: var(--mu); }
+  .c ul.foods { list-style: none; margin: 0; padding: 0; }
+  .c ul.foods li { border-top: 1px solid var(--ln); padding: 10px 0; display: flex; align-items: center; gap: 10px; }
+  .c ul.foods li:first-child { border-top: 0; }
+  .c .fn { flex: 1; min-width: 0; }
+  .c .fn b { font-size: 14.5px; font-weight: 700; line-height: 1.35; }
+  .c .fn small { display: block; font-size: 12.5px; color: var(--mu); }
+  .c .chip { border-radius: 999px; padding: 0 8px; font-size: 11.5px; font-weight: 700; margin-left: 4px; vertical-align: 1px; }
+  .c .chip.high { background: var(--grs); color: var(--gr); }
+  .c .chip.medium { background: var(--acs); color: var(--ac); }
+  .c .chip.low { background: var(--reds); color: var(--red); }
+  .c .g { width: 84px; height: 44px; flex-shrink: 0; border-radius: 14px; border: 1.5px solid var(--s3); background: var(--b); display: flex; align-items: center; justify-content: flex-end; padding-right: 12px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .c .g span { color: var(--mu); font-weight: 400; font-size: 13px; padding-left: 4px; }
+  .c .g.focus { border-color: var(--ac); }
+  .c .up { color: var(--ac); margin-left: 4px; }
+  .c .totals { border-top: 2px solid var(--s3); padding-top: 10px; display: flex; flex-direction: column; gap: 2px; }
+  .c .kcal { font-size: 22px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .c .kcal .wt { color: var(--mu); font-weight: 700; }
+  .c .mac { font-size: 13.5px; color: var(--mu); font-variant-numeric: tabular-nums; }
+  .c .after { background: var(--s2); border-radius: 14px; padding: 10px 12px; font-size: 13.5px; color: var(--mu); display: flex; flex-direction: column; gap: 2px; }
+  .c .after small { font-size: 12px; }
+  .c .after b { color: var(--tx); font-weight: 600; }
+  .c .act { display: flex; gap: 8px; }
+  .c .btn { height: 44px; border-radius: 14px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 750; font-size: 14px; white-space: nowrap; }
+  .c .btn-o { border: 1.5px solid var(--s3); }
+  .c .btn-p { background: var(--ac); color: #241a15; flex: 1; }
+  .c svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Option B tiles */
+  .c .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .c .tile { background: var(--s2); border-radius: 14px; padding: 9px 11px; }
+  .c .tile small { display: block; font-size: 12px; color: var(--mu); }
+  .c .tile b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.25; }
+  .c .tile b span { font-size: 12.5px; font-weight: 500; color: var(--mu); letter-spacing: 0; padding-left: 2px; }
+  .c .tile.wt { box-shadow: inset 0 0 0 1.5px var(--acs); }
+
+  /* Option C editable total */
+  .c .wrow { display: flex; align-items: center; gap: 10px; background: var(--s2); border-radius: 14px; padding: 10px 12px; }
+  .c .wrow .lbl { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 700; }
+  .c .wrow .lbl small { display: block; font-weight: 400; font-size: 12px; color: var(--mu); line-height: 1.4; }
+  .c .wrow .g { width: 96px; background: var(--s1); }
+  .c .scaled { font-size: 12.5px; color: var(--gr); background: var(--grs); border-radius: 10px; padding: 6px 10px; }
+
+  /* Option D breakdown bar */
+  .c .wbar { display: flex; flex-direction: column; gap: 8px; background: var(--s2); border-radius: 14px; padding: 11px 12px; }
+  .c .wbar .top { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--mu); }
+  .c .wbar .top b { font-size: 19px; color: var(--tx); font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .c .bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; gap: 2px; }
+  .c .bar i { display: block; height: 100%; }
+  .c .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; font-size: 12.5px; color: var(--mu); font-variant-numeric: tabular-nums; }
+  .c .legend span { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .c .legend em { font-style: normal; color: var(--tx); margin-left: auto; }
+  .c .dot { width: 8px; height: 8px; border-radius: 3px; flex-shrink: 0; }
+
+  /* Logged meal rows */
+  .c .sec-h { display: flex; justify-content: space-between; align-items: baseline; margin: 2px 2px 8px; }
+  .c .sec-h b { font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
+  .c .sec-h small { font-size: 13px; color: var(--mu); }
+  .c .mrow { display: flex; align-items: center; gap: 12px; padding: 6px 2px; }
+  .c .thumb { width: 48px; height: 48px; border-radius: 16px; flex-shrink: 0; background:
+      radial-gradient(circle at 40% 50%, #d8b88a 0 22%, transparent 23%),
+      radial-gradient(ellipse at 50% 50%, #f3efe6 0 42%, transparent 44%), linear-gradient(135deg, #5b4433, #3e2e24); }
+  .c .thumb.b { background: radial-gradient(circle at 50% 55%, #e8c46a 0 30%, transparent 32%), radial-gradient(ellipse at 50% 50%, #f3efe6 0 44%, transparent 46%), linear-gradient(135deg, #4a3a5a, #2f2440); }
+  .c .mrow .fn b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c .mrow .k { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .c .dots3 { width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--mu); font-weight: 800; letter-spacing: 1px; }
+  .c .hl { color: var(--tx); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Mockups · pick one</div>
+  <h1>Showing how much the meal weighs</h1>
+  <p class="subtitle">After a photo or description, the estimate shows calories and macros for the whole meal but never its total weight. Here are four ways to add it, plus how it would carry over to meals you've already logged.</p>
+  <div class="meta">
+    <span><strong>Screen:</strong> the estimate card on the homepage</span>
+    <span><strong>Also affects:</strong> Eaten today, the Log</span>
+    <span><strong>Data:</strong> already stored, no database change</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>What you see today</h2>
+<p class="lede">The AI already estimates grams for every item, and they're the boxes on the right of each row. You can type a real weight there and that row recalculates on the spot. But the meal's total weight isn't shown anywhere, and once you log the meal its weight drops out of sight.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>Current estimate card</b>The totals show 620 kcal and macros. There's no total weight.</div>
+    <div class="screen"><div class="c">
+      <div class="est">
+        <div class="photo"></div>
+        <div class="h"><b>Your meal</b><small>Done in 9 s · tap a weight to change it</small></div>
+        <ul class="foods">
+          <li><div class="fn"><b>Grilled chicken breast</b> <span class="chip high">high</span><small>248 kcal · 46 g protein</small></div><div class="g">150<span>g</span></div></li>
+          <li><div class="fn"><b>Basmati rice</b> <span class="chip medium">medium</span><small>234 kcal · 5 g protein</small></div><div class="g">180<span>g</span></div></li>
+          <li><div class="fn"><b>Roasted broccoli</b> <span class="chip high">high</span><small>50 kcal · 3 g protein</small></div><div class="g">90<span>g</span></div></li>
+          <li><div class="fn"><b>Olive oil</b> <span class="chip low">low</span><small>88 kcal · 0 g protein</small></div><div class="g">10<span>g</span></div></li>
+        </ul>
+        <div class="totals">
+          <span class="kcal">620 kcal</span>
+          <span class="mac">54 g protein · 57 g carbs · 17 g fat</span>
+        </div>
+        <div class="after"><small>After this meal</small><b>1,140 kcal left · 66 g protein to go</b></div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Option A: Weight next to calories</h2>
+<p class="lede">The smallest change. The weight goes in the big totals line, greyed slightly so calories still stand out. You'd see it at a glance without the card looking any different.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>A · "620 kcal · 430 g"</b>Same card, one more figure in the totals line.</div>
+    <div class="screen"><div class="c">
+      <div class="est">
+        <div class="h"><b>Your meal</b><small>Done in 9 s · tap a weight to change it</small></div>
+        <ul class="foods">
+          <li><div class="fn"><b>Grilled chicken breast</b> <span class="chip high">high</span><small>248 kcal · 46 g protein</small></div><div class="g">150<span>g</span></div></li>
+          <li><div class="fn"><b>Basmati rice</b> <span class="chip medium">medium</span><small>234 kcal · 5 g protein</small></div><div class="g">180<span>g</span></div></li>
+          <li><div class="fn"><b>Roasted broccoli</b> <span class="chip high">high</span><small>50 kcal · 3 g protein</small></div><div class="g">90<span>g</span></div></li>
+          <li><div class="fn"><b>Olive oil</b> <span class="chip low">low</span><small>88 kcal · 0 g protein</small></div><div class="g">10<span>g</span></div></li>
+        </ul>
+        <div class="totals">
+          <span class="kcal">620 kcal <span class="wt">· 430 g</span></span>
+          <span class="mac">54 g protein · 57 g carbs · 17 g fat</span>
+        </div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Option B: Three tiles</h2>
+<p class="lede">The totals become three tiles of equal size: Calories, Weight and Protein. Weight gets the same billing as calories. Carbs and fat move to a small line underneath.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>B · Calories · Weight · Protein</b>The weight tile has a faint outline to mark it as new.</div>
+    <div class="screen"><div class="c">
+      <div class="est">
+        <div class="h"><b>Your meal</b><small>Done in 9 s · tap a weight to change it</small></div>
+        <ul class="foods">
+          <li><div class="fn"><b>Grilled chicken breast</b> <span class="chip high">high</span><small>248 kcal · 46 g protein</small></div><div class="g">150<span>g</span></div></li>
+          <li><div class="fn"><b>Basmati rice</b> <span class="chip medium">medium</span><small>234 kcal · 5 g protein</small></div><div class="g">180<span>g</span></div></li>
+          <li><div class="fn"><b>Roasted broccoli</b> <span class="chip high">high</span><small>50 kcal · 3 g protein</small></div><div class="g">90<span>g</span></div></li>
+          <li><div class="fn"><b>Olive oil</b> <span class="chip low">low</span><small>88 kcal · 0 g protein</small></div><div class="g">10<span>g</span></div></li>
+        </ul>
+        <div class="totals" style="gap:8px">
+          <div class="tiles">
+            <div class="tile"><small>Calories</small><b>620<span>kcal</span></b></div>
+            <div class="tile wt"><small>Weight</small><b>430<span>g</span></b></div>
+            <div class="tile"><small>Protein</small><b>54<span>g</span></b></div>
+          </div>
+          <span class="mac">57 g carbs · 17 g fat</span>
+        </div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>Option C: Total weight you can edit</h2>
+<p class="lede">This one fixes accuracy as well as showing the weight. Under the totals sits a "Total weight" box filled in with the AI's guess. If you weighed the plate, type the real number and every item scales to match, so calories update right away. It doesn't use an AI analysis.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>C1 · As estimated</b>The AI guessed 430 g. The box invites you to correct it.</div>
+    <div class="screen"><div class="c">
+      <div class="est">
+        <div class="h"><b>Your meal</b><small>Done in 9 s · tap a weight to change it</small></div>
+        <ul class="foods">
+          <li><div class="fn"><b>Grilled chicken breast</b> <span class="chip high">high</span><small>248 kcal · 46 g protein</small></div><div class="g">150<span>g</span></div></li>
+          <li><div class="fn"><b>Basmati rice</b> <span class="chip medium">medium</span><small>234 kcal · 5 g protein</small></div><div class="g">180<span>g</span></div></li>
+          <li><div class="fn"><b>Roasted broccoli</b> <span class="chip high">high</span><small>50 kcal · 3 g protein</small></div><div class="g">90<span>g</span></div></li>
+          <li><div class="fn"><b>Olive oil</b> <span class="chip low">low</span><small>88 kcal · 0 g protein</small></div><div class="g">10<span>g</span></div></li>
+        </ul>
+        <div class="totals">
+          <span class="kcal">620 kcal</span>
+          <span class="mac">54 g protein · 57 g carbs · 17 g fat</span>
+        </div>
+        <div class="wrow">
+          <div class="lbl">Total weight<small>Weighed it? Enter the real weight and every item scales to match.</small></div>
+          <div class="g">430<span>g</span></div>
+        </div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="pcol">
+    <div class="pcap"><b>C2 · After typing 500 g</b>Each item grows by the same share. The ▲ marks show what moved.</div>
+    <div class="screen"><div class="c">
+      <div class="est">
+        <div class="h"><b>Your meal</b><small>Done in 9 s · tap a weight to change it</small></div>
+        <ul class="foods">
+          <li><div class="fn"><b>Grilled chicken breast</b> <span class="chip high">high</span><small>288 kcal<span class="up">▲40</span> · 54 g protein</small></div><div class="g">174<span>g</span></div></li>
+          <li><div class="fn"><b>Basmati rice</b> <span class="chip medium">medium</span><small>272 kcal<span class="up">▲38</span> · 6 g protein</small></div><div class="g">209<span>g</span></div></li>
+          <li><div class="fn"><b>Roasted broccoli</b> <span class="chip high">high</span><small>58 kcal<span class="up">▲8</span> · 3 g protein</small></div><div class="g">105<span>g</span></div></li>
+          <li><div class="fn"><b>Olive oil</b> <span class="chip low">low</span><small>102 kcal<span class="up">▲14</span> · 0 g protein</small></div><div class="g">12<span>g</span></div></li>
+        </ul>
+        <div class="totals">
+          <span class="kcal">721 kcal<span class="up" style="font-size:15px">▲101</span></span>
+          <span class="mac">63 g protein · 66 g carbs · 20 g fat</span>
+        </div>
+        <div class="wrow">
+          <div class="lbl">Total weight<small>Weighed it? Enter the real weight and every item scales to match.</small></div>
+          <div class="g focus">500<span>g</span></div>
+        </div>
+        <div class="scaled">Scaled up from the AI's 430 g</div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<div class="callout"><strong>The catch with C:</strong> scaling keeps the AI's split between items. If it saw 180 g of rice and 150 g of chicken, a heavier plate means more of both in that ratio. When the split itself is wrong ("it's mostly rice"), typing a weight in a single row or writing a correction to the AI still works better. Option C fixes the common case, where the AI has the right items but the wrong amount.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>Option D: Weight breakdown bar</h2>
+<p class="lede">A strip above the totals shows the total weight in large type, with a bar showing how it splits across the items. It shows the most at a glance and helps you spot a wrong split, such as the AI giving you far too much rice.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>D · "430 g on the plate"</b>Each colour is one item. The legend gives each item's grams.</div>
+    <div class="screen"><div class="c">
+      <div class="est">
+        <div class="h"><b>Your meal</b><small>Done in 9 s · tap a weight to change it</small></div>
+        <ul class="foods">
+          <li><div class="fn"><b>Grilled chicken breast</b> <span class="chip high">high</span><small>248 kcal · 46 g protein</small></div><div class="g">150<span>g</span></div></li>
+          <li><div class="fn"><b>Basmati rice</b> <span class="chip medium">medium</span><small>234 kcal · 5 g protein</small></div><div class="g">180<span>g</span></div></li>
+          <li><div class="fn"><b>Roasted broccoli</b> <span class="chip high">high</span><small>50 kcal · 3 g protein</small></div><div class="g">90<span>g</span></div></li>
+          <li><div class="fn"><b>Olive oil</b> <span class="chip low">low</span><small>88 kcal · 0 g protein</small></div><div class="g">10<span>g</span></div></li>
+        </ul>
+        <div class="wbar">
+          <div class="top"><span>On the plate</span><b>430 g</b></div>
+          <div class="bar">
+            <i style="width:35%;background:#F4A77A"></i>
+            <i style="width:42%;background:#F2C66D"></i>
+            <i style="width:21%;background:#86D3B0"></i>
+            <i style="width:2%;background:#8DB4E8"></i>
+          </div>
+          <div class="legend">
+            <span><i class="dot" style="background:#F4A77A"></i>Chicken<em>150 g</em></span>
+            <span><i class="dot" style="background:#F2C66D"></i>Rice<em>180 g</em></span>
+            <span><i class="dot" style="background:#86D3B0"></i>Broccoli<em>90 g</em></span>
+            <span><i class="dot" style="background:#8DB4E8"></i>Olive oil<em>10 g</em></span>
+          </div>
+        </div>
+        <div class="totals">
+          <span class="kcal">620 kcal</span>
+          <span class="mac">54 g protein · 57 g carbs · 17 g fat</span>
+        </div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>On meals you've already logged</h2>
+<p class="lede">Whichever option you pick, the weight can also go on the meal rows in "Eaten today" and the Log, between the time and the protein. It's optional: say if you'd rather keep those rows as they are.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>Today</b>Time and protein only.</div>
+    <div class="screen"><div class="c">
+      <div class="sec-h"><b>Eaten today</b><small>2 meals · 960 kcal</small></div>
+      <div class="mrow"><span class="thumb b"></span><div class="fn"><b>Scrambled eggs, Toast with butter</b><small>08:15 · 21 g protein</small></div><span class="k">340</span><span class="dots3">···</span></div>
+      <div class="mrow"><span class="thumb"></span><div class="fn"><b>Grilled chicken breast, Basmati rice…</b><small>12:40 · 54 g protein</small></div><span class="k">620</span><span class="dots3">···</span></div>
+    </div></div>
+  </div>
+  <div class="pcol">
+    <div class="pcap"><b>With weight</b><span class="new-tag">new</span> The grams sit beside the time.</div>
+    <div class="screen"><div class="c">
+      <div class="sec-h"><b>Eaten today</b><small>2 meals · 960 kcal</small></div>
+      <div class="mrow"><span class="thumb b"></span><div class="fn"><b>Scrambled eggs, Toast with butter</b><small>08:15 · <span class="hl">210 g</span> · 21 g protein</small></div><span class="k">340</span><span class="dots3">···</span></div>
+      <div class="mrow"><span class="thumb"></span><div class="fn"><b>Grilled chicken breast, Basmati rice…</b><small>12:40 · <span class="hl">430 g</span> · 54 g protein</small></div><span class="k">620</span><span class="dots3">···</span></div>
+    </div></div>
+  </div>
+</div>
+<p>When you open a meal in the Log, it already lists each item's grams. The macro line under the list would gain a total: <code>430 g total · 54 g protein · 57 g carbs · 17 g fat</code>.</p>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>Odd cases (same in every option)</h2>
+<table>
+  <tr><th>Case</th><th>What the total shows</th></tr>
+  <tr><td>Meal with a drink</td><td>Drinks are measured in ml, so they stay separate rather than being added to the grams: <code>620 kcal · 430 g + 300 ml</code>. In Option C, the total-weight box scales only the food. Each drink keeps its own ml box.</td></tr>
+  <tr><td>Drinks only</td><td>Just the volume (<code>300 ml</code>), with no gram figure.</td></tr>
+  <tr><td>Barcode items</td><td>Counted like any other item. Their grams come from the portion you chose when scanning.</td></tr>
+  <tr><td>Manual entries</td><td>These have no weight (you type calories directly), so they're left out of the total. If every item is manual, the weight is hidden instead of showing <code>0 g</code>.</td></tr>
+  <tr><td>Older logged meals</td><td>They work too. The grams were always saved with the meal, just never added up.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">08</span>Side by side</h2>
+<table>
+  <tr><th>Option</th><th>How visible</th><th>Helps accuracy</th><th>Card gets</th></tr>
+  <tr><td>A · Next to calories</td><td>Glanceable, but secondary</td><td>No</td><td>Same size</td></tr>
+  <tr><td>B · Three tiles</td><td>Equal to calories</td><td>No</td><td>Same size</td></tr>
+  <tr><td>C · Editable total</td><td>Clear, with its own box</td><td>Yes: type the scale reading</td><td>One row taller</td></tr>
+  <tr><td>D · Breakdown bar</td><td>The most visible</td><td>Indirectly: shows a wrong split</td><td>Noticeably taller</td></tr>
+</table>
+
+<div class="callout good"><strong>My pick: C, plus the logged-meal rows from section 06.</strong> You said the calories get much more accurate once the AI knows the grams. C turns the total into a place to enter that number, with no AI round trip and no analysis used up. If you only want to <em>see</em> the weight, A is the cleanest. You can also combine options, e.g. B's tiles with C's editable box.</div>
+
+<p>Reply with a letter (A, B, C or D, or a combination) and whether the logged-meal rows should show the weight too.</p>
+
+<footer class="doc">
+  Calorie Calculator · meal weight mockups · 5 October 2026
+</footer>
+
+</div>
+</body>
+</html>

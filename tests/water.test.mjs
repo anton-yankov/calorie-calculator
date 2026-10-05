@@ -248,3 +248,17 @@ test("catalog drinks preserve ml basis, category and litre-sized packages", asyn
   assert.equal(food.calories, 150);
   assert.equal(food.productSnapshot.portionUnit, "ml");
 });
+
+test("meal weight adds up food grams and keeps drinks in ml", () => {
+  const food = (name, grams, extra = {}) => ({ ...legacy, name, grams, ...extra });
+  assert.equal(water.mealWeight([food("Chicken", 150.4), food("Rice", 180)]), "330 g");
+  assert.equal(water.mealWeight([food("Rice", 1200), milk]), "1,200 g + 250 ml");
+  assert.equal(water.mealWeight([milk]), "250 ml");
+  // Typed-in foods have no portion, so they don't count and never show "0 g"
+  assert.equal(water.mealWeight([food("Snack", 0, { quickEntry: true })]), null);
+  assert.equal(
+    water.mealWeight([food("Rice", 180), food("Bar", 0, { quickEntry: true })]),
+    "180 g",
+  );
+  assert.equal(water.mealWeight([]), null);
+});
