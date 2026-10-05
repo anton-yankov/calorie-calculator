@@ -1,39 +1,104 @@
 "use client";
 
-import { X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { CameraOff, Check, Flashlight, FlashlightOff, Keyboard, X } from "lucide-react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { IScannerControls } from "@zxing/browser";
+import { Button } from "@/components/Button";
+import { Field } from "@/components/fields";
+import { Sheet } from "@/components/Sheet";
+import { codeOutline, coverPlacement, type CodeOutline } from "@/lib/barcode-outline";
+
+/** How long the read code stays on screen: the ~650ms morph, then a moment to see the number */
+const LOCK_MS = 900;
+/** Height kept clear above the hint and "Type the number" button at the bottom */
+const BOTTOM_CONTROLS = 170;
 
 interface BarcodeScannerProps {
-  onDetected: (barcode: string) => void;
+  /** The moment a code is read or typed, so the caller can start looking it up */
+  onRead: (barcode: string) => void;
+  /** Once the read code has been shown; the caller closes the scanner */
+  onFinished: () => void;
   onClose: () => void;
 }
 
-function cameraMessage(error: unknown): string {
-  const name = error instanceof DOMException ? error.name : "";
-  if (name === "NotAllowedError" || name === "SecurityError") {
-    return "Camera access is blocked. Allow camera permission in your browser settings, or enter the code below.";
-  }
-  if (name === "NotFoundError" || name === "OverconstrainedError") {
-    return "No rear camera was found. Enter the barcode below instead.";
-  }
-  if (name === "NotReadableError") {
-    return "The camera is in use by another app. Close it there and try again, or enter the code below.";
-  }
-  return "The camera couldn't start. Enter the barcode below instead.";
+interface CameraProblem {
+  title: string;
+  message: string;
+  /** Whether asking for the camera again could help */
+  canRetry: boolean;
 }
 
-export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
+/** The code that was read, and where its outline lands in the view (null: it stays in the frame) */
+interface Lock {
+  barcode: string;
+  outline: CodeOutline | null;
+  view: { width: number; height: number };
+}
+
+function cameraProblem(error: unknown): CameraProblem {
+  const name = error instanceof DOMException ? error.name : "";
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return {
+      title: "The camera is blocked",
+      message:
+        "Allow camera access for this site in your browser settings, or type the number printed under the barcode.",
+      canRetry: true,
+    };
+  }
+  if (name === "NotFoundError" || name === "OverconstrainedError") {
+    return {
+      title: "No camera found",
+      message: "There's no camera to scan with. Type the number printed under the barcode instead.",
+      canRetry: false,
+    };
+  }
+  if (name === "NotReadableError") {
+    return {
+      title: "The camera is busy",
+      message: "Another app is using the camera. Close it there and try again, or type the number.",
+      canRetry: true,
+    };
+  }
+  return {
+    title: "The camera couldn't start",
+    message: "Try again, or type the number printed under the barcode.",
+    canRetry: true,
+  };
+}
+
+/** Where the number chip sits once the outline has landed: under the code, or above it near the bottom */
+function chipPlacement({ outline, view }: Lock): CSSProperties | undefined {
+  if (!outline) return undefined;
+  const turn = (outline.angle * Math.PI) / 180;
+  const halfHeight =
+    (outline.width / 2) * Math.abs(Math.sin(turn)) +
+    (outline.height / 2) * Math.abs(Math.cos(turn));
+  const below = outline.y + halfHeight + 14;
+  const top =
+    below + 38 <= view.height - BOTTOM_CONTROLS ? below : outline.y - halfHeight - 14 - 38;
+  return {
+    left: Math.min(Math.max(outline.x, 110), view.width - 110),
+    top,
+  };
+}
+
+export function BarcodeScanner({ onRead, onFinished, onClose }: BarcodeScannerProps) {
+  const viewRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const frozenRef = useRef<HTMLCanvasElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const detectedRef = useRef(false);
+  const manualOpenRef = useRef(false);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [problem, setProblem] = useState<CameraProblem | null>(null);
+  const [lock, setLock] = useState<Lock | null>(null);
   const [torchAvailable, setTorchAvailable] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [torchPending, setTorchPending] = useState(false);
   const [torchError, setTorchError] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const [manualError, setManualError] = useState<string | null>(null);
 
@@ -46,13 +111,22 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
     };
   }, []);
 
-  // The parent hands down a fresh onDetected closure on every render. Reading it
-  // through a ref keeps the camera effect on an empty dependency list, so a
-  // re-render can't tear the camera down halfway through starting it.
-  const onDetectedRef = useRef(onDetected);
+  // The parent hands down fresh callbacks on every render. Reading them
+  // through refs keeps the camera effect from restarting on a re-render,
+  // which could tear the camera down halfway through starting it.
+  const onReadRef = useRef(onRead);
+  const onFinishedRef = useRef(onFinished);
   useEffect(() => {
-    onDetectedRef.current = onDetected;
+    onReadRef.current = onRead;
+    onFinishedRef.current = onFinished;
   });
+
+  // Hands over once the read code has been on screen long enough to see
+  useEffect(() => {
+    if (!lock) return;
+    const timer = window.setTimeout(() => onFinishedRef.current(), LOCK_MS);
+    return () => window.clearTimeout(timer);
+  }, [lock]);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,18 +134,52 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
     if (!videoElement) return;
     const previewElement: HTMLVideoElement = videoElement;
 
+    /**
+     * Lays the frame that was read over the preview, exactly where the
+     * preview showed it, so the outline lands on a still picture of the code
+     * rather than a moving one. Returns where the outline goes.
+     */
+    function freeze(frame: HTMLCanvasElement | null, ends: { x: number; y: number }[]) {
+      const canvas = frozenRef.current;
+      const view = viewRef.current;
+      if (!frame?.width || !frame.height || !canvas || !view) return null;
+      canvas.width = frame.width;
+      canvas.height = frame.height;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return null;
+      context.drawImage(frame, 0, 0);
+      const viewSize = { width: view.clientWidth, height: view.clientHeight };
+      const { scale, left, top } = coverPlacement(frame, viewSize);
+      Object.assign(canvas.style, {
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${frame.width * scale}px`,
+        height: `${frame.height * scale}px`,
+      });
+      return codeOutline(
+        ends,
+        frame,
+        viewSize,
+        context.getImageData(0, 0, frame.width, frame.height),
+      );
+    }
+
     async function start() {
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-        setCameraError(
-          "Camera scanning needs HTTPS and a supported browser. Enter the barcode below instead.",
-        );
+        setProblem({
+          title: "Scanning isn't available here",
+          message:
+            "Camera scanning needs HTTPS and a supported browser. Type the number printed under the barcode instead.",
+          canRetry: false,
+        });
         return;
       }
 
       try {
         const { createBarcodeReader, isScanMiss } = await import("@/lib/barcode-reader");
         if (cancelled) return;
-        const controls = await createBarcodeReader().decodeFromConstraints(
+        const reader = createBarcodeReader();
+        const controls = await reader.decodeFromConstraints(
           {
             audio: false,
             video: {
@@ -82,19 +190,36 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           },
           previewElement,
           (result, error, scan) => {
-            if (detectedRef.current) return;
+            // While the number sheet is open the camera keeps running, but reads are ignored
+            if (detectedRef.current || manualOpenRef.current) return;
             if (error && !isScanMiss(error)) {
               // zxing ends the scan loop and releases the camera after this
-              setCameraError("The scanner stopped unexpectedly. Enter the barcode below instead.");
+              setProblem({
+                title: "The scanner stopped",
+                message: "Try the camera again, or type the number printed under the barcode.",
+                canRetry: true,
+              });
               return;
             }
             if (!result) return;
             const barcode = result.getText().trim();
             if (!/^\d{7,14}$/.test(barcode)) return;
             detectedRef.current = true;
+            // Before stopping: the read frame is only kept until the next attempt
+            const ends = result.getResultPoints().map((point) => ({
+              x: point.getX(),
+              y: point.getY(),
+            }));
+            const view = viewRef.current;
+            const outline = freeze(reader.lastFrame, ends);
             scan.stop();
             navigator.vibrate?.(60);
-            onDetectedRef.current(barcode);
+            setLock({
+              barcode,
+              outline,
+              view: { width: view?.clientWidth ?? 0, height: view?.clientHeight ?? 0 },
+            });
+            onReadRef.current(barcode);
           },
         );
         if (cancelled) {
@@ -104,7 +229,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
         controlsRef.current = controls;
         setTorchAvailable(Boolean(controls.switchTorch));
       } catch (error) {
-        if (!cancelled) setCameraError(cameraMessage(error));
+        if (!cancelled) setProblem(cameraProblem(error));
       }
     }
 
@@ -116,7 +241,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
       const stream = previewElement.srcObject;
       if (stream instanceof MediaStream) stream.getTracks().forEach((track) => track.stop());
     };
-  }, []);
+  }, [attempt]);
 
   async function toggleTorch() {
     const switchTorch = controlsRef.current?.switchTorch;
@@ -137,49 +262,51 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
     }
   }
 
+  function retryCamera() {
+    setProblem(null);
+    setTorchAvailable(false);
+    setTorchOn(false);
+    setAttempt((current) => current + 1);
+  }
+
+  function setManual(open: boolean) {
+    manualOpenRef.current = open;
+    setManualOpen(open);
+  }
+
   function submitManual(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const barcode = manualCode.replace(/\D/g, "");
     if (!/^\d{7,14}$/.test(barcode)) {
-      setManualError("Enter the 7–14 digits printed below the barcode.");
+      setManualError("Enter the 7–14 digits printed under the barcode.");
       return;
     }
     detectedRef.current = true;
     controlsRef.current?.stop();
-    onDetected(barcode);
+    onRead(barcode);
+    onFinished();
   }
+
+  const glassButton =
+    "flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-md transition";
+  const chip = lock ? chipPlacement(lock) : undefined;
 
   return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="barcode-scanner-title"
-      className="fixed inset-0 z-50 flex min-h-dvh flex-col bg-background"
+      className="fixed inset-0 z-50 overflow-hidden bg-background text-foreground"
       onKeyDown={(event) => {
-        if (event.key === "Escape") onClose();
+        // Escape in the number sheet closes just the sheet
+        if (event.key === "Escape" && !manualOpen) onClose();
       }}
     >
-      <header className="relative z-10 flex items-center justify-between border-b border-line bg-background/90 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-accent">
-            Product scanner
-          </p>
-          <h2 id="barcode-scanner-title" className="text-xl font-extrabold">
-            Scan a food barcode
-          </h2>
-        </div>
-        <button
-          ref={closeRef}
-          type="button"
-          aria-label="Close scanner"
-          onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-lg transition hover:border-accent"
-        >
-          <X className="h-[1.1em] w-[1.1em]" strokeWidth={2.25} aria-hidden />
-        </button>
-      </header>
-
-      <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
+      <div
+        ref={viewRef}
+        className="absolute inset-0 bg-black"
+        style={{ "--scan-frame": "min(70vw, 42dvh, 17rem)" } as CSSProperties}
+      >
         <video
           ref={videoRef}
           muted
@@ -187,76 +314,170 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           aria-label="Live camera preview"
           className="h-full w-full object-cover"
         />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(27,26,22,0.58),transparent_24%,transparent_70%,rgba(27,26,22,0.7))]" />
-        <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-square w-[min(78vw,52vh,22rem)] -translate-x-1/2 -translate-y-1/2 rounded-panel border border-white/45 shadow-[0_0_0_999px_rgba(27,26,22,0.32)]">
-          <span className="absolute left-0 top-0 h-8 w-8 rounded-tl-panel border-l-2 border-t-2 border-white" />
-          <span className="absolute right-0 top-0 h-8 w-8 rounded-tr-panel border-r-2 border-t-2 border-white" />
-          <span className="absolute bottom-0 left-0 h-8 w-8 rounded-bl-panel border-b-2 border-l-2 border-white" />
-          <span className="absolute bottom-0 right-0 h-8 w-8 rounded-br-panel border-b-2 border-r-2 border-white" />
-          <span className="barcode-scan-line-horizontal absolute left-[7%] top-1/2 h-0.5 w-[86%] -translate-y-1/2 bg-accent shadow-[0_0_16px_3px_rgba(224,138,92,0.65)]" />
-          <span className="barcode-scan-line-vertical absolute left-1/2 top-[7%] h-[86%] w-0.5 -translate-x-1/2 bg-accent/55 shadow-[0_0_14px_2px_rgba(224,138,92,0.45)]" />
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/20 bg-black/45 px-3 py-1.5 text-xs font-semibold text-white/90 backdrop-blur-sm">
-            Upright or sideways
-          </div>
-        </div>
-        {torchAvailable && (
+        <canvas
+          ref={frozenRef}
+          aria-hidden
+          className={`absolute max-w-none ${lock ? "" : "hidden"}`}
+        />
+        {lock && <span aria-hidden className="scan-flash" />}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[linear-gradient(to_bottom,rgb(26_23_32/0.82),transparent)]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-60 bg-[linear-gradient(to_top,rgb(26_23_32/0.9)_30%,transparent)]"
+        />
+
+        {!problem && (
+          <>
+            <div
+              aria-hidden
+              className="scan-frame"
+              data-locked={lock ? "" : undefined}
+              style={
+                lock?.outline
+                  ? {
+                      left: lock.outline.x,
+                      top: lock.outline.y,
+                      width: lock.outline.width,
+                      height: lock.outline.height,
+                      transform: `translate(-50%, -50%) rotate(${lock.outline.angle}deg)`,
+                    }
+                  : undefined
+              }
+            >
+              <div className="scan-corners">
+                <span className="scan-corner scan-corner-tl" />
+                <span className="scan-corner scan-corner-tr" />
+                <span className="scan-corner scan-corner-bl" />
+                <span className="scan-corner scan-corner-br" />
+              </div>
+            </div>
+            <p
+              role="status"
+              className="scan-status"
+              data-locked={lock ? "" : undefined}
+              style={chip}
+            >
+              <span className="scan-status-looking" aria-hidden={Boolean(lock)}>
+                <i aria-hidden className="scan-live-dot" />
+                Looking for a barcode
+              </span>
+              <span className="scan-status-found" aria-hidden={!lock}>
+                <Check className="h-[17px] w-[17px]" strokeWidth={2.6} aria-hidden />
+                <span className="font-mono tabular-nums">{lock?.barcode}</span>
+              </span>
+            </p>
+          </>
+        )}
+      </div>
+
+      <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <button
+          ref={closeRef}
+          type="button"
+          aria-label="Close scanner"
+          onClick={onClose}
+          className={`${glassButton} border-foreground/15 bg-background/55 hover:bg-background/80`}
+        >
+          <X className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+        </button>
+        <h2 id="barcode-scanner-title" className="text-[17px] font-extrabold tracking-tight">
+          Scan a barcode
+        </h2>
+        {torchAvailable && !problem && !lock ? (
           <button
             type="button"
             aria-label={torchOn ? "Turn flashlight off" : "Turn flashlight on"}
             aria-pressed={torchOn}
             disabled={torchPending}
             onClick={() => void toggleTorch()}
-            className="absolute right-5 top-5 flex h-11 items-center gap-2 rounded-full border border-white/35 bg-black/55 px-4 text-sm font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/70 disabled:cursor-wait disabled:opacity-60"
+            className={`${glassButton} disabled:cursor-wait disabled:opacity-60 ${
+              torchOn
+                ? "border-accent bg-accent text-background"
+                : "border-foreground/15 bg-background/55 hover:bg-background/80"
+            }`}
           >
-            <span aria-hidden="true">{torchOn ? "●" : "○"}</span>
-            {torchOn ? "Light on" : "Light"}
+            {torchOn ? (
+              <FlashlightOff className="h-5 w-5" strokeWidth={2} aria-hidden />
+            ) : (
+              <Flashlight className="h-5 w-5" strokeWidth={2} aria-hidden />
+            )}
           </button>
+        ) : (
+          <span aria-hidden className="h-11 w-11" />
         )}
-        {torchError && (
-          <p className="absolute right-5 top-5 max-w-56 rounded-panel bg-black/70 px-3 py-2 text-right text-xs text-white backdrop-blur">
-            {torchError}
-          </p>
-        )}
-        <p className="absolute bottom-5 left-0 right-0 px-5 text-center text-sm font-medium text-foreground drop-shadow">
-          Center the barcode and hold steady
-        </p>
-        {cameraError && (
-          <div className="absolute inset-x-5 top-5 rounded-panel border border-danger/50 bg-danger-soft/95 px-4 py-3 text-sm text-danger backdrop-blur">
-            {cameraError}
-          </div>
-        )}
-      </div>
+      </header>
 
-      <form
-        onSubmit={submitManual}
-        className="border-t border-line bg-background px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4"
-      >
-        <label htmlFor="manual-barcode" className="mb-2 block text-xs font-semibold text-muted">
-          Or enter the number below the barcode
-        </label>
-        <div className="flex gap-2">
-          <input
-            id="manual-barcode"
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            value={manualCode}
-            onChange={(event) => {
-              setManualCode(event.target.value);
-              setManualError(null);
-            }}
-            placeholder="e.g. 3017624010701"
-            className="min-w-0 flex-1 rounded-panel border border-line bg-surface px-3 py-2.5 text-sm tabular-nums placeholder:text-muted/65 focus:border-accent focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="rounded-panel bg-accent px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
+      {torchError && !problem && (
+        <p className="absolute right-4 top-[calc(max(0.75rem,env(safe-area-inset-top))+3.5rem)] z-10 max-w-56 rounded-panel border border-foreground/15 bg-background/75 px-3 py-2 text-right text-xs backdrop-blur-md">
+          {torchError}
+        </p>
+      )}
+
+      {problem ? (
+        <div className="absolute inset-0 z-[5] flex items-center justify-center bg-background px-6">
+          <div className="flex w-full max-w-sm flex-col items-center gap-3 text-center">
+            <span className="mb-1.5 flex h-[76px] w-[76px] items-center justify-center rounded-[26px] bg-surface text-muted">
+              <CameraOff className="h-[34px] w-[34px]" strokeWidth={1.9} aria-hidden />
+            </span>
+            <h3 className="text-[22px] font-extrabold tracking-tight">{problem.title}</h3>
+            <p className="mb-3 text-[15px] leading-normal text-muted">{problem.message}</p>
+            <Button className="w-full" onClick={() => setManual(true)}>
+              <Keyboard className="h-[19px] w-[19px]" strokeWidth={2} aria-hidden />
+              Type the number instead
+            </Button>
+            {problem.canRetry && (
+              <Button variant="outline" className="w-full" onClick={retryCamera}>
+                Try the camera again
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="absolute inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-md flex-col gap-3.5 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <p
+            className={`text-center text-[14.5px] font-semibold ${
+              lock ? "text-success" : "text-foreground/90"
+            }`}
           >
-            Look up
+            {lock ? "Got it. Looking it up…" : "Upright or sideways, both work."}
+          </p>
+          <button
+            type="button"
+            disabled={Boolean(lock)}
+            onClick={() => setManual(true)}
+            className="flex h-[52px] items-center justify-center gap-2.5 rounded-2xl border border-foreground/12 bg-surface-raised/75 text-[15px] font-bold backdrop-blur-md transition hover:bg-surface-raised disabled:opacity-40"
+          >
+            <Keyboard className="h-5 w-5 text-accent" strokeWidth={2} aria-hidden />
+            Type the number instead
           </button>
         </div>
-        {manualError && <p className="mt-2 text-xs text-danger">{manualError}</p>}
-      </form>
+      )}
+
+      <Sheet open={manualOpen} onClose={() => setManual(false)} title="Type the barcode number">
+        <form onSubmit={submitManual} className="flex flex-col gap-3.5">
+          <p className="-mt-1.5 text-[13.5px] text-muted">
+            The 7–14 digits printed under the bars.
+          </p>
+          <Field
+            label="Barcode number"
+            value={manualCode}
+            onChange={(value) => {
+              setManualCode(value);
+              setManualError(null);
+            }}
+            autoComplete="off"
+          />
+          {manualError && (
+            <p role="alert" className="text-sm font-semibold text-danger">
+              {manualError}
+            </p>
+          )}
+          <Button type="submit">Look up</Button>
+        </form>
+      </Sheet>
     </div>,
     document.body,
   );

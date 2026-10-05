@@ -197,8 +197,8 @@ export function BarcodeFlow({
   const [product, setProduct] = useState<BarcodeProduct | null>(null);
   const [missing, setMissing] = useState<{ error: string; name: string } | null>(null);
 
+  // Starts as soon as the code is read, while the scanner is still showing it
   async function lookup(code: string) {
-    setScanning(false);
     setBarcode(code);
     setLooking(true);
     try {
@@ -231,7 +231,13 @@ export function BarcodeFlow({
   }
 
   if (scanning) {
-    return <BarcodeScanner onDetected={(code) => void lookup(code)} onClose={onDone} />;
+    return (
+      <BarcodeScanner
+        onRead={(code) => void lookup(code)}
+        onFinished={() => setScanning(false)}
+        onClose={onDone}
+      />
+    );
   }
   return (
     <>

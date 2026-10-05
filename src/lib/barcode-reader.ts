@@ -40,7 +40,15 @@ class TurnableFrameSource extends HTMLCanvasElementLuminanceSource {
 }
 
 class SidewaysCapableReader extends BrowserMultiFormatOneDReader {
+  /**
+   * The camera frame the latest attempt read. A result's points are positions
+   * in this frame, so the scanner freezes it on screen to draw the outline.
+   * zxing redraws it on the next attempt, so copy it before scanning on.
+   */
+  lastFrame: HTMLCanvasElement | null = null;
+
   override decodeFromCanvas(canvas: HTMLCanvasElement) {
+    this.lastFrame = canvas;
     return this.decodeBitmap(
       new BinaryBitmap(new HybridBinarizer(new TurnableFrameSource(canvas))),
     );
