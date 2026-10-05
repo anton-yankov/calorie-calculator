@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newest meal first — Home &amp; Log</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+
+    /* The app's own colours, for the screen mockups */
+    --a-bg: #1a1720;
+    --a-fg: #f1ecf4;
+    --a-s1: #24202c;
+    --a-s2: #2f2a39;
+    --a-mu: #a8a0b2;
+    --a-ac: #f4a77a;
+    --a-gr: #86d3b0;
+    --a-grs: #1f3330;
+    --a-ls: #3a3446;
+    --a-am: #f2c66d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); font-weight: 600; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: 'JetBrains Mono', monospace; }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  pre { background: var(--code-bg); border-radius: var(--radius); font-size: 13.5px; line-height: 1.55; margin: 16px 0; padding: 18px 20px; overflow-x: auto; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+
+  /* Before / after pairs */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 24px 0 8px; }
+  @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+  .label { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; color: var(--ink-soft); }
+  .label.after { color: var(--green); }
+  .screen {
+    background: var(--a-bg); color: var(--a-fg); border-radius: 28px; padding: 18px 16px;
+    border: 8px solid #0c0b09; box-shadow: 0 0 0 1px #3a372e;
+    font-size: 14px; line-height: 1.35;
+  }
+  .screen.after { box-shadow: 0 0 0 2px var(--green); }
+  .fade { color: var(--a-mu); font-size: 12px; text-align: center; padding: 4px 0 10px; border-bottom: 1px dashed var(--a-ls); margin-bottom: 12px; }
+  .s-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 2px 0 10px; }
+  .s-head h4 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; }
+  .s-head span { font-size: 13px; color: var(--a-mu); }
+  .meal { display: flex; align-items: center; gap: 12px; padding: 4px 0; margin-bottom: 6px; position: relative; }
+  .thumb { width: 44px; height: 44px; border-radius: 15px; flex-shrink: 0; background: var(--a-s2); display: flex; align-items: center; justify-content: center; color: var(--a-mu); font-size: 18px; }
+  .t1 { background: linear-gradient(135deg, #e8b46a, #a8643a); }
+  .t2 { background: linear-gradient(135deg, #8fbf7a, #3f6f4a); }
+  .t3 { background: linear-gradient(135deg, #d98a7a, #7a3f3a); }
+  .meal-t { flex: 1; min-width: 0; font-weight: 700; font-size: 14.5px; }
+  .meal-t small { display: block; color: var(--a-mu); font-weight: 400; font-size: 12.5px; }
+  .kcal { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .dots { color: var(--a-mu); padding-left: 4px; letter-spacing: 1px; }
+  .meal.new { background: var(--a-grs); border-radius: 16px; padding: 8px; margin: 0 -8px 6px; }
+  .tag {
+    position: absolute; right: -6px; top: -9px; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; background: var(--accent); color: #1B1A16; padding: 1px 7px; border-radius: 999px;
+  }
+  .day { background: var(--a-s1); border-radius: 18px; padding: 12px 13px; margin-bottom: 10px; }
+  .day-top { display: flex; justify-content: space-between; align-items: center; }
+  .day-top b { font-size: 16px; font-weight: 800; }
+  .day-top b small { font-size: 12px; color: var(--a-mu); font-weight: 500; margin-left: 5px; }
+  .chip { font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; }
+  .chip.prog { background: var(--a-s2); color: #8db4e8; }
+  .chip.met { background: var(--a-grs); color: var(--a-gr); }
+  .bars { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 9px; font-size: 11px; color: var(--a-mu); }
+  .track { height: 5px; border-radius: 9px; background: var(--a-ls); margin-top: 4px; overflow: hidden; }
+  .track i { display: block; height: 100%; border-radius: 9px; }
+  .day-meals { padding: 0 2px 8px; }
+  .gap { height: 8px; }
+  .note { font-size: 13px; color: var(--ink-soft); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Mockup · before &amp; after</div>
+  <h1>Newest meal first</h1>
+  <p class="subtitle">On the homepage and the Log, a day's meals currently run oldest → newest, so the meal you just logged lands at the bottom. This flips each day's list so the latest meal sits at the top.</p>
+  <div class="meta">
+    <span><strong>Pages:</strong> Home, Log (and the admin's view of a user's log)</span>
+    <span><strong>Size:</strong> two small ordering changes</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>Homepage — “Eaten today”</h2>
+<p class="lede">Same day, same four meals. Breakfast at 08:10 was first, the protein shake at 16:30 was just logged (tinted green for a few seconds, as now).</p>
+
+<div class="pair">
+  <div>
+    <div class="label">Now</div>
+    <div class="screen">
+      <div class="fade">↑ today's numbers, water, weigh-in</div>
+      <div class="s-head"><h4>Eaten today</h4><span>4 meals · 1,740 kcal</span></div>
+      <div class="meal"><div class="thumb t1"></div><div class="meal-t">Fried eggs, Toast with butter<small>08:10 · 24 g protein</small></div><span class="kcal">460</span><span class="dots">⋯</span></div>
+      <div class="meal"><div class="thumb t2"></div><div class="meal-t">Chicken salad<small>12:45 · 41 g protein</small></div><span class="kcal">520</span><span class="dots">⋯</span></div>
+      <div class="meal"><div class="thumb">✎</div><div class="meal-t">Snickers<small>14:20 · 4 g protein · manual</small></div><span class="kcal">250</span><span class="dots">⋯</span></div>
+      <div class="meal new"><span class="tag">just logged</span><div class="thumb t3"></div><div class="meal-t">Protein shake, Banana<small>16:30 · 32 g protein</small></div><span class="kcal">510</span><span class="dots">⋯</span></div>
+    </div>
+    <p class="note">The newest meal is last — on a phone that's below the fold, under everything else on the page.</p>
+  </div>
+  <div>
+    <div class="label after">After</div>
+    <div class="screen after">
+      <div class="fade">↑ today's numbers, water, weigh-in</div>
+      <div class="s-head"><h4>Eaten today</h4><span>4 meals · 1,740 kcal</span></div>
+      <div class="meal new"><span class="tag">just logged</span><div class="thumb t3"></div><div class="meal-t">Protein shake, Banana<small>16:30 · 32 g protein</small></div><span class="kcal">510</span><span class="dots">⋯</span></div>
+      <div class="meal"><div class="thumb">✎</div><div class="meal-t">Snickers<small>14:20 · 4 g protein · manual</small></div><span class="kcal">250</span><span class="dots">⋯</span></div>
+      <div class="meal"><div class="thumb t2"></div><div class="meal-t">Chicken salad<small>12:45 · 41 g protein</small></div><span class="kcal">520</span><span class="dots">⋯</span></div>
+      <div class="meal"><div class="thumb t1"></div><div class="meal-t">Fried eggs, Toast with butter<small>08:10 · 24 g protein</small></div><span class="kcal">460</span><span class="dots">⋯</span></div>
+    </div>
+    <p class="note">The newest meal is first, right under the heading. Nothing else on the page moves.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Log page</h2>
+<p class="lede">Days are already newest first (Today, then Yesterday…). Only the meals <em>inside</em> each day flip, so the whole page reads newest → oldest from top to bottom. Day cards, totals and the calendar are untouched.</p>
+
+<div class="pair">
+  <div>
+    <div class="label">Now</div>
+    <div class="screen">
+      <div class="day">
+        <div class="day-top"><b>Today<small>Mon 5 Oct</small></b><span class="chip prog">460 left</span></div>
+        <div class="bars"><div>Calories<div class="track"><i style="width:66%;background:#8db4e8"></i></div></div><div>Protein<div class="track"><i style="width:62%;background:#8db4e8"></i></div></div></div>
+      </div>
+      <div class="day-meals">
+        <div class="meal"><div class="thumb t1"></div><div class="meal-t">Fried eggs, Toast with butter<small>08:10 · 24 g protein</small></div><span class="kcal">460</span><span class="dots">⋯</span></div>
+        <div class="meal"><div class="thumb t2"></div><div class="meal-t">Chicken salad<small>12:45 · 41 g protein</small></div><span class="kcal">520</span><span class="dots">⋯</span></div>
+        <div class="meal"><div class="thumb">✎</div><div class="meal-t">Snickers<small>14:20 · 4 g protein · manual</small></div><span class="kcal">250</span><span class="dots">⋯</span></div>
+        <div class="meal"><div class="thumb t3"></div><div class="meal-t">Protein shake, Banana<small>16:30 · 32 g protein</small></div><span class="kcal">510</span><span class="dots">⋯</span></div>
+      </div>
+      <div class="day">
+        <div class="day-top"><b>Yesterday<small>Sun 4 Oct</small></b><span class="chip met">On target</span></div>
+        <div class="bars"><div>Calories<div class="track"><i style="width:80%;background:var(--a-gr)"></i></div></div><div>Protein<div class="track"><i style="width:84%;background:var(--a-gr)"></i></div></div></div>
+      </div>
+      <div class="day-meals">
+        <div class="meal"><div class="thumb t2"></div><div class="meal-t">Oats with berries<small>09:00 · 14 g protein</small></div><span class="kcal">390</span><span class="dots">⋯</span></div>
+        <div class="meal"><div class="thumb t1"></div><div class="meal-t">Pasta bolognese<small>19:15 · 38 g protein</small></div><span class="kcal">780</span><span class="dots">⋯</span></div>
+      </div>
+    </div>
+    <p class="note">Times zig-zag: days go down in time, meals within a day go up.</p>
+  </div>
+  <div>
+    <div class="label after">After</div>
+    <div class="screen after">
+      <div class="day">
+        <div class="day-top"><b>Today<small>Mon 5 Oct</small></b><span class="chip prog">460 left</span></div>
+        <div class="bars"><div>Calories<div class="track"><i style="width:66%;background:#8db4e8"></i></div></div><div>Protein<div class="track"><i style="width:62%;background:#8db4e8"></i></div></div></div>
+      </div>
+      <div class="day-meals">
+        <div class="meal"><div class="thumb t3"></div><div class="meal-t">Protein shake, Banana<small>16:30 · 32 g protein</small></div><span class="kcal">510</span><span class="dots">⋯</span></div>
+        <div class="meal"><div class="thumb">✎</div><div class="meal-t">Snickers<small>14:20 · 4 g protein · manual</small></div><span class="kcal">250</span><span class="dots">⋯</span></div>
+        <div class="meal"><div class="thumb t2"></div><div class="meal-t">Chicken salad<small>12:45 · 41 g protein</small></div><span class="kcal">520</span><span class="dots">⋯</span></div>
+        <div class="meal"><div class="thumb t1"></div><div class="meal-t">Fried eggs, Toast with butter<small>08:10 · 24 g protein</small></div><span class="kcal">460</span><span class="dots">⋯</span></div>
+      </div>
+      <div class="day">
+        <div class="day-top"><b>Yesterday<small>Sun 4 Oct</small></b><span class="chip met">On target</span></div>
+        <div class="bars"><div>Calories<div class="track"><i style="width:80%;background:var(--a-gr)"></i></div></div><div>Protein<div class="track"><i style="width:84%;background:var(--a-gr)"></i></div></div></div>
+      </div>
+      <div class="day-meals">
+        <div class="meal"><div class="thumb t1"></div><div class="meal-t">Pasta bolognese<small>19:15 · 38 g protein</small></div><span class="kcal">780</span><span class="dots">⋯</span></div>
+        <div class="meal"><div class="thumb t2"></div><div class="meal-t">Oats with berries<small>09:00 · 14 g protein</small></div><span class="kcal">390</span><span class="dots">⋯</span></div>
+      </div>
+    </div>
+    <p class="note">One direction all the way down: the most recent meal you ever logged is the first row on the page.</p>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>What changes in the code</h2>
+<p class="lede">Display order only — nothing in the database, the totals or the day grouping changes.</p>
+
+<table>
+  <tr><th>Where</th><th>Today</th><th>After</th></tr>
+  <tr><td><code>EatenToday.tsx</code></td><td>Renders the day's meals as the server sends them (oldest first)</td><td>Renders them reversed, newest first</td></tr>
+  <tr><td><code>LogList.tsx</code></td><td>Reverses the newest-first list so each day reads in eating order</td><td>Keeps the list newest first inside each day; days stay newest first</td></tr>
+</table>
+
+<div class="callout good"><strong>Comes along for free:</strong> “Log again” and a freshly logged meal now appear at the top, where the green “just logged” tint is visible straight away. The admin's view of a user's log uses the same list, so it flips too.</div>
+
+<footer class="doc">
+  Calorie Calculator · newest meal first · mockup for approval
+</footer>
+
+</div>
+</body>
+</html>

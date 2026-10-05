@@ -224,7 +224,8 @@ function LogMeal({ meal, readOnly }: { meal: LoggedMeal; readOnly: boolean }) {
 }
 
 /**
- * The Log: every day newest first, as a day card with its meals underneath.
+ * The Log: every day newest first, as a day card with its meals (also newest
+ * first) underneath.
  * On desktop, month calendars stay in a column on the left; tapping a day
  * scrolls to it. Each day is judged by the plan that applied on it.
  * `readOnly` (the admin's view of another account) hides every action.
@@ -255,12 +256,12 @@ export function LogList({
 
   const todayKey = dayKey(new Date());
   const days = new Map<string, LoggedMeal[]>();
-  // The list arrives newest first; within a day, meals read in eating order
-  for (const meal of [...meals].reverse()) {
+  // The list arrives newest first, and both the days and their meals keep that order
+  for (const meal of meals) {
     const key = dayKey(meal.loggedAt);
     days.set(key, [...(days.get(key) ?? []), meal]);
   }
-  const dayKeys = [...days.keys()].reverse();
+  const dayKeys = [...days.keys()];
   const totalsOf = (key: string) => sumTotals((days.get(key) ?? []).map((m) => m.analysis.totals));
 
   function dayStatus(key: string): CalendarDay {

@@ -5,7 +5,7 @@ import { MealMenu } from "@/components/meals/MealActions";
 import { MealRow } from "@/components/meals/MealRow";
 import { dayLabel } from "@/lib/day";
 
-/** The day's meals under everything else on the homepage, each with its ⋯ menu. */
+/** The day's meals under everything else on the homepage, newest first, each with its ⋯ menu. */
 export function EatenToday({
   progress,
   day,
@@ -24,6 +24,8 @@ export function EatenToday({
 }) {
   if (!progress) return null;
   const { meals, totals } = progress;
+  // The day arrives oldest first; the latest meal goes on top
+  const newestFirst = [...meals].reverse();
   return (
     <section aria-label="Meals this day" className={`flex flex-col gap-2 ${className}`}>
       <div className="mt-1.5 flex items-baseline justify-between gap-3">
@@ -43,7 +45,7 @@ export function EatenToday({
           <p className="mt-1 text-[13.5px] text-muted">Your meals show up here as you add them.</p>
         </div>
       ) : (
-        meals.map((meal) => (
+        newestFirst.map((meal) => (
           <MealRow
             key={meal.id}
             meal={meal}
