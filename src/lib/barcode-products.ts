@@ -23,10 +23,12 @@ interface BarcodeProductRow {
   image_url: string | null;
   serving_grams: number | null;
   updated_at: string;
+  /** Only written when the product is logged, so saving an edit never moves it */
+  last_logged_at?: string | null;
 }
 
 const PRODUCT_COLUMNS =
-  "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, updated_at, image_url, serving_grams, portion_unit, drink_type";
+  "barcode, name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, updated_at, image_url, serving_grams, portion_unit, drink_type, last_logged_at";
 
 /** Upserts match on the composite primary key, so one user's save never touches another's. */
 const OWNER_KEY = "user_id,barcode";
@@ -47,6 +49,7 @@ function toProduct(row: BarcodeProductRow): BarcodeProduct {
       fat_g: row.fat_per_100g,
     },
     source: "saved",
+    lastLoggedAt: row.last_logged_at ?? null,
   };
 }
 
@@ -136,9 +139,11 @@ function loggedAmounts(foods: readonly FoodItem[]): Map<string, number> {
 }
 
 /**
- * Makes each logged amount the one prefilled on the next scan. Only touches
- * products that are already saved, and only their amount: a deleted product
- * stays deleted and saved edits to nutrition, name or image are kept.
+ * Makes each logged amount the one prefilled on the next scan, and marks the
+ * product as just logged (the homepage search lists recent ones first). Only
+ * touches products that are already saved, and only those two fields: a
+ * deleted product stays deleted and saved edits to nutrition, name or image
+ * are kept.
  */
 export async function rememberLoggedAmounts(
   userId: string,
@@ -147,11 +152,12 @@ export async function rememberLoggedAmounts(
   const amounts = loggedAmounts(foods);
   if (amounts.size === 0) return;
   const db = await createSessionClient();
+  const loggedAt = new Date().toISOString();
   const results = await Promise.all(
     [...amounts].map(([barcode, amount]) =>
       db
         .from("barcode_products")
-        .update({ serving_grams: amount })
+        .update({ serving_grams: amount, last_logged_at: loggedAt })
         .eq("user_id", userId)
         .eq("barcode", barcode),
     ),

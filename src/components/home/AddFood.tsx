@@ -1,6 +1,6 @@
 "use client";
 
-import { Barcode, Camera, MessageSquareText, PencilLine } from "lucide-react";
+import { Barcode, Camera, MessageSquareText, PencilLine, Search } from "lucide-react";
 import { useRef } from "react";
 import { useAiAllowance } from "@/components/AiAllowance";
 
@@ -27,7 +27,7 @@ function Square({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="flex h-[88px] flex-col items-center justify-center gap-2 rounded-[20px] bg-surface text-[13.5px] font-bold transition hover:bg-surface-raised disabled:cursor-not-allowed disabled:text-muted [&:disabled_svg]:text-muted/60"
+      className="flex h-[88px] min-w-0 flex-col items-center justify-center gap-2 rounded-[20px] bg-surface text-[13px] font-bold transition hover:bg-surface-raised disabled:cursor-not-allowed disabled:text-muted [&:disabled_svg]:text-muted/60"
     >
       {icon}
       {label}
@@ -36,21 +36,23 @@ function Square({
 }
 
 /**
- * The four ways to add food. Photo is the big button because it's used most;
- * Describe, Barcode and Manual sit under it at equal size. Once the day's AI
- * analyses are used up (or the admin paused them), Photo and Describe go grey
- * with the reason, while Barcode and Manual keep working.
+ * The ways to add food. Photo is the big button because it's used most;
+ * Describe, Barcode, Search (saved products) and Manual sit under it at equal
+ * size. Once the day's AI analyses are used up (or the admin paused them),
+ * Photo and Describe go grey with the reason, while the rest keep working.
  */
 export function AddFood({
   onPhoto,
   onDescribe,
   onBarcode,
+  onSearch,
   onManual,
   className = "",
 }: {
   onPhoto: (file: File) => void;
   onDescribe: () => void;
   onBarcode: () => void;
+  onSearch: () => void;
   onManual: () => void;
   className?: string;
 }) {
@@ -113,7 +115,7 @@ export function AddFood({
           </span>
         </span>
       </button>
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-4 gap-2">
         <Square
           icon={<MessageSquareText className={iconClass} strokeWidth={1.9} aria-hidden />}
           label="Describe"
@@ -126,6 +128,11 @@ export function AddFood({
           onClick={onBarcode}
         />
         <Square
+          icon={<Search className={iconClass} strokeWidth={1.9} aria-hidden />}
+          label="Search"
+          onClick={onSearch}
+        />
+        <Square
           icon={<PencilLine className={iconClass} strokeWidth={1.9} aria-hidden />}
           label="Manual"
           onClick={onManual}
@@ -133,7 +140,7 @@ export function AddFood({
       </div>
       {capReached && (
         <p className="text-[12.5px] text-muted">
-          Barcode and Manual still work, they don&apos;t use AI.
+          Barcode, Search and Manual still work, they don&apos;t use AI.
         </p>
       )}
     </div>

@@ -16,6 +16,7 @@ export function Sheet({
   onClose,
   title,
   badge,
+  focusPanel = false,
   children,
 }: {
   open: boolean;
@@ -23,6 +24,11 @@ export function Sheet({
   title: string;
   /** A small chip beside the title, e.g. "No AI used" */
   badge?: React.ReactNode;
+  /**
+   * Focus the panel itself instead of its first field, so a phone keeps the
+   * keyboard down until a field is tapped
+   */
+  focusPanel?: boolean;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -33,6 +39,8 @@ export function Sheet({
     openRef.current = open;
     const dialog = ref.current;
     if (!dialog) return;
+    // An autofocus attribute on the dialog makes showModal focus the dialog itself
+    dialog.toggleAttribute("autofocus", focusPanel);
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
     if (!open) return;
@@ -43,12 +51,13 @@ export function Sheet({
     return () => {
       root.style.overflow = previous;
     };
-  }, [open]);
+  }, [open, focusPanel]);
 
   return (
     <dialog
       ref={ref}
       aria-label={title}
+      tabIndex={focusPanel ? -1 : undefined}
       // close also fires (a task later) after the parent sets `open` to false;
       // only a close the user made (Escape) is reported, or a parent that
       // swaps one sheet for another would hear onClose for the old one
@@ -60,7 +69,7 @@ export function Sheet({
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="m-0 mt-auto max-h-[88dvh] w-full max-w-none overflow-y-auto rounded-t-[28px] bg-surface p-0 text-foreground backdrop:bg-black/60 lg:m-auto lg:max-w-md lg:rounded-[24px]"
+      className="m-0 mt-auto max-h-[88dvh] w-full max-w-none overflow-y-auto rounded-t-[28px] bg-surface p-0 text-foreground backdrop:bg-black/60 lg:m-auto lg:max-w-md lg:rounded-[24px] focus:outline-none"
     >
       {open && (
         <div className="flex flex-col gap-3.5 px-[18px] pt-2.5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] lg:px-6 lg:pt-6 lg:pb-6">

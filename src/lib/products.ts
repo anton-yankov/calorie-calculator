@@ -82,6 +82,8 @@ export interface BarcodeProduct {
   servingGrams: number | null;
   per100g: ProductNutrition;
   source: "open-food-facts" | "saved";
+  /** When a saved product was last logged (null if never since this was tracked) */
+  lastLoggedAt?: string | null;
 }
 
 function productName(product: Pick<BarcodeProduct, "brand" | "name">): string {

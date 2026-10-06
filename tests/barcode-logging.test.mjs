@@ -159,12 +159,17 @@ test("logging remembers the last logged amount for the next scan", async () => {
   await data.saveLoggedBarcodeProducts("user-1", [food, scaleFood(food, 10)]);
   // A new product starts from the logged amount, not the catalog serving
   assert.equal(calls[0].rows[0].serving_grams, 10);
-  // An existing product only has its amount changed, for this user and barcode
-  assert.deepEqual(calls[1], {
-    table: "barcode_products",
-    update: { serving_grams: 10 },
-    filters: { user_id: "user-1", barcode: product.barcode },
-  });
+  // An existing product only has its amount and last-logged time changed, for this user and barcode
+  const { last_logged_at: loggedAt, ...update } = calls[1].update;
+  assert.deepEqual(
+    { ...calls[1], update },
+    {
+      table: "barcode_products",
+      update: { serving_grams: 10 },
+      filters: { user_id: "user-1", barcode: product.barcode },
+    },
+  );
+  assert.ok(Math.abs(Date.parse(loggedAt) - Date.now()) < 5_000);
   assert.equal(calls.length, 2);
 });
 
@@ -176,7 +181,7 @@ test("drinks logged in ml remember their volume", async () => {
   );
   assert.equal(drink.grams, 0);
   await data.rememberLoggedAmounts("user-1", [drink]);
-  assert.deepEqual(calls[0].update, { serving_grams: 330 });
+  assert.equal(calls[0].update.serving_grams, 330);
 });
 
 test("logging again remembers amounts without re-adding deleted products", async () => {

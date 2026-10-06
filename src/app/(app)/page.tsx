@@ -9,6 +9,7 @@ import { BarcodeFlow } from "@/components/home/BarcodeFlow";
 import { EatenToday } from "@/components/home/EatenToday";
 import { EarlierEstimate, EstimateCard } from "@/components/home/EstimateCard";
 import { ManualSheet } from "@/components/home/ManualSheet";
+import { ProductSearch } from "@/components/home/ProductSearch";
 import {
   AnalyzingCard,
   ComposeCard,
@@ -28,7 +29,7 @@ const HIGHLIGHT_MS = 4000;
 
 /**
  * The homepage. Phones get one column: the day's numbers, then either the
- * four ways to add food or the meal being put together, then water, the
+ * ways to add food or the meal being put together, then water, the
  * weigh-in card and the day's meals. Desktop splits it: adding food on the
  * left (sticky), the numbers, the meal in progress and the day's meals on the
  * right. Both orders come from the same elements: on phones the two column
@@ -55,6 +56,7 @@ export default function Home() {
   const [describing, setDescribing] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -168,6 +170,7 @@ export default function Home() {
           }}
           onDescribe={() => setDescribing(true)}
           onBarcode={() => setScanning(true)}
+          onSearch={() => setSearching(true)}
           onManual={() => setManualOpen(true)}
         />
         <WaterRow progress={progress} className="order-3" />
@@ -200,6 +203,13 @@ export default function Home() {
           setManualOpen(false);
           onLogged(id, name, loggedDay);
         }}
+      />
+      <ProductSearch
+        open={searching}
+        target={plateHasFood ? "meal" : "now"}
+        onAdd={addProduct}
+        onScan={() => setScanning(true)}
+        onClose={() => setSearching(false)}
       />
       {scanning && (
         <BarcodeFlow

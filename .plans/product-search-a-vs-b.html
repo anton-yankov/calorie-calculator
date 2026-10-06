@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product search: header icon vs fourth tile — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16; --surface: #24221C; --surface-raised: #2A281F; --ink: #EDEAE0; --ink-soft: #A5A195;
+    --accent: #E08A5C; --accent-soft: #3A2A20; --green: #7FBF92; --green-soft: #22312A; --line: #38352C;
+    --code-bg: #2d2d2d; --radius: 10px;
+    --serif: Georgia, 'Times New Roman', serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.65; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 64px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  ul.tight { margin: 8px 0; padding-left: 20px; } ul.tight li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px; }
+  th { text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px; }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  .procon { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0 0; font-size: 14.5px; }
+  .procon div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; }
+  .procon b { display: block; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+  .procon .pro b { color: var(--green); } .procon .con b { color: var(--accent); }
+  .procon ul { margin: 0; padding-left: 18px; } .procon li { margin: 3px 0; }
+  @media (max-width: 640px) { .procon { grid-template-columns: 1fr; } }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------- Mock scaffolding ---------- */
+  .screens { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-start; margin: 26px 0 8px; }
+  .pcol { display: flex; flex-direction: column; gap: 12px; width: 375px; max-width: 100%; }
+  .pcap { font-size: 14px; color: var(--ink-soft); min-height: 66px; }
+  .pcap b { display: block; color: var(--ink); font-size: 15.5px; margin-bottom: 2px; }
+  .screen { height: 790px; border-radius: 34px; border: 10px solid #0c0b09; box-shadow: 0 0 0 1px #3a372e, 0 30px 60px -20px rgba(0,0,0,.7); overflow: hidden; }
+  .new { outline: 2px dashed #86D3B0; outline-offset: 3px; }
+
+  /* =========================================================
+     The app's look ("Plate"), mirroring globals.css tokens
+     ========================================================= */
+  .c {
+    --b: #1A1720; --s1: #24202C; --s2: #2F2A39; --s3: #3A3446; --tx: #F1ECF4; --mu: #A8A0B2;
+    --ac: #F4A77A; --acs: #3B2A2A; --gr: #86D3B0; --grs: #1F3330; --lose: #8DB4E8; --ln: #352F40;
+    position: relative; height: 100%; overflow: hidden;
+    background: radial-gradient(circle at 50% -10%, rgba(244,167,122,.06), transparent 34rem), var(--b);
+    color: var(--tx); font-family: var(--sans); line-height: 1.5; font-size: 15px;
+  }
+  .c svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .c .tn { font-variant-numeric: tabular-nums; }
+  .c .body { padding: 14px 14px 0; display: flex; flex-direction: column; gap: 10px; }
+
+  /* Top bar */
+  .c .top { border-bottom: 1px solid var(--ln); padding: 8px 14px 0; background: rgba(26,23,32,.95); }
+  .c .hdr { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; min-height: 66px; }
+  .c .hdr .t { flex: 1; min-width: 0; }
+  .c .hdr small { display: block; font-size: 13px; color: var(--mu); font-weight: 500; }
+  .c .hdr h3 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+  .c .ibtn { width: 44px; height: 44px; border-radius: 14px; background: var(--s1); color: var(--mu); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .c .tabs { display: flex; margin: 0 -8px; }
+  .c .tabs span { flex: 1; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--mu); position: relative; }
+  .c .tabs span.on { color: var(--tx); }
+  .c .tabs span.on::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 3px; border-radius: 3px; background: var(--ac); }
+
+  /* Today cards */
+  .c .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .c .sc { background: var(--s1); border-radius: 20px; padding: 13px 14px; }
+  .c .sc small { font-size: 12.5px; color: var(--mu); }
+  .c .sc b { display: block; font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.25; font-variant-numeric: tabular-nums; }
+  .c .sc b span { font-size: 13px; font-weight: 500; color: var(--mu); letter-spacing: 0; margin-left: 4px; }
+  .c .trk { position: relative; height: 6px; border-radius: 6px; background: var(--s3); margin-top: 9px; overflow: hidden; }
+  .c .trk i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--lose); }
+  .c .trk em { position: absolute; top: 0; bottom: 0; left: 83.3%; width: 2px; background: rgba(241,236,244,.6); }
+  .c .sc .cap { display: block; font-size: 12px; color: var(--mu); margin-top: 5px; }
+
+  /* Add food */
+  .c .snap { position: relative; height: 150px; border-radius: 26px; background: var(--ac); color: #241a15; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; }
+  .c .snap .ic { width: 52px; height: 52px; border-radius: 18px; background: rgba(0,0,0,.1); display: flex; align-items: center; justify-content: center; }
+  .c .snap .ic svg.i { width: 28px; height: 28px; }
+  .c .snap .ai { position: absolute; top: 18px; right: 18px; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; background: rgba(0,0,0,.1); }
+  .c .snap b { display: block; font-size: 21px; font-weight: 800; letter-spacing: -.02em; line-height: 1.3; }
+  .c .snap small { font-size: 13px; opacity: .75; }
+  .c .sq { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .c .sq.four { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .c .sq span { height: 88px; border-radius: 20px; background: var(--s1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; font-weight: 700; }
+  .c .sq span svg.i { color: var(--ac); }
+  .c .sq.four span { font-size: 12.5px; height: 82px; border-radius: 18px; }
+
+  /* Water */
+  .c .water { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .c .water small { grid-column: span 3; font-size: 13px; font-weight: 600; color: var(--mu); }
+  .c .water span { height: 44px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: var(--lose); }
+
+  /* Eaten today */
+  .c .sec-h { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 2px 0; }
+  .c .sec-h b { font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
+  .c .sec-h small { font-size: 13px; color: var(--mu); }
+  .c .mrow { display: flex; align-items: center; gap: 12px; padding: 4px 2px; }
+  .c .mrow .fn { flex: 1; min-width: 0; }
+  .c .mrow .fn b { display: block; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c .mrow .fn small { font-size: 12.5px; color: var(--mu); }
+  .c .mrow .k { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .c .thumb { width: 48px; height: 48px; border-radius: 16px; flex-shrink: 0; background:
+      radial-gradient(circle at 40% 50%, #d8b88a 0 22%, transparent 23%),
+      radial-gradient(ellipse at 50% 50%, #f3efe6 0 42%, transparent 44%), linear-gradient(135deg, #5b4433, #3e2e24); }
+  .c .thumb.egg { background: radial-gradient(circle at 50% 55%, #e8c46a 0 30%, transparent 32%), radial-gradient(ellipse at 50% 50%, #f3efe6 0 44%, transparent 46%), linear-gradient(135deg, #4a3a5a, #2f2440); }
+
+  /* Product thumbnails */
+  .c .pt { width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0; }
+  .c .pt.bis { background:
+      radial-gradient(circle at 50% 50%, transparent 0 3%, #c8954d 3.5% 5%, transparent 5.5%),
+      radial-gradient(circle at 50% 50%, #e7bd74 0 34%, #c58f48 35% 38%, transparent 39%),
+      #f2ead9; }
+  .c .pt.choc { background: repeating-linear-gradient(90deg, #5a3522 0 9px, #3e2216 9px 11px), #5a3522; box-shadow: inset 0 -12px 0 #7b2d3a; }
+  .c .pt.milk { background: linear-gradient(180deg, #2f7fd0 0 30%, #f4f6fb 30% 100%); box-shadow: inset 0 0 0 4px #e3e8f2; }
+  .c .pt.yog { background: radial-gradient(circle at 50% 58%, #fbfaf6 0 30%, transparent 31%), linear-gradient(180deg, #8bbf6a 0 40%, #e9efe2 40%); }
+  .c .pt.bar { background: linear-gradient(160deg, transparent 30%, #1f1b17 30% 70%, transparent 70%), #e0483e; }
+  .c .pt.sm { width: 26px; height: 26px; border-radius: 999px; }
+
+  /* Search field + results */
+  .c .field { height: 48px; border-radius: 14px; background: var(--s1); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--mu); font-size: 15px; }
+  .c .field.focus { box-shadow: 0 0 0 2px var(--ac); }
+  .c .field .q { color: var(--tx); flex: 1; display: flex; align-items: center; }
+  .c .field .ph { flex: 1; }
+  .c .field svg.i { width: 20px; height: 20px; stroke-width: 2; }
+  .c .caret { display: inline-block; width: 2px; height: 19px; background: var(--ac); margin-left: 1px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .c .lbl { font-size: 12.5px; font-weight: 600; color: var(--mu); margin: 2px 2px 0; }
+  .c .res { display: flex; flex-direction: column; }
+  .c .rrow { display: flex; align-items: center; gap: 12px; padding: 8px 4px; border-top: 1px solid var(--ln); }
+  .c .rrow:first-child { border-top: 0; }
+  .c .rrow .fn { flex: 1; min-width: 0; }
+  .c .rrow .fn b { display: block; font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .c .rrow .fn b mark { background: none; color: var(--ac); }
+  .c .rrow .fn small { display: block; font-size: 12.5px; color: var(--mu); font-variant-numeric: tabular-nums; }
+  .c .plus { width: 38px; height: 38px; border-radius: 12px; background: var(--acs); color: var(--ac); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .c .plus svg.i { width: 20px; height: 20px; stroke-width: 2.4; }
+  .c .panel { background: var(--s1); border-radius: 20px; padding: 6px 12px; }
+
+  /* Overlays */
+  .c .dim { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
+  .c .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--s1); border-radius: 28px 28px 0 0; padding: 10px 18px 22px; display: flex; flex-direction: column; gap: 12px; }
+  .c .sheet .handle { width: 40px; height: 5px; border-radius: 5px; background: var(--s3); margin: 0 auto 2px; }
+  .c .sheet .sh { display: flex; align-items: center; gap: 10px; }
+  .c .sheet .sh b { flex: 1; font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+  .c .sheet .sh .x { width: 36px; height: 36px; border-radius: 12px; background: var(--s2); color: var(--mu); display: flex; align-items: center; justify-content: center; }
+  .c .sheet .sh .x svg.i { width: 18px; height: 18px; stroke-width: 2.2; }
+  .c .sheet .field { background: var(--b); }
+  .c .sheet .rrow { border-top-color: var(--s3); }
+  .c .badge { border-radius: 999px; background: var(--grs); color: var(--gr); font-size: 12px; font-weight: 700; padding: 2px 10px; }
+
+  /* Keyboard */
+  .c .kb { position: absolute; left: 0; right: 0; bottom: 0; background: #2a2731; padding: 9px 4px 26px; display: flex; flex-direction: column; gap: 9px; }
+  .c .kb div { display: flex; justify-content: center; gap: 5px; }
+  .c .kb i { font-style: normal; width: 31px; height: 40px; border-radius: 6px; background: #4a4655; color: #ddd8e3; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .c .kb i.w { width: 46px; background: #3a3644; font-size: 12px; }
+  .c .kb i.sp { width: 170px; }
+  .c .kb i.go { width: 80px; background: var(--ac); color: #241a15; font-size: 13px; font-weight: 700; }
+
+  /* Buttons */
+  .c .btn { height: 48px; border-radius: 14px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 750; font-size: 14.5px; white-space: nowrap; }
+  .c .btn-o { border: 1.5px solid var(--s3); }
+  .c .btn-p { background: var(--ac); color: #241a15; flex: 1; }
+  .c .row { display: flex; gap: 8px; }
+
+  /* Option D: quick-add chips */
+  .c .chips { display: flex; gap: 8px; overflow: hidden; margin-right: -14px; }
+  .c .chip { height: 42px; border-radius: 999px; background: var(--s1); display: flex; align-items: center; gap: 8px; padding: 0 14px 0 8px; font-size: 13.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+  .c .chip small { color: var(--mu); font-weight: 500; font-size: 12.5px; }
+  .c .chip.s { width: 42px; padding: 0; justify-content: center; color: var(--ac); }
+  .c .chip.s svg.i { width: 20px; height: 20px; stroke-width: 2.1; }
+
+  /* Option E: scanner */
+  .c.scan { background:
+      radial-gradient(ellipse at 50% 46%, rgba(255,255,255,.08), transparent 55%),
+      linear-gradient(180deg, #2b2620, #15120f 70%); }
+  .c .box { position: absolute; left: 50%; top: 44%; width: 220px; height: 150px; transform: translate(-50%,-50%) rotate(-4deg); background: linear-gradient(135deg, #d9c49a, #b89a68); border-radius: 6px; box-shadow: 0 20px 40px rgba(0,0,0,.5); }
+  .c .box::after { content: "Milk biscuits"; position: absolute; left: 16px; top: 14px; font: 800 17px var(--sans); color: #5a3a1e; }
+  .c .bars { position: absolute; right: 16px; bottom: 16px; width: 86px; height: 46px; background: repeating-linear-gradient(90deg, #111 0 2px, #fff 2px 4px, #111 4px 5px, #fff 5px 8px); border: 4px solid #fff; }
+  .c .frame { position: absolute; left: 50%; top: 44%; width: 250px; height: 130px; transform: translate(-50%,-50%); border: 3px solid transparent;
+      background: linear-gradient(var(--tx),var(--tx)) 0 0/26px 3px no-repeat, linear-gradient(var(--tx),var(--tx)) 0 0/3px 26px no-repeat,
+                  linear-gradient(var(--tx),var(--tx)) 100% 0/26px 3px no-repeat, linear-gradient(var(--tx),var(--tx)) 100% 0/3px 26px no-repeat,
+                  linear-gradient(var(--tx),var(--tx)) 0 100%/26px 3px no-repeat, linear-gradient(var(--tx),var(--tx)) 0 100%/3px 26px no-repeat,
+                  linear-gradient(var(--tx),var(--tx)) 100% 100%/26px 3px no-repeat, linear-gradient(var(--tx),var(--tx)) 100% 100%/3px 26px no-repeat; }
+  .c .shdr { position: absolute; top: 12px; left: 14px; right: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .c .shdr b { font-size: 17px; font-weight: 800; }
+  .c .glass { width: 44px; height: 44px; border-radius: 999px; background: rgba(26,23,32,.55); border: 1px solid rgba(241,236,244,.15); display: flex; align-items: center; justify-content: center; }
+  .c .glass svg.i { width: 20px; height: 20px; stroke-width: 2.2; }
+  .c .status { position: absolute; left: 50%; top: calc(44% - 100px); transform: translateX(-50%); font-size: 13.5px; font-weight: 700; background: rgba(26,23,32,.6); border-radius: 999px; padding: 6px 14px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .c .status i { width: 8px; height: 8px; border-radius: 9px; background: var(--ac); }
+  .c .sbot { position: absolute; left: 14px; right: 14px; bottom: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .c .sbot p { margin: 0 0 4px; text-align: center; font-size: 14.5px; font-weight: 600; color: rgba(241,236,244,.9); }
+  .c .gbtn { height: 52px; border-radius: 16px; border: 1px solid rgba(241,236,244,.12); background: rgba(47,42,57,.75); display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 15px; font-weight: 700; }
+  .c .gbtn svg.i { color: var(--ac); width: 20px; height: 20px; stroke-width: 2; }
+
+  /* Toast */
+  .c .toast { position: absolute; left: 14px; right: 14px; bottom: 22px; background: var(--s2); border: 1px solid var(--s3); border-radius: 16px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-size: 14px; box-shadow: 0 16px 30px rgba(0,0,0,.45); }
+  .c .toast .ok { width: 22px; height: 22px; border-radius: 99px; background: var(--grs); color: var(--gr); display: flex; align-items: center; justify-content: center; }
+  .c .toast .ok svg.i { width: 14px; height: 14px; stroke-width: 3; }
+  .c .toast .msg { flex: 1; }
+  .c .toast u { text-decoration: none; font-weight: 800; color: var(--ac); }
+  .c .pin { position: absolute; left: 0; right: 0; top: 0; z-index: 2; background: var(--b); }
+  .c .hlrow { background: rgba(134,211,176,.1); border-radius: 16px; }
+  /* A vs B additions */
+  .tagA, .tagB { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 7px; font-size: 13px; font-weight: 800; margin-right: 8px; vertical-align: 1px; }
+  .tagA { background: #3b3048; color: #c9b2f0; } .tagB { background: #3A2A20; color: #E08A5C; }
+  .c .cancel { font-size: 15px; font-weight: 700; color: var(--ac); padding: 0 2px; }
+  .c .est { background: var(--s1); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .c .sh2 { display: flex; align-items: flex-start; gap: 10px; }
+  .c .sh2 div { flex: 1; } .c .sh2 b { display: block; font-size: 16px; font-weight: 800; } .c .sh2 small { font-size: 13px; color: var(--mu); }
+  .c .x2 { width: 36px; height: 36px; border-radius: 12px; border: 1.5px solid var(--s3); color: var(--mu); display: flex; align-items: center; justify-content: center; }
+  .c .x2 svg.i { width: 18px; height: 18px; stroke-width: 2.2; }
+  .c .ta { min-height: 92px; border-radius: 16px; border: 1.5px solid var(--ac); background: var(--b); padding: 12px 14px; font-size: 15.5px; }
+  .c .btn-s { background: var(--s2); height: 40px; font-size: 14px; }
+  .c .est .btn-p { height: 40px; }
+  .c .note { text-align: center; font-size: 12.5px; color: var(--mu); }
+  .c .nope { position: absolute; left: 50%; top: 142px; transform: translateX(-50%); white-space: nowrap; background: #3A2228; color: #F08A8A; border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 700; display: none; }
+  .c .thumb-zone { position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at 105% 108%, rgba(134,211,176,.30) 0 300px, rgba(242,198,109,.22) 300px 440px, rgba(240,138,138,.24) 440px); }
+  .c .target { position: absolute; width: 52px; height: 52px; border-radius: 17px; border: 3px solid #fff; box-shadow: 0 0 0 4px rgba(0,0,0,.4); }
+  .dcap { font-size: 14px; color: var(--ink-soft); margin: 26px 0 10px; }
+  .dcap b { display: block; color: var(--ink); font-size: 15.5px; margin-bottom: 2px; }
+  .dwrap { width: 100%; aspect-ratio: 1280 / 720; overflow: hidden; border-radius: 14px; border: 8px solid #0c0b09; box-shadow: 0 0 0 1px #3a372e; position: relative; container-type: inline-size; }
+  .dscale { width: 1280px; height: 720px; transform-origin: 0 0; position: absolute; left: 0; top: 0; }
+  .c.dk { display: flex; height: 720px; font-size: 15px; }
+  .c .side { width: 240px; border-right: 1px solid var(--ln); background: rgba(0,0,0,.15); padding: 24px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .c .logo { font-size: 21px; font-weight: 800; padding: 0 12px 20px; }
+  .c .nav { height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-radius: 14px; font-weight: 700; color: var(--mu); }
+  .c .nav.on { background: var(--s1); color: var(--tx); } .c .nav.on svg.i { color: var(--ac); }
+  .c .dmain { flex: 1; padding: 24px 32px; position: relative; }
+  .c .dhdr { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .c .dhdr .t { flex: 1; } .c .dhdr small { font-size: 13px; color: var(--mu); } .c .dhdr h3 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; }
+  .c .dgrid { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
+  .c .dleft, .c .dright { display: flex; flex-direction: column; gap: 12px; }
+  table.pc td { vertical-align: middle; }
+  table.pc td:first-child { color: var(--ink-soft); font-weight: 600; }
+  table.pc i, .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 99px; margin-right: 9px; vertical-align: 0; }
+  i.g { background: #7FBF92; } i.y { background: #E6C15A; } i.r { background: #E07070; }
+  .legend { font-size: 13px; color: var(--ink-soft); } .legend i { margin-left: 12px; } .legend i:first-child { margin-left: 0; }
+</style>
+</head>
+<body>
+
+<!-- Icons (lucide) -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="describe" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M13 8H7"/><path d="M17 12H7"/></symbol>
+  <symbol id="barcode" viewBox="0 0 24 24"><path d="M3 5v14"/><path d="M8 5v14"/><path d="M12 5v14"/><path d="M17 5v14"/><path d="M21 5v14"/></symbol>
+  <symbol id="pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.4 3.6a1 1 0 0 1 3 3L7.4 18.6a2 2 0 0 1-.9.5l-2.9.8a.5.5 0 0 1-.6-.6l.8-2.9a2 2 0 0 1 .5-.9z"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="back" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+  <symbol id="keyboard" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></symbol>
+  <symbol id="flash" viewBox="0 0 24 24"><path d="M18 6c0 2-2 2-2 4v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V10c0-2-2-2-2-4V2h12z"/><path d="M6 6h12"/><path d="M12 12v.01"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="house" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .7-1.5l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="notebook" viewBox="0 0 24 24"><path d="M2 6h4M2 10h4M2 14h4M2 18h4"/><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9.5 8h5M9.5 12H16M9.5 16H14"/></symbol>
+  <symbol id="chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9M13 17V5M8 17v-3"/></symbol>
+  <symbol id="package" viewBox="0 0 24 24"><path d="M11 21.7a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/></symbol>
+  <symbol id="settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></symbol>
+</svg>
+
+<!-- Reusable pieces of the homepage, stamped into each phone by the script at the bottom -->
+<template id="t-top">
+  <div class="top">
+    <div class="hdr"><div class="t"><small>Tuesday, 6 October</small><h3>Today</h3></div><span class="ibtn"><svg class="i"><use href="#user"/></svg></span></div>
+    <div class="tabs"><span class="on">Home</span><span>Log</span><span>Stats</span><span>Products</span></div>
+  </div>
+</template>
+<template id="t-cards">
+  <div class="cards">
+    <div class="sc"><small>Calories</small><b>1,140<span>left</span></b><div class="trk"><i style="width:30%"></i><em></em></div><span class="cap">660 of 1,800</span></div>
+    <div class="sc"><small>Protein</small><b>66 g<span>to go</span></b><div class="trk"><i style="width:39%"></i><em></em></div><span class="cap">54 of 120 g</span></div>
+  </div>
+</template>
+<template id="t-snap">
+  <div class="snap"><span class="ic"><svg class="i"><use href="#camera"/></svg></span><span class="ai">14 of 20 AI left</span><span><b>Snap your meal</b><small>Take or choose a photo</small></span></div>
+</template>
+<template id="t-sq3">
+  <div class="sq">
+    <span><svg class="i"><use href="#describe"/></svg>Describe</span>
+    <span><svg class="i"><use href="#barcode"/></svg>Barcode</span>
+    <span><svg class="i"><use href="#pencil"/></svg>Manual</span>
+  </div>
+</template>
+<template id="t-water">
+  <div class="water"><small>Water · 750 ml of 2 L</small><span>+250 ml</span><span>+500 ml</span><span>+1 L</span></div>
+</template>
+<template id="t-eaten">
+  <div class="sec-h"><b>Eaten today</b><small>2 meals · 660 kcal</small></div>
+  <div class="mrow"><span class="thumb"></span><div class="fn"><b>Grilled chicken breast, Basmati rice</b><small>12:40 · 46 g protein</small></div><span class="k">482</span></div>
+  <div class="mrow"><span class="thumb egg"></span><div class="fn"><b>Scrambled eggs</b><small>08:15 · 8 g protein</small></div><span class="k">178</span></div>
+</template>
+<template id="t-milk">
+  <div class="res">
+    <div class="rrow"><span class="pt bis"></span><div class="fn"><b><mark>Milk</mark> biscuits</b><small>Last time 30 g · 132 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+    <div class="rrow"><span class="pt milk"></span><div class="fn"><b>Fresh <mark>milk</mark> 3.6%</b><small>Last time 250 ml · 160 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+    <div class="rrow"><span class="pt choc"></span><div class="fn"><b><mark>Milk</mark> chocolate with raspberry</b><small>Last time 25 g · 134 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+  </div>
+</template>
+<template id="t-recent">
+  <div class="res">
+    <div class="rrow"><span class="pt bis"></span><div class="fn"><b>Milk biscuits</b><small>Last time 30 g · 132 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+    <div class="rrow"><span class="pt yog"></span><div class="fn"><b>Greek yogurt 2%</b><small>Last time 150 g · 110 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+    <div class="rrow"><span class="pt bar"></span><div class="fn"><b>Protein bar, peanut</b><small>Last time 60 g · 212 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+    <div class="rrow"><span class="pt milk"></span><div class="fn"><b>Fresh milk 3.6%</b><small>Last time 250 ml · 160 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+    <div class="rrow"><span class="pt choc"></span><div class="fn"><b>Milk chocolate with raspberry</b><small>Last time 25 g · 134 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+  </div>
+</template>
+<template id="t-kb">
+  <div class="kb">
+    <div><i>q</i><i>w</i><i>e</i><i>r</i><i>t</i><i>y</i><i>u</i><i>i</i><i>o</i><i>p</i></div>
+    <div><i>a</i><i>s</i><i>d</i><i>f</i><i>g</i><i>h</i><i>j</i><i>k</i><i>l</i></div>
+    <div><i class="w">⇧</i><i>z</i><i>x</i><i>c</i><i>v</i><i>b</i><i>n</i><i>m</i><i class="w">⌫</i></div>
+    <div><i class="w">123</i><i class="sp">space</i><i class="go">search</i></div>
+  </div>
+</template>
+
+<template id="t-topA">
+  <div class="top">
+    <div class="hdr"><div class="t"><small>Tuesday, 6 October</small><h3>Today</h3></div><span class="ibtn" style="color:var(--tx)"><svg class="i"><use href="#search"/></svg></span><span class="ibtn"><svg class="i"><use href="#user"/></svg></span></div>
+    <div class="tabs"><span class="on">Home</span><span>Log</span><span>Stats</span><span>Products</span></div>
+  </div>
+</template>
+<template id="t-sq4">
+  <div class="sq four">
+    <span><svg class="i"><use href="#describe"/></svg>Describe</span>
+    <span><svg class="i"><use href="#barcode"/></svg>Barcode</span>
+    <span><svg class="i"><use href="#search"/></svg>Search</span>
+    <span><svg class="i"><use href="#pencil"/></svg>Manual</span>
+  </div>
+</template>
+<template id="t-recent4">
+  <div class="res">
+    <div class="rrow"><span class="pt bis"></span><div class="fn"><b>Milk biscuits</b><small>Last time 30 g · 132 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+    <div class="rrow"><span class="pt yog"></span><div class="fn"><b>Greek yogurt 2%</b><small>Last time 150 g · 110 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+    <div class="rrow"><span class="pt bar"></span><div class="fn"><b>Protein bar, peanut</b><small>Last time 60 g · 212 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+    <div class="rrow"><span class="pt milk"></span><div class="fn"><b>Fresh milk 3.6%</b><small>Last time 250 ml · 160 kcal</small></div><span class="plus"><svg class="i"><use href="#plus"/></svg></span></div>
+  </div>
+</template>
+<template id="t-compose">
+  <div class="est">
+    <div class="sh2"><div><b>Describe your meal</b><small>Amounts help: “2 eggs”, “a large plate”</small></div><span class="x2"><svg class="i"><use href="#x"/></svg></span></div>
+    <div class="ta">coffee with milk</div>
+    <div class="row"><span class="btn btn-s">Add photo</span><span class="btn btn-p">Analyze</span></div>
+    <small class="note">Uses 1 of your 14 AI analyses left today</small>
+  </div>
+</template>
+<template id="t-desk">
+  <aside class="side">
+    <b class="logo">Calories</b>
+    <span class="nav on"><svg class="i"><use href="#house"/></svg>Home</span>
+    <span class="nav"><svg class="i"><use href="#notebook"/></svg>Log</span>
+    <span class="nav"><svg class="i"><use href="#chart"/></svg>Stats</span>
+    <span class="nav"><svg class="i"><use href="#package"/></svg>Products</span>
+    <span style="flex:1"></span>
+    <span class="nav"><svg class="i"><use href="#settings"/></svg>Settings</span>
+  </aside>
+  <div class="dmain">
+    <div class="dhdr"><div class="t"><small>Tuesday, 6 October</small><h3>Today</h3></div><span class="slotA"></span></div>
+    <div class="dgrid">
+      <div class="dleft">
+        <div data-use="t-snap"></div>
+        <span class="slotTiles"></span>
+        <div data-use="t-water"></div>
+      </div>
+      <div class="dright">
+        <div data-use="t-cards"></div>
+        <div data-use="t-eaten"></div>
+      </div>
+    </div>
+  </div>
+</template>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Mockups · A vs B</div>
+  <h1>Header icon or fourth tile?</h1>
+  <p class="subtitle">The same task done both ways: logging your milk biscuits from the homepage. Each row below is one moment in that task. Option A is always on the left and Option B on the right.</p>
+  <div class="meta">
+    <span><strong>A:</strong> magnifying glass next to the profile button, expands into a field</span>
+    <span><strong>B:</strong> a fourth "Search" tile next to Barcode, opens a sheet</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>At rest</h2>
+<p class="lede">Before you search. A adds one icon to the top bar. B changes the row of tiles from three to four.</p>
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagA">A</span>Header icon</b>The homepage looks almost exactly like today.</div>
+    <div class="screen"><div class="c">
+      <div data-use="t-topA"></div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+        <div data-use="t-snap"></div>
+        <div data-use="t-sq3"></div>
+        <div data-use="t-water"></div>
+        <div data-use="t-eaten"></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagB">B</span>Fourth tile</b>Search sits beside the other ways to add food.</div>
+    <div class="screen"><div class="c">
+      <div data-use="t-top"></div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+        <div data-use="t-snap"></div>
+        <div data-use="t-sq4"></div>
+        <div data-use="t-water"></div>
+        <div data-use="t-eaten"></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Tap to search</h2>
+<p class="lede">Both start with your recently logged products, so the biscuits are already on screen. A focuses the field right away, so the keyboard comes up and leaves room for about five rows. B opens the sheet without the keyboard, so you see the whole list and can tap <strong>+</strong> without typing.</p>
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagA">A</span>Field open, keyboard up</b>Recents drop down under the field.</div>
+    <div class="screen"><div class="c">
+      <div class="top" style="position:relative;z-index:2">
+        <div class="hdr"><div class="field focus" style="flex:1"><svg class="i"><use href="#search"/></svg><span class="ph">Search your products<span class="caret" style="vertical-align:-4px"></span></span></div><span class="cancel">Cancel</span></div>
+        <div class="tabs"><span class="on">Home</span><span>Log</span><span>Stats</span><span>Products</span></div>
+      </div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+        <div data-use="t-snap"></div>
+        <div data-use="t-sq3"></div>
+      </div>
+      <div class="dim" style="top:127px"></div>
+      <div style="position:absolute;left:12px;right:12px;top:136px">
+        <div class="panel"><div class="lbl" style="margin:6px 4px 2px">Recently logged</div><div data-use="t-recent4"></div></div>
+      </div>
+      <div data-use="t-kb"></div>
+    </div></div>
+  </div>
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagB">B</span>Sheet open, no keyboard yet</b>The keyboard only comes up if you tap the field.</div>
+    <div class="screen"><div class="c">
+      <div data-use="t-top"></div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+        <div data-use="t-snap"></div>
+      </div>
+      <div class="dim"></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sh"><b>Your products</b><span class="x"><svg class="i"><use href="#x"/></svg></span></div>
+        <div class="field"><svg class="i"><use href="#search"/></svg><span class="ph">Search by name or barcode</span></div>
+        <div class="lbl">Recently logged</div>
+        <div data-use="t-recent"></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Typing "milk"</h2>
+<p class="lede">Typing works almost the same in both. In A, results replace the recents in the same panel. In B, the sheet slides up above the keyboard and filters in place.</p>
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagA">A</span>Results in the dropdown</b>Cancel or ✕ puts the title back.</div>
+    <div class="screen"><div class="c">
+      <div class="top" style="position:relative;z-index:2">
+        <div class="hdr"><div class="field focus" style="flex:1"><svg class="i"><use href="#search"/></svg><span class="q">milk<span class="caret"></span></span><svg class="i" style="width:18px;height:18px"><use href="#x"/></svg></div><span class="cancel">Cancel</span></div>
+        <div class="tabs"><span class="on">Home</span><span>Log</span><span>Stats</span><span>Products</span></div>
+      </div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+        <div data-use="t-snap"></div>
+        <div data-use="t-sq3"></div>
+      </div>
+      <div class="dim" style="top:127px"></div>
+      <div style="position:absolute;left:12px;right:12px;top:136px">
+        <div class="panel" data-use="t-milk"></div>
+      </div>
+      <div data-use="t-kb"></div>
+    </div></div>
+  </div>
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagB">B</span>Results in the sheet</b>The sheet grows to fit above the keyboard.</div>
+    <div class="screen"><div class="c">
+      <div data-use="t-top"></div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+      </div>
+      <div class="dim"></div>
+      <div class="sheet" style="bottom:auto;top:150px;border-radius:28px 28px 0 0;height:640px">
+        <div class="handle"></div>
+        <div class="sh"><b>Your products</b><span class="x"><svg class="i"><use href="#x"/></svg></span></div>
+        <div class="field focus"><svg class="i"><use href="#search"/></svg><span class="q">milk<span class="caret"></span></span><svg class="i" style="width:18px;height:18px"><use href="#x"/></svg></div>
+        <div data-use="t-milk"></div>
+      </div>
+      <div data-use="t-kb"></div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>In the middle of a meal</h2>
+<p class="lede">Say you've described "coffee with milk" and want to add biscuits to the <em>same</em> meal. On phones the tiles hide while a meal is being put together (the meal card takes their place), so B's Search tile hides too. A's icon is in the header, which never hides, so the biscuits go into the meal and the button reads "Add to this meal".</p>
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagA">A</span>Icon still there</b>Search adds the biscuits to the meal you're building.</div>
+    <div class="screen"><div class="c">
+      <div data-use="t-topA"></div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+        <div data-use="t-compose"></div>
+        <div data-use="t-water"></div>
+        <div data-use="t-eaten"></div>
+      </div>
+    </div></div>
+  </div>
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagB">B</span>Tile hidden with the others</b>You'd need to log the coffee first, then search. (On desktop the tiles stay, so B works there.)</div>
+    <div class="screen"><div class="c">
+      <div data-use="t-top"></div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+        <div data-use="t-compose"></div>
+        <div data-use="t-water"></div>
+        <div data-use="t-eaten"></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+<div class="callout">This gap in B can be closed: the meal card could get a small "Add a saved product" link. That's more to build, and it puts search in two places.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>One-handed reach</h2>
+<p class="lede">If you hold the phone in your right hand and use your thumb, the bottom half of the screen is easy to reach and the top corners are a stretch. The shading shows roughly where your thumb lands comfortably (green), with effort (yellow) and with a shuffle of the phone (red). The marked button is the one you'd tap to start a search.</p>
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagA">A</span>Top right: a stretch</b>The same spot as the profile button. Fine with two hands.</div>
+    <div class="screen"><div class="c">
+      <div data-use="t-topA"></div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+        <div data-use="t-snap"></div>
+        <div data-use="t-sq3"></div>
+        <div data-use="t-water"></div>
+        <div data-use="t-eaten"></div>
+      </div>
+      <div class="thumb-zone"></div>
+      <div class="target" style="right:66px;top:19px"></div>
+    </div></div>
+  </div>
+  <div class="pcol">
+    <div class="pcap"><b><span class="tagB">B</span>Middle: easy</b>Right next to Barcode, where your thumb already goes.</div>
+    <div class="screen"><div class="c">
+      <div data-use="t-top"></div>
+      <div class="body">
+        <div data-use="t-cards"></div>
+        <div data-use="t-snap"></div>
+        <div data-use="t-sq4"></div>
+        <div data-use="t-water"></div>
+        <div data-use="t-eaten"></div>
+      </div>
+      <div class="thumb-zone"></div>
+      <div class="target" style="left:186px;top:425px;width:86px;height:86px;border-radius:22px"></div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>On desktop</h2>
+<p class="lede">On a wide screen, Add food is the left column and stays put as you scroll. In A, the icon goes at the right end of the "Today" title row. B's tile is in the left column with the others. On desktop the tiles stay visible during a meal, so B keeps working there.</p>
+
+<div class="dcap"><b><span class="tagA">A</span>Header icon, desktop</b>A wide search field opens in the title row, with results dropping down under it.</div>
+<div class="dwrap"><div class="dscale"><div class="c dk" data-use="t-desk" data-variant="A"></div></div></div>
+<div class="dcap"><b><span class="tagB">B</span>Fourth tile, desktop</b>Search sits in the left column with the other tiles. Tapping it opens the same list as a centred dialog, the way Manual does on desktop.</div>
+<div class="dwrap"><div class="dscale"><div class="c dk" data-use="t-desk" data-variant="B"></div></div></div>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>Pros and cons</h2>
+<table class="pc">
+  <tr><th></th><th>A · Header icon</th><th>B · Fourth tile</th></tr>
+  <tr><td>Homepage looks</td><td><i class="g"></i>Unchanged apart from one small icon</td><td><i class="y"></i>Tiles get narrower and the labels shrink</td></tr>
+  <tr><td>Finding it</td><td><i class="y"></i>A small icon, but you'll learn where it is</td><td><i class="g"></i>Labelled "Search", next to the other ways to add food</td></tr>
+  <tr><td>One-handed reach</td><td><i class="r"></i>Top-right corner, a stretch</td><td><i class="g"></i>Middle of the screen, easy</td></tr>
+  <tr><td>Taps to log biscuits</td><td><i class="g"></i>2 (icon, then + on recent)</td><td><i class="g"></i>2 (tile, then + on recent)</td></tr>
+  <tr><td>Room for results</td><td><i class="y"></i>Keyboard opens at once, about 5 rows fit</td><td><i class="g"></i>Full sheet, no keyboard until you tap the field</td></tr>
+  <tr><td>During a meal (phone)</td><td><i class="g"></i>Works and adds to the meal</td><td><i class="r"></i>Hidden until the meal is logged</td></tr>
+  <tr><td>Desktop</td><td><i class="g"></i>Works</td><td><i class="g"></i>Works, even during a meal</td></tr>
+  <tr><td>Fits the app's patterns</td><td><i class="y"></i>New pattern: field expanding in the header</td><td><i class="g"></i>Same tile and sheet as Barcode and Manual</td></tr>
+  <tr><td>Could reuse on other pages</td><td><i class="g"></i>Yes, the header is on every page</td><td><i class="y"></i>Homepage only</td></tr>
+  <tr><td>Effort to build</td><td><i class="y"></i>A bit more: animation, dropdown, closing on scroll</td><td><i class="g"></i>Less: reuses the existing Sheet</td></tr>
+</table>
+<p class="legend"><i class="g"></i>good <i class="y"></i>okay <i class="r"></i>weak</p>
+
+<div class="callout good"><strong>If it's a tie, B.</strong> You'll mostly search from the homepage with one hand, which is where B is strongest, and it reuses what's already there. Choose <strong>A</strong> if you often add packaged things to a meal you're building (coffee + biscuits as one entry), or if you want the homepage as clean as it is now.</div>
+
+<footer class="doc">
+  Calorie Calculator · product search, A vs B · 6 October 2026
+</footer>
+
+</div>
+
+<script>
+  // Desktop frames: fill in the A or B differences before stamping
+  document.querySelectorAll('[data-variant]').forEach(function (frame) {
+    frame.appendChild(document.getElementById('t-desk').content.cloneNode(true));
+    frame.removeAttribute('data-use');
+    var a = frame.getAttribute('data-variant') === 'A';
+    var slotA = frame.querySelector('.slotA'), tiles = frame.querySelector('.slotTiles');
+    if (a) {
+      slotA.outerHTML = '<div class="field focus" style="width:420px"><svg class="i"><use href="#search"/></svg><span class="q">milk<span class="caret"></span></span><span class="cancel" style="font-size:14px">Cancel</span></div>';
+      tiles.outerHTML = '<div data-use="t-sq3"></div>';
+      var drop = document.createElement('div');
+      drop.style.cssText = 'position:absolute;right:32px;top:92px;width:420px;z-index:3';
+      drop.innerHTML = '<div class="panel" data-use="t-milk" style="box-shadow:0 24px 50px rgba(0,0,0,.55)"></div>';
+      frame.querySelector('.dmain').appendChild(drop);
+    } else {
+      slotA.remove();
+      tiles.outerHTML = '<div data-use="t-sq4"></div>';
+    }
+  });
+  // Stamp the shared pieces (twice, since pieces can contain pieces)
+  for (var pass = 0; pass < 3; pass++) {
+    document.querySelectorAll('[data-use]').forEach(function (slot) {
+      if (slot.hasAttribute('data-done')) return;
+      var tpl = document.getElementById(slot.getAttribute('data-use'));
+      if (tpl) slot.appendChild(tpl.content.cloneNode(true));
+      slot.setAttribute('data-done', '');
+    });
+  }
+  document.querySelectorAll('[data-use]:not([class]):not([style])').forEach(function (slot) { slot.style.display = 'contents'; });
+  // Show the "no search" pill on B's mid-meal phone
+  document.querySelectorAll('.nope').forEach(function (n) { n.style.display = 'block'; });
+  // Scale the 1280px desktop frames to fit the page
+  function fit() { document.querySelectorAll('.dwrap').forEach(function (w) { w.firstElementChild.style.transform = 'scale(' + (w.clientWidth / 1280) + ')'; }); }
+  fit(); window.addEventListener('resize', fit);
+</script>
+</body>
+</html>
