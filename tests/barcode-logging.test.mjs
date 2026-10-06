@@ -110,7 +110,8 @@ test("invalid product snapshots are rejected before either write", async () => {
   }
 });
 
-test("batch product saving deduplicates barcodes and never overwrites existing products", async () => {
+/** Loads the product data layer against a fake database that records every write. */
+function productData() {
   const calls = [];
   const data = loadModule("src/lib/barcode-products.ts", {
     "@/lib/supabase-session": {
@@ -120,20 +121,82 @@ test("batch product saving deduplicates barcodes and never overwrites existing p
             calls.push({ table, rows, options });
             return { error: null };
           },
+          update: (values) => {
+            const call = { table, update: values, filters: {} };
+            calls.push(call);
+            const query = {
+              eq: (column, value) => {
+                call.filters[column] = value;
+                return query;
+              },
+              then: (resolve) => resolve({ error: null }),
+            };
+            return query;
+          },
         }),
       }),
     },
   });
+  return { data, calls };
+}
+
+test("batch product saving deduplicates barcodes and never overwrites existing products", async () => {
+  const { data, calls } = productData();
   await data.saveLoggedBarcodeProducts("user-1", [food, scaleFood(food, 10), { name: "Plain" }]);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].table, "barcode_products");
-  assert.equal(calls[0].rows.length, 1);
-  assert.equal(calls[0].rows[0].user_id, "user-1");
-  assert.equal(calls[0].rows[0].calories_per_100g, 80);
-  assert.equal(calls[0].rows[0].serving_grams, 125.5);
-  assert.deepEqual(calls[0].options, { onConflict: "user_id,barcode", ignoreDuplicates: true });
+  const inserts = calls.filter((call) => call.rows);
+  assert.equal(inserts.length, 1);
+  assert.equal(inserts[0].table, "barcode_products");
+  assert.equal(inserts[0].rows.length, 1);
+  assert.equal(inserts[0].rows[0].user_id, "user-1");
+  assert.equal(inserts[0].rows[0].calories_per_100g, 80);
+  assert.deepEqual(inserts[0].options, { onConflict: "user_id,barcode", ignoreDuplicates: true });
   await data.saveLoggedBarcodeProducts("user-1", [{ name: "Plain" }]);
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
+});
+
+test("logging remembers the last logged amount for the next scan", async () => {
+  const { data, calls } = productData();
+  await data.saveLoggedBarcodeProducts("user-1", [food, scaleFood(food, 10)]);
+  // A new product starts from the logged amount, not the catalog serving
+  assert.equal(calls[0].rows[0].serving_grams, 10);
+  // An existing product only has its amount changed, for this user and barcode
+  assert.deepEqual(calls[1], {
+    table: "barcode_products",
+    update: { serving_grams: 10 },
+    filters: { user_id: "user-1", barcode: product.barcode },
+  });
+  assert.equal(calls.length, 2);
+});
+
+test("drinks logged in ml remember their volume", async () => {
+  const { data, calls } = productData();
+  const drink = products.barcodeProductToFood(
+    { ...product, name: "Orange juice", portionUnit: "ml", drinkType: "juice" },
+    330,
+  );
+  assert.equal(drink.grams, 0);
+  await data.rememberLoggedAmounts("user-1", [drink]);
+  assert.deepEqual(calls[0].update, { serving_grams: 330 });
+});
+
+test("logging again remembers amounts without re-adding deleted products", async () => {
+  const events = [];
+  const action = loadModule("src/app/actions.ts", {
+    "next/cache": { revalidatePath: (path) => events.push(path) },
+    "@/lib/supabase-session": { getUserId: async () => "user-1" },
+    "@/lib/products": products,
+    "@/lib/profiles": {},
+    "@/lib/meals": {
+      getMealById: async () => meal,
+      insertMeals: async () => events.push("meal"),
+    },
+    "@/lib/barcode-products": {
+      rememberLoggedAmounts: async (_userId, foods) => events.push(foods),
+      saveLoggedBarcodeProducts: async () => assert.fail("Logging again must not add products"),
+    },
+  });
+  assert.ok((await action.relogMealAction(meal.id)).newId);
+  assert.deepEqual(events, ["meal", meal.analysis.foods, "/products", "/log", "/stats"]);
 });
 
 test("saved barcode lookup returns saved macros and grams without calling the catalog", async () => {

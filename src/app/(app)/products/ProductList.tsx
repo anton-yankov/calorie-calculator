@@ -223,7 +223,7 @@ function ProductEditor({
           inputMode="decimal"
         />
         <p className="mt-1.5 text-xs text-muted">
-          Leave empty to start from 100 {unit}. A whole package or one serving is usually handiest.
+          Updates to the amount you last logged. Leave empty to start from 100 {unit}.
         </p>
       </div>
       {error && (

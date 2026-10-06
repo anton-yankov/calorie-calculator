@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   deleteSavedBarcodeProduct,
+  rememberLoggedAmounts,
   saveBarcodeProduct,
   saveLoggedBarcodeProducts,
 } from "@/lib/barcode-products";
@@ -224,6 +225,12 @@ export async function relogMealAction(id: string): Promise<ActionResult & { newI
     if (!meal) return { error: "That meal no longer exists" };
     const newId = crypto.randomUUID();
     await insertMeals(userId, [{ ...meal, id: newId, loggedAt: new Date().toISOString() }]);
+    try {
+      await rememberLoggedAmounts(userId, meal.analysis.foods);
+    } catch (err) {
+      console.error("Remembering logged amounts failed:", err);
+    }
+    revalidatePath("/products");
     revalidatePath("/log");
     revalidatePath("/stats");
     return { newId };

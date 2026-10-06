@@ -119,11 +119,56 @@ export async function deleteSavedBarcodeProduct(userId: string, barcode: string)
   if (error) throw new Error(`Couldn't delete the product: ${error.message}`);
 }
 
-/** Insert new products only; a later scan must never overwrite saved edits or defaults. */
+/** How much of a logged food was eaten, in its product's unit: the same amount portion edits scale. */
+function loggedAmount(food: FoodItem): number | null {
+  const amount = food.volume_ml ?? food.grams;
+  return Number.isFinite(amount) && amount > 0 ? amount : null;
+}
+
+/** Each scanned barcode's logged amount; the last food wins when a barcode appears twice. */
+function loggedAmounts(foods: readonly FoodItem[]): Map<string, number> {
+  const amounts = new Map<string, number>();
+  for (const food of foods) {
+    const amount = food.barcode ? loggedAmount(food) : null;
+    if (food.barcode && amount !== null) amounts.set(food.barcode, amount);
+  }
+  return amounts;
+}
+
+/**
+ * Makes each logged amount the one prefilled on the next scan. Only touches
+ * products that are already saved, and only their amount: a deleted product
+ * stays deleted and saved edits to nutrition, name or image are kept.
+ */
+export async function rememberLoggedAmounts(
+  userId: string,
+  foods: readonly FoodItem[],
+): Promise<void> {
+  const amounts = loggedAmounts(foods);
+  if (amounts.size === 0) return;
+  const db = await createSessionClient();
+  const results = await Promise.all(
+    [...amounts].map(([barcode, amount]) =>
+      db
+        .from("barcode_products")
+        .update({ serving_grams: amount })
+        .eq("user_id", userId)
+        .eq("barcode", barcode),
+    ),
+  );
+  const failed = results.find((result) => result.error);
+  if (failed?.error) throw new Error(`Couldn't remember logged amounts: ${failed.error.message}`);
+}
+
+/**
+ * Inserts new products, then remembers every logged amount. A later log never
+ * overwrites a saved product's edits — only its amount for the next scan.
+ */
 export async function saveLoggedBarcodeProducts(
   userId: string,
   foods: readonly FoodItem[],
 ): Promise<void> {
+  const amounts = loggedAmounts(foods);
   const rows = new Map<string, BarcodeProductRow>();
   for (const food of foods) {
     if (!food.barcode || !food.productSnapshot || rows.has(food.barcode)) continue;
@@ -138,15 +183,17 @@ export async function saveLoggedBarcodeProducts(
       carbs_per_100g: product.per100g.carbs_g,
       fat_per_100g: product.per100g.fat_g,
       image_url: food.imageUrl ?? null,
-      serving_grams: product.servingGrams,
+      serving_grams: amounts.get(food.barcode) ?? product.servingGrams,
       updated_at: new Date().toISOString(),
     });
   }
-  if (rows.size === 0) return;
-  const db = await createSessionClient();
-  const { error } = await db.from("barcode_products").upsert(
-    [...rows.values()].map((row) => ({ ...row, user_id: userId })),
-    { onConflict: OWNER_KEY, ignoreDuplicates: true },
-  );
-  if (error) throw new Error(`Couldn't save logged products: ${error.message}`);
+  if (rows.size > 0) {
+    const db = await createSessionClient();
+    const { error } = await db.from("barcode_products").upsert(
+      [...rows.values()].map((row) => ({ ...row, user_id: userId })),
+      { onConflict: OWNER_KEY, ignoreDuplicates: true },
+    );
+    if (error) throw new Error(`Couldn't save logged products: ${error.message}`);
+  }
+  await rememberLoggedAmounts(userId, foods);
 }
