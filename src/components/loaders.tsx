@@ -77,6 +77,27 @@ export function SkeletonPanels({ label, heights }: { label: string; heights: num
   );
 }
 
+/** Ghost version of the admin's account header: back button and email, badge, three key numbers. */
+export function SkeletonAccountHeader() {
+  return (
+    <>
+      <div role="status" aria-label="Account loading" className="flex items-center gap-3">
+        <div aria-hidden className="h-11 w-11 shrink-0 rounded-[14px] bg-surface" />
+        <GhostBar className="h-5 w-48" />
+      </div>
+      <GhostBar className="h-6 w-56 rounded-full" />
+      <div aria-hidden className="grid grid-cols-3 gap-2">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex h-[78px] flex-col gap-2 rounded-[18px] bg-surface p-3">
+            <GhostBar className="h-3 w-12" />
+            <GhostBar className="h-4 w-16" />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 /** Ghost version of the product list: a few product rows. */
 export function SkeletonProducts() {
   return (

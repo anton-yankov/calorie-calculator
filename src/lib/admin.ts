@@ -143,13 +143,16 @@ export async function aiUsageHistory(
   });
 }
 
-/** An account's daily cap: its own row, else the default; null for the admin. */
-export async function dailyCapOf(account: Account): Promise<number | null> {
-  if (account.isAdmin) return null;
+/**
+ * A user's daily cap: their own row, else the default. Takes only the id, so
+ * it can load alongside the account; the admin's null (no cap) is applied by
+ * the caller once the account is known.
+ */
+export async function storedDailyCap(userId: string): Promise<number> {
   const { data, error } = await createAdminClient()
     .from("ai_limits")
     .select("daily_cap")
-    .eq("user_id", account.userId)
+    .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(`Couldn't load the cap: ${error.message}`);
   return (data as { daily_cap: number } | null)?.daily_cap ?? DEFAULT_DAILY_CAP;
