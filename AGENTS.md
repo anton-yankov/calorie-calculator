@@ -16,6 +16,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Only commit or push when I explicitly ask for it — never as an automatic follow-up to other work.
 - Give me any required SQL inline; this project has no migrations.
 
+## Commits and pushes
+
+Do not commit or push until the user asks. When a commit or push looks useful, ask first. When you do commit, use a short message that is easy to read and understand. Do not mention Claude, Claude Code, or any provider or model name. The commit should read as if the user wrote it.
+
 ## Publishing HTML plans
 
 Publish every HTML plan, prototype, or visual write-up to postplan with `npx postplan upload .plans/plan.html --description "short label"` and share the printed draft URL. Keep the source file in `.plans/` (not the project root). My key in `~/.postplan` attributes uploads automatically — never run `postplan auth` commands. Give the HTML a meaningful `<title>` (it becomes the draft's display name in my dashboard).
