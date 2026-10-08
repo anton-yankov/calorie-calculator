@@ -19,6 +19,31 @@ function GhostBar({ className, style }: { className: string; style?: React.CSSPr
   );
 }
 
+/** A few ghost meal rows, the shape of `MealRow` with its ⋯ button. */
+function GhostMealRows() {
+  return [0, 1, 2].map((i) => (
+    <div key={i} aria-hidden className="flex items-center gap-3 px-0.5 py-1">
+      <GhostBar className="h-12 w-12 rounded-[16px]" />
+      <div className="min-w-0 flex-1">
+        <GhostBar className={`h-4 ${i === 1 ? "w-40" : "w-28"}`} />
+        <GhostBar className="mt-1.5 h-3 w-24" />
+      </div>
+      <GhostBar className="h-4 w-10" />
+      <GhostBar className="h-11 w-11 rounded-panel" />
+    </div>
+  ));
+}
+
+/** Ghost version of the homepage's "Eaten today": its heading and a few meal rows. */
+export function SkeletonDayMeals({ className = "" }: { className?: string }) {
+  return (
+    <div role="status" aria-label="Meals loading" className={`flex flex-col gap-2 ${className}`}>
+      <GhostBar className="mt-2 mb-1 h-5 w-32" />
+      <GhostMealRows />
+    </div>
+  );
+}
+
 /**
  * Ghost version of the Log: the calendar column (desktop only), then a day
  * card with a few meal rows, the same shapes the real list fills in.
@@ -38,17 +63,7 @@ export function SkeletonLog() {
             <GhostBar className="h-6" />
           </div>
         </div>
-        {[0, 1, 2].map((i) => (
-          <div key={i} aria-hidden className="flex items-center gap-3 px-0.5 py-1">
-            <GhostBar className="h-12 w-12 rounded-[16px]" />
-            <div className="min-w-0 flex-1">
-              <GhostBar className={`h-4 ${i === 1 ? "w-40" : "w-28"}`} />
-              <GhostBar className="mt-1.5 h-3 w-24" />
-            </div>
-            <GhostBar className="h-4 w-10" />
-            <GhostBar className="h-11 w-11 rounded-panel" />
-          </div>
-        ))}
+        <GhostMealRows />
       </div>
     </>
   );

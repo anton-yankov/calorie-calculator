@@ -52,7 +52,7 @@ export default function Home() {
     addScannedFood,
     refreshDay,
   } = useAnalysis();
-  const { day, isToday, progress } = useDay();
+  const { day, isToday, progress, weighIn } = useDay();
   const [describing, setDescribing] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -174,7 +174,7 @@ export default function Home() {
           onManual={() => setManualOpen(true)}
         />
         <WaterRow progress={progress} className="order-3" />
-        <WeighInCard className="order-4" />
+        <WeighInCard status={weighIn} className="order-4" />
       </div>
 
       {/* Right on desktop: the day's numbers, the meal in progress and the day's meals */}

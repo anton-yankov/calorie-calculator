@@ -1,6 +1,7 @@
 "use client";
 
 import type { TodayProgress } from "@/app/actions";
+import { SkeletonDayMeals } from "@/components/loaders";
 import { MealMenu } from "@/components/meals/MealActions";
 import { MealRow } from "@/components/meals/MealRow";
 import { dayLabel } from "@/lib/day";
@@ -22,7 +23,7 @@ export function EatenToday({
   onChanged: () => void;
   className?: string;
 }) {
-  if (!progress) return null;
+  if (!progress) return <SkeletonDayMeals className={className} />;
   const { meals, totals } = progress;
   // The day arrives oldest first; the latest meal goes on top
   const newestFirst = [...meals].reverse();

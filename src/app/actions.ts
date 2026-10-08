@@ -280,18 +280,35 @@ export interface TodayProgress {
   meals: LoggedMeal[];
 }
 
+/** The last weigh-in and how often to remind, for the homepage's weigh-in card. */
+export interface WeighInStatus {
+  /** null when there are no weigh-ins */
+  latest: WeightEntry | null;
+  reminderDays: WeighInReminderDays;
+}
+
+/** Everything the homepage loads. The extras are null when they couldn't be read. */
+export interface HomeData {
+  progress: TodayProgress;
+  weighIn: WeighInStatus | null;
+  allowance: AiAllowance | null;
+}
+
 /**
- * One day on the homepage: its totals, its targets and its meals. The client
- * supplies the day and its bounds because "today" depends on the viewer's
- * timezone, which the server doesn't know (Vercel runs in UTC).
+ * Everything the homepage shows for a day, in one request: its totals,
+ * targets and meals, plus the weigh-in reminder and the AI count. Server
+ * Actions run one at a time, so separate ones would wait in line behind each
+ * other. The client supplies the day and its bounds because "today" depends
+ * on the viewer's timezone, which the server doesn't know (Vercel runs in UTC).
  */
-export async function todayProgressAction(
+export async function homeDataAction(
   day: string,
   startIso: string,
   endIso: string,
-): Promise<ActionResult & { progress?: TodayProgress }> {
-  const userId = await getUserId();
-  if (!userId) return { error: "Authentication required" };
+): Promise<ActionResult & { home?: HomeData }> {
+  const viewer = await getViewer();
+  if (!viewer) return { error: "Authentication required" };
+  const { userId } = viewer;
   if (typeof day !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return { error: "Invalid day" };
   const start = Date.parse(startIso);
   const end = Date.parse(endIso);
@@ -300,14 +317,24 @@ export async function todayProgressAction(
     return { error: "Invalid range" };
   }
   try {
-    const [totals, meals, plans, profile] = await Promise.all([
+    // The weigh-in and the AI count failing only hides them, as before
+    const [totals, meals, plans, profile, latest, allowance] = await Promise.all([
       sumTotalsBetween(userId, startIso, endIso),
       listMealsBetween(userId, startIso, endIso),
       listPlans(userId),
       getProfile(userId),
+      latestWeighIn(userId).catch(() => undefined),
+      getAiAllowance(viewer).catch(() => null),
     ]);
     return {
-      progress: { totals, meals, targets: targetsForDay(plans, day, activeWaterGoal(profile)) },
+      home: {
+        progress: { totals, meals, targets: targetsForDay(plans, day, activeWaterGoal(profile)) },
+        weighIn:
+          latest === undefined
+            ? null
+            : { latest, reminderDays: profile?.weighInReminderDays ?? DEFAULT_REMINDER_DAYS },
+        allowance,
+      },
     };
   } catch (err) {
     return { error: message(err, "Couldn't load today's progress") };
@@ -322,20 +349,6 @@ export async function aiAllowanceAction(): Promise<ActionResult & { allowance?: 
     return { allowance: await getAiAllowance(viewer) };
   } catch (err) {
     return { error: message(err, "Couldn't load your analyses left") };
-  }
-}
-
-/** The latest weigh-in and how often to remind, for the homepage's weigh-in card. */
-export async function latestWeighInAction(): Promise<
-  ActionResult & { latest?: WeightEntry | null; reminderDays?: WeighInReminderDays }
-> {
-  const userId = await getUserId();
-  if (!userId) return { error: "Authentication required" };
-  try {
-    const [latest, profile] = await Promise.all([latestWeighIn(userId), getProfile(userId)]);
-    return { latest, reminderDays: profile?.weighInReminderDays ?? DEFAULT_REMINDER_DAYS };
-  } catch (err) {
-    return { error: message(err, "Couldn't load the latest weigh-in") };
   }
 }
 

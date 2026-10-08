@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { todayProgressAction, type TodayProgress } from "@/app/actions";
+import { homeDataAction, type HomeData } from "@/app/actions";
+import { useAiAllowance } from "@/components/AiAllowance";
 import { useAnalysis } from "@/components/AnalysisProvider";
 import { dayBounds, dayKey } from "@/lib/day";
 
@@ -11,34 +12,41 @@ import { dayBounds, dayKey } from "@/lib/day";
  * browser (only it knows the viewer's timezone) and fetched again whenever the
  * analysis state reports a change. The last answer stays on screen while the
  * next one loads, so nothing flickers after logging.
+ *
+ * The same request brings the weigh-in reminder and the AI count, so the
+ * homepage loads in one round trip and everything on it appears together.
  */
 export function useDay() {
   const { logDate, progressVersion } = useAnalysis();
+  const { seed: seedAllowance } = useAiAllowance();
   const day = logDate ?? dayKey(new Date());
-  const [loaded, setLoaded] = useState<{ day: string; progress: TodayProgress } | null>(null);
+  const [loaded, setLoaded] = useState<{ day: string; home: HomeData } | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const { startIso, endIso } = dayBounds(day);
-    void todayProgressAction(day, startIso, endIso).then((result) => {
+    void homeDataAction(day, startIso, endIso).then((result) => {
       if (cancelled) return;
-      if (result.progress) {
-        setLoaded({ day, progress: result.progress });
+      if (result.home) {
+        setLoaded({ day, home: result.home });
+        if (result.home.allowance) seedAllowance(result.home.allowance);
         setFailed(false);
       } else setFailed(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [day, progressVersion]);
+  }, [day, progressVersion, seedAllowance]);
 
   return {
     day,
     // Backdating judges the day as finished, not as still in progress
     isToday: day === dayKey(new Date()),
     // A different day's numbers never stand in for this one's
-    progress: loaded?.day === day ? loaded.progress : null,
+    progress: loaded?.day === day ? loaded.home.progress : null,
+    // Not tied to the day: undefined while loading, null when it couldn't be read
+    weighIn: loaded ? loaded.home.weighIn : undefined,
     failed,
   };
 }

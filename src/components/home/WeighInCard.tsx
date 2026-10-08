@@ -2,12 +2,11 @@
 
 import { Check, Clock, Settings, X } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { latestWeighInAction } from "@/app/actions";
+import type { WeighInStatus } from "@/app/actions";
 import { saveWeightAction } from "@/app/(app)/stats/actions";
 import { Button, ButtonLink } from "@/components/Button";
 import { Sheet } from "@/components/Sheet";
 import { addDays, dayKey, daysBetween, longDate } from "@/lib/day";
-import { DEFAULT_REMINDER_DAYS } from "@/lib/reminder";
 import type { WeightEntry } from "@/lib/weights";
 
 /** The day until which the card stays snoozed (YYYY-MM-DD), in this browser only. */
@@ -33,13 +32,19 @@ const typedKg = (text: string) => {
 /**
  * The homepage's weigh-in reminder: shows when the last weigh-in is older than
  * the interval chosen in Settings (a week by default), or there's none; saves the weight right here, says how it moved, then gets
- * out of the way. ✕ snoozes it for a day or three.
+ * out of the way. ✕ snoozes it for a day or three. Its data comes with the
+ * rest of the homepage's (`useDay`).
  */
-export function WeighInCard({ className = "" }: { className?: string }) {
-  // undefined while loading; null when there are no weigh-ins
-  const [latest, setLatest] = useState<WeightEntry | null | undefined>(undefined);
-  // How old the last weigh-in may get (Settings); 0 turns the card off
-  const [remindAfter, setRemindAfter] = useState(DEFAULT_REMINDER_DAYS);
+export function WeighInCard({
+  status,
+  className = "",
+}: {
+  /** undefined while loading, null when it couldn't be read */
+  status: WeighInStatus | null | undefined;
+  className?: string;
+}) {
+  // The weigh-in just saved here, standing in until the next reload brings it
+  const [savedLatest, setSavedLatest] = useState<WeightEntry | null>(null);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -55,29 +60,21 @@ export function WeighInCard({ className = "" }: { className?: string }) {
     () => "9999-12-31",
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    void latestWeighInAction().then((result) => {
-      if (cancelled || result.latest === undefined) return;
-      setLatest(result.latest);
-      if (result.reminderDays !== undefined) setRemindAfter(result.reminderDays);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   // The confirmation stays a moment, then the card is done until the next one is due
   useEffect(() => {
     if (!saved) return;
     const timer = setTimeout(() => {
       setSaved(null);
-      setLatest({ day: today, weightKg: saved.weightKg });
+      setSavedLatest({ day: today, weightKg: saved.weightKg });
     }, SAVED_FOR_MS);
     return () => clearTimeout(timer);
   }, [saved, today]);
 
-  if (latest === undefined || snoozedNow || today < snoozedUntil) return null;
+  if (!status || snoozedNow || today < snoozedUntil) return null;
+  // null when there are no weigh-ins
+  const latest = savedLatest ?? status.latest;
+  // How old the last weigh-in may get (Settings); 0 turns the card off
+  const remindAfter = status.reminderDays;
   const days = latest === null ? null : daysBetween(latest.day, today);
   if (!saved && (remindAfter === 0 || (days !== null && days < remindAfter))) return null;
 
@@ -95,7 +92,7 @@ export function WeighInCard({ className = "" }: { className?: string }) {
       setError(result.error);
       return;
     }
-    setSaved({ weightKg, previous: latest ?? null });
+    setSaved({ weightKg, previous: latest });
   }
 
   function snooze(forDays: number) {

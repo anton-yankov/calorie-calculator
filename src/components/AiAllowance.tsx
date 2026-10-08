@@ -14,14 +14,20 @@ interface AllowanceContext {
   allowance: AiAllowance | null;
   /** Re-reads the count, e.g. after an AI request */
   refresh: () => void;
+  /** Sets a count read elsewhere: the homepage loads it with the rest of its data */
+  seed: (allowance: AiAllowance) => void;
 }
 
-const Context = createContext<AllowanceContext>({ allowance: null, refresh: () => {} });
+const Context = createContext<AllowanceContext>({
+  allowance: null,
+  refresh: () => {},
+  seed: () => {},
+});
 
 /**
  * Today's AI analyses for the nav counter and the AI controls. Mounted in the
  * root layout, above the nav and the analysis state. The count is re-read on
- * every navigation, when the tab comes back into view (it may be past midnight),
+ * every navigation (the homepage reads it along with its own data), when the tab comes back into view (it may be past midnight),
  * and whenever an AI request finishes.
  */
 export function AiAllowanceProvider({ children }: { children: React.ReactNode }) {
@@ -34,7 +40,8 @@ export function AiAllowanceProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (pathname === "/login") return;
-    refresh();
+    // The homepage reads it in the same request as the rest of its data
+    if (pathname !== "/") refresh();
     const onVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };
@@ -42,7 +49,7 @@ export function AiAllowanceProvider({ children }: { children: React.ReactNode })
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [pathname, refresh]);
 
-  return <Context value={{ allowance, refresh }}>{children}</Context>;
+  return <Context value={{ allowance, refresh, seed: setAllowance }}>{children}</Context>;
 }
 
 export function useAiAllowance(): AllowanceContext & { capReached: boolean } {
