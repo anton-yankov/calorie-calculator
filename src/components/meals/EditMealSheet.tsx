@@ -167,13 +167,16 @@ function EditMealForm({
         {/* min-w-0: iOS gives time inputs a wide intrinsic width that pushes past the grid */}
         <label className="min-w-0">
           <span className="mb-1.5 block text-[12.5px] font-semibold text-muted">Time</span>
-          <input
-            type="time"
-            value={time}
-            disabled={pending}
-            onChange={(e) => setTime(e.target.value)}
-            className="block h-12 w-full min-w-0 appearance-none rounded-panel border-[1.5px] border-line bg-background px-4 text-[15px] text-foreground focus:border-accent focus:outline-none"
-          />
+          {/* The box is the wrapper: iOS pins an unstyled time value to the top of a tall input */}
+          <span className="flex h-12 items-center rounded-panel border-[1.5px] border-line bg-background px-4 focus-within:border-accent">
+            <input
+              type="time"
+              value={time}
+              disabled={pending}
+              onChange={(e) => setTime(e.target.value)}
+              className="w-full min-w-0 appearance-none bg-transparent text-[15px] text-foreground focus:outline-none"
+            />
+          </span>
         </label>
       </div>
       <div className="flex flex-col gap-2">
