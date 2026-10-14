@@ -164,23 +164,24 @@ function EditMealForm({
             className="flex h-12 w-full items-center justify-between rounded-panel border-[1.5px] border-line bg-background px-4 text-[15px]"
           />
         </div>
-        <label>
+        {/* min-w-0: iOS gives time inputs a wide intrinsic width that pushes past the grid */}
+        <label className="min-w-0">
           <span className="mb-1.5 block text-[12.5px] font-semibold text-muted">Time</span>
           <input
             type="time"
             value={time}
             disabled={pending}
             onChange={(e) => setTime(e.target.value)}
-            className="h-12 w-full rounded-panel border-[1.5px] border-line bg-background px-4 text-[15px] text-foreground focus:border-accent focus:outline-none"
+            className="block h-12 w-full min-w-0 appearance-none rounded-panel border-[1.5px] border-line bg-background px-4 text-[15px] text-foreground focus:border-accent focus:outline-none"
           />
         </label>
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" disabled={pending} onClick={onDone}>
-          Cancel
-        </Button>
-        <Button pending={pending} onClick={save} className="flex-1">
+      <div className="flex flex-col gap-2">
+        <Button pending={pending} onClick={save} className="w-full">
           {pending ? "Saving…" : "Save changes"}
+        </Button>
+        <Button variant="outline" disabled={pending} onClick={onDone} className="w-full">
+          Cancel
         </Button>
       </div>
     </>
