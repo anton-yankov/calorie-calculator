@@ -13,6 +13,8 @@ import type { WeightEntry } from "@/lib/weights";
 const SNOOZE_KEY = "weigh-in-snoozed-until";
 /** How long the "Saved" confirmation stays before the card goes away. */
 const SAVED_FOR_MS = 4000;
+/** How long the card takes to fold away (the .fold transition in globals.css). */
+const FOLD_MS = 320;
 
 // localStorage only exists in the browser: the server snapshot counts as
 // snoozed, so the card never renders on the server and then vanishes
@@ -53,6 +55,8 @@ export function WeighInCard({
   );
   const [snoozing, setSnoozing] = useState(false);
   const [snoozedNow, setSnoozedNow] = useState(false);
+  // Folding away: the card stays as it is until the fold has played out
+  const [leaving, setLeaving] = useState(false);
   const today = dayKey(new Date());
   const snoozedUntil = useSyncExternalStore(
     subscribe,
@@ -60,17 +64,30 @@ export function WeighInCard({
     () => "9999-12-31",
   );
 
-  // The confirmation stays a moment, then the card is done until the next one is due
+  // The confirmation stays a moment, then the card folds away until the next one is due
   useEffect(() => {
     if (!saved) return;
-    const timer = setTimeout(() => {
-      setSaved(null);
-      setSavedLatest({ day: today, weightKg: saved.weightKg });
-    }, SAVED_FOR_MS);
+    const timer = setTimeout(() => setLeaving(true), SAVED_FOR_MS);
     return () => clearTimeout(timer);
-  }, [saved, today]);
+  }, [saved]);
 
-  if (!status || snoozedNow || today < snoozedUntil) return null;
+  useEffect(() => {
+    if (!leaving) return;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = setTimeout(
+      () => {
+        setLeaving(false);
+        if (saved) {
+          setSaved(null);
+          setSavedLatest({ day: today, weightKg: saved.weightKg });
+        }
+      },
+      reduced ? 0 : FOLD_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [leaving, saved, today]);
+
+  if (!status || ((snoozedNow || today < snoozedUntil) && !leaving)) return null;
   // null when there are no weigh-ins
   const latest = savedLatest ?? status.latest;
   // How old the last weigh-in may get (Settings); 0 turns the card off
@@ -99,83 +116,90 @@ export function WeighInCard({
     localStorage.setItem(SNOOZE_KEY, addDays(today, forDays));
     setSnoozedNow(true);
     setSnoozing(false);
+    setLeaving(true);
   }
 
-  if (saved) {
-    const change = saved.previous ? saved.weightKg - saved.previous.weightKg : null;
-    return (
-      <section
-        role="status"
-        className={`flex items-start gap-3 rounded-[22px] bg-success-soft p-4 ${className}`}
-      >
-        <div className="min-w-0 flex-1">
-          <p className="font-extrabold text-success">Saved · {kg(saved.weightKg)} kg</p>
-          {change !== null && saved.previous && (
-            <p className="text-[13px]">
-              {change === 0
-                ? "Same as"
-                : `${change > 0 ? "+" : "−"}${kg(Math.abs(change))} kg since`}{" "}
-              {longDate(saved.previous.day)}.
-            </p>
-          )}
-        </div>
-        <Check className="h-5 w-5 text-success" strokeWidth={2.5} aria-hidden />
-      </section>
-    );
-  }
+  const change = saved?.previous ? saved.weightKg - saved.previous.weightKg : null;
 
   return (
-    <section
-      aria-label="Weigh-in reminder"
-      className={`flex flex-col gap-3 rounded-[22px] bg-surface p-4 ${className}`}
-    >
-      <div className="flex items-start justify-between gap-3">
+    <>
+      {/* One wrapper for both faces, so swapping to "Saved" doesn't replay the arrival */}
+      <div className={`fold ${className}`} data-folded={leaving || undefined} inert={leaving}>
         <div>
-          <h2 className="font-extrabold">
-            {latest ? "Time to weigh in" : "Log your first weigh-in"}
-          </h2>
-          <p className="text-[13px] text-muted">
-            {latest
-              ? `Last: ${kg(latest.weightKg)} kg, ${days} days ago`
-              : "It starts your weight trend on Stats"}
-          </p>
+          {saved ? (
+            <section
+              role="status"
+              className="flex items-start gap-3 rounded-[22px] bg-success-soft p-4"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-extrabold text-success">Saved · {kg(saved.weightKg)} kg</p>
+                {change !== null && saved.previous && (
+                  <p className="text-[13px]">
+                    {change === 0
+                      ? "Same as"
+                      : `${change > 0 ? "+" : "−"}${kg(Math.abs(change))} kg since`}{" "}
+                    {longDate(saved.previous.day)}.
+                  </p>
+                )}
+              </div>
+              <Check className="h-5 w-5 text-success" strokeWidth={2.5} aria-hidden />
+            </section>
+          ) : (
+            <section
+              aria-label="Weigh-in reminder"
+              className="flex flex-col gap-3 rounded-[22px] bg-surface p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-extrabold">
+                    {latest ? "Time to weigh in" : "Log your first weigh-in"}
+                  </h2>
+                  <p className="text-[13px] text-muted">
+                    {latest
+                      ? `Last: ${kg(latest.weightKg)} kg, ${days} days ago`
+                      : "It starts your weight trend on Stats"}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Remind me later"
+                  onClick={() => setSnoozing(true)}
+                  className="-mt-1 -mr-1"
+                >
+                  <X className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <label className="flex h-12 min-w-0 flex-1 items-center rounded-panel border-[1.5px] border-line bg-background pr-4 focus-within:border-accent">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={value}
+                    disabled={pending}
+                    aria-label="Weight in kg"
+                    placeholder="Weight"
+                    onChange={(e) => setValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void save();
+                    }}
+                    className="w-full min-w-0 bg-transparent px-4 text-[15px] tabular-nums placeholder:text-muted focus:outline-none"
+                  />
+                  <span className="text-sm text-muted">kg</span>
+                </label>
+                <Button pending={pending} onClick={() => void save()}>
+                  Save
+                </Button>
+              </div>
+              {error && (
+                <p role="alert" className="text-sm font-semibold text-danger">
+                  {error}
+                </p>
+              )}
+            </section>
+          )}
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Remind me later"
-          onClick={() => setSnoozing(true)}
-          className="-mt-1 -mr-1"
-        >
-          <X className="h-[18px] w-[18px]" strokeWidth={2.25} aria-hidden />
-        </Button>
       </div>
-      <div className="flex gap-2">
-        <label className="flex h-12 min-w-0 flex-1 items-center rounded-panel border-[1.5px] border-line bg-background pr-4 focus-within:border-accent">
-          <input
-            type="text"
-            inputMode="decimal"
-            value={value}
-            disabled={pending}
-            aria-label="Weight in kg"
-            placeholder="Weight"
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void save();
-            }}
-            className="w-full min-w-0 bg-transparent px-4 text-[15px] tabular-nums placeholder:text-muted focus:outline-none"
-          />
-          <span className="text-sm text-muted">kg</span>
-        </label>
-        <Button pending={pending} onClick={() => void save()}>
-          Save
-        </Button>
-      </div>
-      {error && (
-        <p role="alert" className="text-sm font-semibold text-danger">
-          {error}
-        </p>
-      )}
       <Sheet open={snoozing} onClose={() => setSnoozing(false)} title="Remind me…">
         <Button variant="outline" className="w-full justify-start" onClick={() => snooze(1)}>
           <Clock className="h-[19px] w-[19px]" strokeWidth={2} aria-hidden />
@@ -194,6 +218,6 @@ export function WeighInCard({
           Change how often…
         </ButtonLink>
       </Sheet>
-    </section>
+    </>
   );
 }
