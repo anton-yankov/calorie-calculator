@@ -140,9 +140,16 @@ export function SwipeToRemove({
     state.scroll = null;
   }
 
+  // A move still waiting for the next frame would land after a settle and leave
+  // the row stuck halfway, so every settle drops it first
+  function dropPendingMove() {
+    cancelAnimationFrame(drag.current.frame);
+  }
+
   function close() {
     const state = drag.current;
     if (state.removing) return;
+    dropPendingMove();
     setMotion("settle");
     place(0);
     state.open = false;
@@ -157,6 +164,7 @@ export function SwipeToRemove({
   function open() {
     const state = drag.current;
     closeOthers();
+    dropPendingMove();
     setMotion("spring");
     place(-REVEAL);
     state.open = true;
@@ -180,6 +188,7 @@ export function SwipeToRemove({
     state.open = false;
     if (openRow?.owner === state) openRow = null;
     stopListening();
+    dropPendingMove();
     const reduced = reducedMotion();
     setMotion("leave");
     place(-item.offsetWidth - GAP, true);
@@ -261,7 +270,6 @@ export function SwipeToRemove({
       return;
     }
     state.swallowClick = true;
-    cancelAnimationFrame(state.frame);
     const first = state.samples[0]!;
     const last = state.samples[state.samples.length - 1]!;
     const velocity = last.t > first.t ? (last.x - first.x) / (last.t - first.t) : 0;
@@ -270,12 +278,19 @@ export function SwipeToRemove({
     else open();
   }
 
+  /** The gesture ended without a pointerup (the system took the touch): snap back. */
   function onPointerCancel(e: React.PointerEvent<HTMLDivElement>) {
     const state = drag.current;
     if (e.pointerId !== state.pointer) return;
     state.pointer = null;
     e.currentTarget.style.userSelect = "";
     if (state.lock === "x") close();
+  }
+
+  // Losing the capture mid-swipe ends it too. The event bubbles, so only the
+  // row's own counts: a child hands its capture over when the swipe starts.
+  function onLostPointerCapture(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.target === e.currentTarget) onPointerCancel(e);
   }
 
   // A swipe ends in a click on whatever was under the finger; don't let it land
@@ -288,6 +303,18 @@ export function SwipeToRemove({
     const active = document.activeElement;
     if (active instanceof HTMLElement && e.currentTarget.contains(active)) active.blur();
   }
+
+  // Once a swipe has started it keeps the finger. Otherwise iOS takes the touch
+  // for scrolling as soon as it turns up or down, cancelling the swipe halfway.
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const hold = (e: TouchEvent) => {
+      if (drag.current.lock === "x") e.preventDefault();
+    };
+    row.addEventListener("touchmove", hold, { passive: false });
+    return () => row.removeEventListener("touchmove", hold);
+  }, []);
 
   // Busy (re-estimating, logging): close and stay closed
   useEffect(() => {
@@ -352,6 +379,7 @@ export function SwipeToRemove({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
+          onLostPointerCapture={onLostPointerCapture}
           onClickCapture={onClickCapture}
           className="relative z-[1] touch-pan-y bg-surface py-2.5 will-change-transform"
         >
