@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Removing a food from an AI estimate — mockups — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16; --surface: #24221C; --surface-raised: #2A281F; --ink: #EDEAE0; --ink-soft: #A5A195;
+    --accent: #E08A5C; --accent-soft: #3A2A20; --green: #7FBF92; --green-soft: #22312A; --line: #38352C;
+    --code-bg: #2d2d2d; --radius: 10px;
+    --serif: Georgia, 'Times New Roman', serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color-scheme: dark; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.65; }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  h1 { font-family: var(--serif); font-size: clamp(32px, 5vw, 46px); font-weight: 650; line-height: 1.1; margin: 0 0 12px; }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+  h2 { font-family: var(--serif); font-size: 27px; font-weight: 650; margin: 56px 0 8px; display: flex; align-items: baseline; gap: 12px; }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  .lede { color: var(--ink-soft); margin-top: 0; }
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+  ul.tight { margin: 8px 0; padding-left: 20px; } ul.tight li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 14.5px; }
+  th { text-align: left; padding: 10px 14px; background: var(--surface-raised); font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 24px; margin: 18px 0; }
+  .callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px; }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .pill { font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+  .pill.in { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pill.out { color: var(--ink-soft); text-decoration: line-through; }
+  footer.doc { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+
+  /* ---------- Mock scaffolding ---------- */
+  .screens { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-start; margin: 26px 0 8px; }
+  .pcol { display: flex; flex-direction: column; gap: 12px; width: 375px; max-width: 100%; }
+  .pcap { font-size: 14px; color: var(--ink-soft); }
+  .pcap b { display: block; color: var(--ink); font-size: 15.5px; margin-bottom: 2px; }
+  .screen { border-radius: 34px; border: 10px solid #0c0b09; box-shadow: 0 0 0 1px #3a372e, 0 30px 60px -20px rgba(0,0,0,.7); overflow: hidden; }
+  .try { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--green); background: var(--green-soft); border-radius: 999px; padding: 1px 8px; margin-left: 6px; vertical-align: 2px; }
+  .reset { align-self: flex-start; font: inherit; font-size: 13px; color: var(--ink-soft); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+  .reset:hover { color: var(--ink); }
+
+  /* =========================================================
+     The app's look ("Plate") — mirrors globals.css tokens
+     ========================================================= */
+  .c {
+    --b: #1A1720; --s1: #24202C; --s2: #2F2A39; --s3: #3A3446; --tx: #F1ECF4; --mu: #A8A0B2;
+    --ac: #F4A77A; --acs: #3B2A2A; --gr: #86D3B0; --grs: #1F3330;
+    --red: #F08A8A; --reds: #3A2228; --ln: #352F40;
+    background: var(--b); color: var(--tx); font-family: var(--sans); padding: 14px 12px 16px; line-height: 1.5;
+  }
+  .c button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .c .est { position: relative; background: var(--s1); border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .c .photo { height: 90px; border-radius: 18px; background:
+      radial-gradient(ellipse at 50% 40%, #e9c77d 0 22%, transparent 23%),
+      radial-gradient(ellipse at 50% 48%, #d98b8b 0 30%, transparent 31%),
+      radial-gradient(ellipse at 50% 56%, #c99a5e 0 36%, #a8743f 37% 39%, transparent 40%),
+      radial-gradient(ellipse at 50% 52%, #f3efe6 0 44%, #cfc8ba 45% 47%, transparent 48%),
+      linear-gradient(135deg, #5b4433, #3e2e24); }
+  .c .h b { font-size: 16px; font-weight: 800; letter-spacing: -.01em; display: block; }
+  .c .h small { font-size: 13px; color: var(--mu); }
+  .c ul.foods { list-style: none; margin: 0; padding: 0; }
+  .c ul.foods > li { border-top: 1px solid var(--ln); position: relative; }
+  .c ul.foods > li:first-child { border-top: 0; }
+  .c .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; background: var(--s1); position: relative; }
+  .c .fn { flex: 1; min-width: 0; text-align: left; }
+  .c .fn b { font-size: 14.5px; font-weight: 700; line-height: 1.35; }
+  .c .fn small { display: block; font-size: 12.5px; color: var(--mu); }
+  .c .chip { border-radius: 999px; padding: 0 8px; font-size: 11.5px; font-weight: 700; margin-left: 4px; vertical-align: 1px; }
+  .c .chip.high { background: var(--grs); color: var(--gr); }
+  .c .chip.medium { background: var(--acs); color: var(--ac); }
+  .c .chip.low { background: var(--reds); color: var(--red); }
+  .c .g { width: 84px; height: 44px; flex-shrink: 0; border-radius: 14px; border: 1.5px solid var(--s3); background: var(--b); display: flex; align-items: center; justify-content: flex-end; padding-right: 12px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .c .g span { color: var(--mu); font-weight: 400; font-size: 13px; padding-left: 4px; }
+  .c .totals { border-top: 2px solid var(--s3); padding-top: 10px; display: flex; flex-direction: column; gap: 2px; }
+  .c .kcal { font-size: 22px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .c .kcal .wt { color: var(--mu); }
+  .c .dn { color: var(--gr); font-size: 15px; margin-left: 4px; }
+  .c .mac { font-size: 13.5px; color: var(--mu); font-variant-numeric: tabular-nums; }
+  .c .after { background: var(--s2); border-radius: 14px; padding: 10px 12px; font-size: 13.5px; color: var(--mu); display: flex; flex-direction: column; gap: 2px; }
+  .c .after small { font-size: 12px; }
+  .c .after b { color: var(--tx); font-weight: 600; }
+  .c .act { display: flex; gap: 8px; }
+  .c .btn { height: 44px; border-radius: 14px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 750; font-size: 14px; white-space: nowrap; }
+  .c .btn-o { border: 1.5px solid var(--s3); }
+  .c .btn-p { background: var(--ac); color: #241a15; flex: 1; }
+  .c .btn-p.off { opacity: .45; }
+  .c svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+  .c svg.i.sm { width: 16px; height: 16px; stroke-width: 2.25; }
+  .c .undo { color: var(--ac); font-weight: 750; font-size: 13.5px; padding: 6px 4px; }
+
+  /* A · × button + in-place undo line */
+  .c .x { width: 32px; height: 32px; margin-right: -4px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--mu); }
+  .c .x:hover { background: var(--s2); color: var(--red); }
+  .c .gone { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0; padding: 4px 6px 4px 12px; border-radius: 12px; border: 1.5px dashed var(--s3); font-size: 13.5px; color: var(--mu); }
+  .c .gone s { color: var(--mu); }
+
+  /* B · swipe */
+  .c .swipe-bg { position: absolute; inset: 1px 0 1px 0; background: var(--red); color: #2a1416; display: flex; align-items: center; justify-content: flex-end; padding-right: 18px; font-weight: 800; font-size: 14px; gap: 6px; border-radius: 12px; }
+  .c .row.drag { transition: none; }
+  .c .row.anim { transition: transform .22s ease; }
+  .c .row.sw { touch-action: pan-y; user-select: none; cursor: grab; }
+  .c .hint { font-size: 12px; color: var(--mu); display: flex; align-items: center; gap: 6px; }
+  .c .toast { position: absolute; left: 12px; right: 12px; bottom: 12px; background: var(--tx); color: var(--b); border-radius: 14px; padding: 8px 8px 8px 14px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 600; box-shadow: 0 10px 30px -8px rgba(0,0,0,.6); transform: translateY(140%); transition: transform .25s ease; z-index: 3; }
+  .c .toast.show { transform: none; }
+  .c .toast .undo { color: #b4502a; }
+  .c .toast .bar { position: absolute; left: 14px; right: 14px; bottom: 4px; height: 2px; border-radius: 2px; background: rgba(26,23,32,.15); overflow: hidden; }
+  .c .toast .bar i { display: block; height: 100%; width: 100%; background: rgba(26,23,32,.45); transform-origin: left; }
+  .c .toast.show .bar i { animation: drain 5s linear forwards; }
+  @keyframes drain { to { transform: scaleX(0); } }
+
+  /* C · remove inside the details */
+  .c .details { padding: 0 0 10px; font-size: 12.5px; color: var(--mu); display: flex; flex-direction: column; gap: 8px; }
+  .c .rm { align-self: flex-start; height: 36px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--reds); color: var(--red); font-weight: 750; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+  .c .out .fn b, .c .out .fn small { text-decoration: line-through; color: var(--mu); }
+  .c .out .fn { opacity: .7; }
+  .c .back { width: 84px; height: 44px; flex-shrink: 0; border-radius: 14px; border: 1.5px dashed var(--s3); font-size: 13.5px; font-weight: 750; color: var(--ac); display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .c .chev { color: var(--mu); font-size: 11px; margin-left: 4px; }
+
+  /* D · checkmarks */
+  .c .ck { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; background: var(--gr); color: var(--b); display: flex; align-items: center; justify-content: center; }
+  .c .out .ck { background: transparent; box-shadow: inset 0 0 0 2px var(--s3); color: transparent; }
+  .c .out .g { opacity: .4; }
+  .c .count { font-size: 13px; color: var(--mu); }
+
+  /* small shared bits */
+  .c .gone, .c .out { animation: pop .18s ease; }
+  @keyframes pop { from { opacity: .3; } to { opacity: 1; } }
+  .verdict td:first-child { white-space: normal; }
+  .yes { color: var(--green); } .no { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Mockups · pick one</div>
+  <h1>Removing a food from an AI estimate</h1>
+  <p class="subtitle">When the AI splits a sandwich into bread, ham, cheese and butter, the only fix today is setting the cheese to 0 g or asking the AI to try again. Here are four quick ways to drop an item and undo it. All four mockups work, so tap them.</p>
+  <div class="meta">
+    <span><strong>Screen:</strong> the estimate card on the homepage</span>
+    <span><strong>Code:</strong> <code>EstimateCard.tsx</code>, <code>AnalysisProvider.tsx</code></span>
+    <span><strong>Data:</strong> no database change</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>What you see today</h2>
+<p class="lede">Each row has a name, a confidence tag, and a grams field. You can tap the name to see the AI's assumptions. There's no way to remove a row. Typing 0 g sort of works, but the cheese still shows up in the meal and is saved with it.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>Current estimate card</b>The cheese is wrong, but you can't remove it.</div>
+    <div class="screen"><div class="c">
+      <div class="est" data-static>
+        <div class="photo"></div>
+        <div class="h"><b>Your meal</b><small>Done in 7 s · tap a weight to change it</small></div>
+        <ul class="foods" data-list></ul>
+        <div data-totals></div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>Option A: × on every row, undo in place</h2>
+<p class="lede">Every row gets a small × to the right of the grams field. Tap it and the row shrinks to a dashed line, "Cheese removed · Undo", in the same spot. The undo line stays until you log the meal, so there's no timer to race. It's one tap to remove, one tap to undo, and it works the same with a mouse.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>A · Remove button <span class="try">try it</span></b>Tap the × next to Cheese, then tap Undo.</div>
+    <div class="screen"><div class="c">
+      <div class="est" data-opt="a">
+        <div class="h"><b>Your meal</b><small>Done in 7 s · tap a weight to change it</small></div>
+        <ul class="foods" data-list></ul>
+        <div data-totals></div>
+        <div data-after></div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p" data-log><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+    <button class="reset" type="button" data-reset="a">↺ Reset mockup</button>
+  </div>
+</div>
+
+<ul class="tight">
+  <li><b>Good:</b> you can see how to do it at a glance. There's nothing to discover or remember.</li>
+  <li><b>Good:</b> the undo stays where the food was, so nothing pops up over the card.</li>
+  <li><b>Cost:</b> one more small icon per row. It's muted grey until you touch it, so the card stays calm.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Option B: Swipe left to delete</h2>
+<p class="lede">This is how iOS Mail does it. Drag a row left to reveal a red Delete. Let go past halfway (or tap Delete) and the row is gone. A toast slides up from the bottom of the card with Undo for 5 seconds. The rows look exactly like they do today.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>B · Swipe <span class="try">try it</span></b>Drag a row left with your mouse or finger.</div>
+    <div class="screen"><div class="c">
+      <div class="est" data-opt="b">
+        <div class="h"><b>Your meal</b><small>Done in 7 s · tap a weight to change it</small></div>
+        <ul class="foods" data-list></ul>
+        <div class="hint"><svg class="i sm" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Swipe a food left to remove it</div>
+        <div data-totals></div>
+        <div data-after></div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p" data-log><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+        <div class="toast" data-toast><span data-toast-text></span><button type="button" class="undo" data-toast-undo>Undo</button><span class="bar"><i></i></span></div>
+      </div>
+    </div></div>
+    <button class="reset" type="button" data-reset="b">↺ Reset mockup</button>
+  </div>
+</div>
+
+<ul class="tight">
+  <li><b>Good:</b> the card stays as clean as it is now, and swiping feels natural on a phone.</li>
+  <li><b>Cost:</b> you can't see that swiping is possible, hence the hint line. On desktop, dragging rows with a mouse is awkward. There we'd need a fallback, such as a × that appears on hover.</li>
+  <li><b>Cost:</b> undo only lasts 5 seconds. If you miss it, the item is gone and you'd have to ask the AI again.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>Option C: Remove inside the row's details</h2>
+<p class="lede">Tapping a food's name already opens its details (the AI's assumptions, carbs and fat). This adds a "Remove from meal" button there. The removed food stays in the list, struck through, and its grams field turns into "Add back". Nothing new appears on the card until you open a row.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>C · In the details <span class="try">try it</span></b>Tap "Cheese" to open it, then Remove.</div>
+    <div class="screen"><div class="c">
+      <div class="est" data-opt="c">
+        <div class="h"><b>Your meal</b><small>Done in 7 s · tap a food for details</small></div>
+        <ul class="foods" data-list></ul>
+        <div data-totals></div>
+        <div data-after></div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p" data-log><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+    <button class="reset" type="button" data-reset="c">↺ Reset mockup</button>
+  </div>
+</div>
+
+<ul class="tight">
+  <li><b>Good:</b> it adds no clutter, and it builds on a tap you may already use.</li>
+  <li><b>Good:</b> the struck-through row is its own undo, and it stays until you log.</li>
+  <li><b>Cost:</b> it's two taps, and most people never open the details, so they might not find it.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>Option D: A checkmark on every food</h2>
+<p class="lede">Every food starts with a green check. Tap the check and the food is left out of the meal: it's dimmed, struck through, and the header says "3 of 4 foods". Tap it again to bring it back. Removing and undoing are the same button.</p>
+
+<div class="screens">
+  <div class="pcol">
+    <div class="pcap"><b>D · Checkmarks <span class="try">try it</span></b>Tap the check next to Cheese, and tap it again.</div>
+    <div class="screen"><div class="c">
+      <div class="est" data-opt="d">
+        <div class="h"><b>Your meal</b><small data-count>Done in 7 s · tap a check to leave a food out</small></div>
+        <ul class="foods" data-list></ul>
+        <div data-totals></div>
+        <div data-after></div>
+        <div class="act"><span class="btn btn-o">Today</span><span class="btn btn-p" data-log><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Log to today</span></div>
+      </div>
+    </div></div>
+    <button class="reset" type="button" data-reset="d">↺ Reset mockup</button>
+  </div>
+</div>
+
+<ul class="tight">
+  <li><b>Good:</b> it's the fastest to flip back and forth, which is handy for "what if I skip the butter?".</li>
+  <li><b>Cost:</b> a green check on every row makes the card busier, and it reads a bit like a to-do list.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>Side by side</h2>
+
+<table class="verdict">
+  <tr><th>Option</th><th>Taps to remove</th><th>Easy to find</th><th>Undo</th><th>Desktop</th><th>Card looks</th></tr>
+  <tr><td>A · × button</td><td>1</td><td class="yes">Yes</td><td>In place, until you log</td><td class="yes">Works as is</td><td>One muted icon per row</td></tr>
+  <tr><td>B · Swipe</td><td>1 swipe</td><td class="no">Needs a hint</td><td>Toast, 5 s</td><td class="no">Needs a fallback</td><td>Unchanged</td></tr>
+  <tr><td>C · In details</td><td>2</td><td class="no">Hidden</td><td>In place, until you log</td><td class="yes">Works as is</td><td>Unchanged</td></tr>
+  <tr><td>D · Checkmarks</td><td>1</td><td class="yes">Yes</td><td>Same button</td><td class="yes">Works as is</td><td>Busier</td></tr>
+</table>
+
+<div class="callout good"><strong>My pick: A.</strong> It's the only option that's visible, takes one tap, keeps the undo until you log, and behaves the same on phone and desktop. If you also want swipe, it can be added on top of A later. Swipe would just be a shortcut for the same ×, and A's undo line would stay as it is.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>Same in every option</h2>
+<ul class="tight">
+  <li><b>Totals update at once.</b> The calories, macros, weight and "After this meal" line all drop by the food's amount as soon as it's removed, with the green ▼ you already see after corrections.</li>
+  <li><b>Undo restores everything exactly.</b> The food comes back in its old spot with the grams you had typed.</li>
+  <li><b>Removing every food</b> greys out Log and the card says "Nothing left to log". Start over still works.</li>
+  <li><b>Asking the AI for a correction</b> after removing something sends the meal without that food, so the new estimate starts from what you kept. Any pending undo is cleared at that point.</li>
+  <li><b>Barcode-scanned items</b> added to the meal can be removed the same way.</li>
+  <li><b>Nothing is saved until you tap Log.</b> Removed foods never reach the database, so no SQL is needed.</li>
+</ul>
+
+<h3>One open question</h3>
+<p>Meals you've already logged open in the <b>Edit meal</b> sheet, which has grams fields but no remove either. Whichever option you pick could be added there too, using the same look. Do you want that in the same change, or only on the estimate card for now?</p>
+
+<footer class="doc">
+  Calorie Calculator · removing foods from an estimate · mockups for choosing a direction
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var FOODS = [
+    { name: "White bread", conf: "high", g: 80, kcal: 212, p: 7, c: 39, f: 3, why: "Two slices of sandwich bread, about 40 g each." },
+    { name: "Ham", conf: "high", g: 50, kcal: 58, p: 9, c: 1, f: 2, why: "Two to three thin slices of cooked ham." },
+    { name: "Cheddar cheese", conf: "medium", g: 25, kcal: 100, p: 6, c: 0, f: 8, why: "One slice, partly hidden under the ham." },
+    { name: "Butter", conf: "low", g: 10, kcal: 72, p: 0, c: 0, f: 8, why: "Assumed a thin layer on one slice." }
+  ];
+  var LEFT_BEFORE = 1350, PROTEIN_LEFT = 88;
+  var ICON_X = '<svg class="i sm" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+  var ICON_TRASH = '<svg class="i sm" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
+  var ICON_CHECK = '<svg class="i sm" viewBox="0 0 24 24" style="stroke-width:3"><path d="M20 6 9 17l-5-5"/></svg>';
+  var ICON_UNDO = '<svg class="i sm" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
+
+  function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+
+  function sum(state) {
+    var t = { kcal: 0, p: 0, c: 0, f: 0, g: 0 };
+    FOODS.forEach(function (food, i) {
+      if (state.removed[i]) return;
+      t.kcal += food.kcal; t.p += food.p; t.c += food.c; t.f += food.f; t.g += food.g;
+    });
+    return t;
+  }
+
+  function totalsHtml(state) {
+    var t = sum(state), full = sum({ removed: {} });
+    var diff = full.kcal - t.kcal;
+    return '<div class="totals"><span class="kcal">' + fmt(t.kcal) + ' kcal' +
+      (diff > 0 ? '<span class="dn">▼' + fmt(diff) + '</span>' : '') +
+      ' <span class="wt">· ' + fmt(t.g) + ' g</span></span>' +
+      '<span class="mac">' + fmt(t.p) + ' g protein · ' + fmt(t.c) + ' g carbs · ' + fmt(t.f) + ' g fat</span></div>';
+  }
+
+  function afterHtml(state) {
+    var t = sum(state);
+    if (t.kcal === 0) return '<div class="after"><small>After this meal</small><b>Nothing left to log</b></div>';
+    return '<div class="after"><small>After this meal</small><b>' + fmt(LEFT_BEFORE - t.kcal) + ' kcal left · ' + fmt(PROTEIN_LEFT - t.p) + ' g protein to go</b></div>';
+  }
+
+  function info(food) {
+    return '<b>' + food.name + '</b> <span class="chip ' + food.conf + '">' + food.conf + '</span>' +
+      '<small>' + fmt(food.kcal) + ' kcal · ' + fmt(food.p) + ' g protein</small>';
+  }
+  function grams(food) { return '<div class="g">' + food.g + '<span>g</span></div>'; }
+
+  var renderers = {
+    plain: function (state) {
+      return FOODS.map(function (food) {
+        return '<li><div class="row"><div class="fn">' + info(food) + '</div>' + grams(food) + '</div></li>';
+      }).join("");
+    },
+    a: function (state) {
+      return FOODS.map(function (food, i) {
+        if (state.removed[i]) {
+          return '<li><div class="gone"><span><s>' + food.name + '</s> removed · −' + fmt(food.kcal) + ' kcal</span>' +
+            '<button type="button" class="undo" data-act="restore" data-i="' + i + '">Undo</button></div></li>';
+        }
+        return '<li><div class="row"><div class="fn">' + info(food) + '</div>' + grams(food) +
+          '<button type="button" class="x" aria-label="Remove ' + food.name + '" data-act="remove" data-i="' + i + '">' + ICON_X + '</button></div></li>';
+      }).join("");
+    },
+    b: function (state) {
+      return FOODS.map(function (food, i) {
+        if (state.removed[i]) return "";
+        return '<li><div class="swipe-bg"><button type="button" data-act="remove" data-i="' + i + '" style="display:flex;align-items:center;gap:6px;font-weight:800">' + ICON_TRASH + 'Delete</button></div>' +
+          '<div class="row sw anim" data-i="' + i + '"><div class="fn">' + info(food) + '</div>' + grams(food) + '</div></li>';
+      }).join("");
+    },
+    c: function (state) {
+      return FOODS.map(function (food, i) {
+        if (state.removed[i]) {
+          return '<li class="out"><div class="row"><div class="fn">' + info(food) + '</div>' +
+            '<button type="button" class="back" data-act="restore" data-i="' + i + '">' + ICON_UNDO + 'Add back</button></div></li>';
+        }
+        var open = state.open === i;
+        return '<li><div class="row"><button type="button" class="fn" data-act="toggle" data-i="' + i + '" aria-expanded="' + open + '">' +
+          info(food).replace('</span><small>', '</span><span class="chev">' + (open ? '▲' : '▼') + '</span><small>') + '</button>' + grams(food) + '</div>' +
+          (open ? '<div class="details"><span>' + food.why + '</span><span>' + food.c + ' g carbs · ' + food.f + ' g fat</span>' +
+            '<button type="button" class="rm" data-act="remove" data-i="' + i + '">' + ICON_TRASH + 'Remove from meal</button></div>' : '') +
+          '</li>';
+      }).join("");
+    },
+    d: function (state) {
+      return FOODS.map(function (food, i) {
+        var out = state.removed[i];
+        return '<li' + (out ? ' class="out"' : '') + '><div class="row">' +
+          '<button type="button" class="ck" aria-pressed="' + !out + '" aria-label="' + (out ? 'Add back ' : 'Leave out ') + food.name + '" data-act="' + (out ? 'restore' : 'remove') + '" data-i="' + i + '">' + ICON_CHECK + '</button>' +
+          '<div class="fn">' + info(food) + '</div>' + grams(food) + '</div></li>';
+      }).join("");
+    }
+  };
+
+  function mount(card, kind) {
+    var state = { removed: {}, open: null, toastTimer: null, lastRemoved: null };
+    var list = card.querySelector("[data-list]");
+    var totals = card.querySelector("[data-totals]");
+    var after = card.querySelector("[data-after]");
+    var log = card.querySelector("[data-log]");
+    var count = card.querySelector("[data-count]");
+    var toast = card.querySelector("[data-toast]");
+
+    function render() {
+      list.innerHTML = renderers[kind](state);
+      totals.innerHTML = totalsHtml(state);
+      if (after) after.innerHTML = afterHtml(state);
+      if (log) log.classList.toggle("off", sum(state).kcal === 0);
+      if (count) {
+        var kept = FOODS.filter(function (_, i) { return !state.removed[i]; }).length;
+        count.textContent = kept === FOODS.length ? "Done in 7 s · tap a check to leave a food out" : kept + " of " + FOODS.length + " foods · tap a check to add one back";
+      }
+      if (kind === "b") wireSwipes();
+    }
+
+    function showToast(i) {
+      if (!toast) return;
+      state.lastRemoved = i;
+      toast.querySelector("[data-toast-text]").textContent = FOODS[i].name + " removed";
+      toast.classList.remove("show");
+      void toast.offsetWidth; // restart the countdown bar
+      toast.classList.add("show");
+      clearTimeout(state.toastTimer);
+      state.toastTimer = setTimeout(function () { toast.classList.remove("show"); }, 5000);
+    }
+
+    function remove(i) {
+      state.removed[i] = true;
+      if (state.open === i) state.open = null;
+      render();
+      showToast(i);
+    }
+    function restore(i) { delete state.removed[i]; render(); }
+
+    card.addEventListener("click", function (e) {
+      var el = e.target.closest("[data-act]");
+      if (!el || !card.contains(el)) return;
+      var i = Number(el.getAttribute("data-i"));
+      var act = el.getAttribute("data-act");
+      if (act === "remove") remove(i);
+      else if (act === "restore") restore(i);
+      else if (act === "toggle") { state.open = state.open === i ? null : i; render(); }
+    });
+
+    if (toast) {
+      toast.querySelector("[data-toast-undo]").addEventListener("click", function () {
+        if (state.lastRemoved === null) return;
+        restore(state.lastRemoved);
+        state.lastRemoved = null;
+        toast.classList.remove("show");
+        clearTimeout(state.toastTimer);
+      });
+    }
+
+    function wireSwipes() {
+      var REVEAL = 96;
+      list.querySelectorAll(".row.sw").forEach(function (row) {
+        var startX = 0, base = 0, x = 0, dragging = false, moved = false;
+        row.addEventListener("pointerdown", function (e) {
+          dragging = true; moved = false; startX = e.clientX;
+          base = row.classList.contains("open") ? -REVEAL : 0; x = base;
+          row.classList.add("drag"); row.classList.remove("anim");
+          row.setPointerCapture(e.pointerId);
+          list.querySelectorAll(".row.sw.open").forEach(function (other) {
+            if (other !== row) { other.classList.add("anim"); other.classList.remove("open"); other.style.transform = ""; }
+          });
+        });
+        row.addEventListener("pointermove", function (e) {
+          if (!dragging) return;
+          var dx = e.clientX - startX;
+          if (Math.abs(dx) > 4) moved = true;
+          x = Math.min(0, base + dx);
+          row.style.transform = "translateX(" + x + "px)";
+        });
+        function end() {
+          if (!dragging) return;
+          dragging = false;
+          row.classList.remove("drag"); row.classList.add("anim");
+          var w = row.offsetWidth;
+          if (x < -w * 0.5) {
+            row.style.transform = "translateX(" + (-w) + "px)";
+            setTimeout(function () { remove(Number(row.getAttribute("data-i"))); }, 200);
+          } else if (x < -REVEAL / 2) {
+            row.classList.add("open"); row.style.transform = "translateX(" + (-REVEAL) + "px)";
+          } else {
+            row.classList.remove("open"); row.style.transform = "";
+          }
+        }
+        row.addEventListener("pointerup", end);
+        row.addEventListener("pointercancel", end);
+      });
+    }
+
+    render();
+    return function reset() {
+      state.removed = {}; state.open = null; state.lastRemoved = null;
+      if (toast) { toast.classList.remove("show"); clearTimeout(state.toastTimer); }
+      render();
+    };
+  }
+
+  var resets = {};
+  document.querySelectorAll("[data-static]").forEach(function (card) { mount(card, "plain"); });
+  document.querySelectorAll("[data-opt]").forEach(function (card) {
+    var kind = card.getAttribute("data-opt");
+    resets[kind] = mount(card, kind);
+  });
+  document.querySelectorAll("[data-reset]").forEach(function (btn) {
+    btn.addEventListener("click", function () { resets[btn.getAttribute("data-reset")](); });
+  });
+})();
+</script>
+</body>
+</html>

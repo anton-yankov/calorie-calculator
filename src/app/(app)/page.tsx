@@ -134,6 +134,7 @@ export default function Home() {
         ))}
         <EstimateCard
           analysis={latest.analysis}
+          keys={latest.keys}
           previous={earlier.at(-1)?.analysis ?? null}
           label={history.length > 1 ? `Estimate ${history.length}` : "Estimate"}
           durationMs={latest.durationMs}

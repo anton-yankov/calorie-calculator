@@ -12,6 +12,10 @@ import { scaleFood, sumTotals } from "@/lib/scale";
 import type { FoodItem, MealAnalysis } from "@/lib/schema";
 
 interface HistoryEntry {
+  /** Stable for the entry's lifetime, so an Undo can tell it still applies */
+  id: number;
+  /** One stable key per food, in order: list keys, and where an undone food goes back */
+  keys: number[];
   /** The correction that produced this estimate; null for the first estimate of a photo */
   correction: string | null;
   analysis: MealAnalysis;
@@ -68,6 +72,31 @@ interface AnalysisState {
   addScannedFood: (food: FoodItem) => void;
   analyze: (correction?: string) => Promise<void>;
   handleGramsChange: (foodIndex: number, grams: number) => void;
+  /** Takes the food with this key off the latest estimate, with an Undo toast */
+  removeFood: (key: number) => void;
+}
+
+/** A food taken off an estimate, kept so Undo can put it back where it was. */
+interface RemovedFood {
+  entryId: number;
+  key: number;
+  food: FoodItem;
+  base: FoodItem;
+}
+
+/** The entry with new food lists, its totals recomputed. */
+function withFoods(
+  entry: HistoryEntry,
+  keys: number[],
+  foods: FoodItem[],
+  baselineFoods: FoodItem[],
+): HistoryEntry {
+  return {
+    ...entry,
+    keys,
+    analysis: { ...entry.analysis, foods, totals: sumTotals(foods) },
+    baseline: { ...entry.baseline, foods: baselineFoods, totals: sumTotals(baselineFoods) },
+  };
 }
 
 const AnalysisContext = createContext<AnalysisState | null>(null);
@@ -100,6 +129,10 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState(0);
   // The resized JPEG is cached so corrections re-send the same bytes
   const resizedRef = useRef<Blob | null>(null);
+  // Source of entry ids and food keys; only ever counts up
+  const nextId = useRef(0);
+  // Undo toasts for removed foods, dismissed once the estimate they belong to is gone
+  const removalToasts = useRef<(string | number)[]>([]);
 
   const latest = history.length > 0 ? history[history.length - 1] : undefined;
 
@@ -112,7 +145,22 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
+  function newEntry(
+    correction: string | null,
+    analysis: MealAnalysis,
+    durationMs: number | null,
+  ): HistoryEntry {
+    const keys = analysis.foods.map(() => nextId.current++);
+    return { id: nextId.current++, keys, correction, analysis, baseline: analysis, durationMs };
+  }
+
+  function dismissRemovalToasts() {
+    removalToasts.current.forEach((id) => toast.dismiss(id));
+    removalToasts.current = [];
+  }
+
   async function handleSelect(selected: File) {
+    dismissRemovalToasts();
     setHistory([]);
     setError(null);
     resizedRef.current = null;
@@ -192,6 +240,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   }
 
   function handleClear() {
+    dismissRemovalToasts();
     setSourceBlob(null);
     replacePreviewUrl(null);
     setDescription("");
@@ -230,7 +279,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function handleLog(): Promise<LoggedPlate | null> {
-    if (!latest || logging) return null;
+    if (!latest || logging || latest.analysis.foods.length === 0) return null;
     setLogging(true);
     setError(null);
     const id = crypto.randomUUID();
@@ -277,7 +326,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
           totals: sumTotals([food]),
           notes: note,
         };
-        return [{ correction: null, analysis, baseline: analysis, durationMs: null }];
+        return [newEntry(null, analysis, null)];
       }
 
       const analysisFoods = [...last.analysis.foods, food];
@@ -286,6 +335,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         ...prev.slice(0, -1),
         {
           ...last,
+          keys: [...last.keys, nextId.current++],
           analysis: {
             ...last.analysis,
             foods: analysisFoods,
@@ -311,6 +361,8 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setLoadingSince(started);
     setError(null);
+    // A new estimate replaces the one any pending Undo would restore into
+    dismissRemovalToasts();
     if (correction) {
       setPendingCorrection(correction);
     } else {
@@ -345,11 +397,8 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
           ? { ...raw, foods: reattachFoodExtras(raw.foods, latest.analysis.foods) }
           : raw;
       const durationMs = Date.now() - started;
-      setHistory((prev) =>
-        correction
-          ? [...prev, { correction, analysis: body, baseline: body, durationMs }]
-          : [{ correction: null, analysis: body, baseline: body, durationMs }],
-      );
+      const entry = newEntry(correction ?? null, body, durationMs);
+      setHistory((prev) => (correction ? [...prev, entry] : [entry]));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -372,6 +421,57 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       });
       const totals = sumTotals(foods);
       return [...prev.slice(0, -1), { ...last, analysis: { ...last.analysis, foods, totals } }];
+    });
+  }
+
+  function removeFood(key: number) {
+    const index = latest?.keys.indexOf(key) ?? -1;
+    if (!latest || index < 0) return;
+    const removed: RemovedFood = {
+      entryId: latest.id,
+      key,
+      food: latest.analysis.foods[index]!,
+      base: latest.baseline.foods[index]!,
+    };
+    setHistory((prev) => {
+      const last = prev[prev.length - 1];
+      if (!last || last.id !== removed.entryId) return prev;
+      const keep = (_: unknown, i: number) => last.keys[i] !== key;
+      return [
+        ...prev.slice(0, -1),
+        withFoods(
+          last,
+          last.keys.filter((k) => k !== key),
+          last.analysis.foods.filter(keep),
+          last.baseline.foods.filter(keep),
+        ),
+      ];
+    });
+    const id = toast.success(`${removed.food.name} removed`, {
+      duration: 5000,
+      action: { label: "Undo", onClick: () => restoreFood(removed) },
+    });
+    removalToasts.current.push(id);
+  }
+
+  /** Puts a removed food back in its old place, as long as its estimate is still the latest. */
+  function restoreFood(removed: RemovedFood) {
+    setHistory((prev) => {
+      const last = prev[prev.length - 1];
+      if (!last || last.id !== removed.entryId || last.keys.includes(removed.key)) return prev;
+      // Keys count up in list order, so the food goes before the first later key
+      const after = last.keys.findIndex((k) => k > removed.key);
+      const at = after < 0 ? last.keys.length : after;
+      const insert = <T,>(list: T[], item: T) => [...list.slice(0, at), item, ...list.slice(at)];
+      return [
+        ...prev.slice(0, -1),
+        withFoods(
+          last,
+          insert(last.keys, removed.key),
+          insert(last.analysis.foods, removed.food),
+          insert(last.baseline.foods, removed.base),
+        ),
+      ];
     });
   }
 
@@ -404,6 +504,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         addScannedFood,
         analyze,
         handleGramsChange,
+        removeFood,
       }}
     >
       {children}

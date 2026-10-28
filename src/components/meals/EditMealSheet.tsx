@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { DatePicker } from "@/components/DatePicker";
 import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
 import { Sheet } from "@/components/Sheet";
+import { SwipeList, SwipeToRemove } from "@/components/SwipeToRemove";
 import { useWaterTracking } from "@/components/WaterTracking";
 import { dayKey } from "@/lib/day";
 import type { LoggedMeal } from "@/lib/log";
@@ -68,7 +69,10 @@ function EditMealForm({
     const d = new Date(meal.loggedAt);
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   });
-  const totals = sumTotals(foods);
+  // Indexes of swiped-away foods; kept in `foods` so gram edits still line up with the saved meal
+  const [removed, setRemoved] = useState<number[]>([]);
+  const kept = foods.filter((_, i) => !removed.includes(i));
+  const totals = sumTotals(kept);
 
   // Grams edits rescale from the saved food (the baseline), so 0 g never loses the ratios
   function changeGrams(index: number, grams: number) {
@@ -98,7 +102,7 @@ function EditMealForm({
     if (Number.isFinite(h) && Number.isFinite(m)) when.setHours(h!, m!, 0, 0);
     startTransition(async () => {
       const result = await updateMealAction(meal.id, {
-        analysis: { ...meal.analysis, foods, totals },
+        analysis: { ...meal.analysis, foods: kept, totals },
         loggedAt: when.toISOString(),
       });
       if (result.error) {
@@ -113,36 +117,67 @@ function EditMealForm({
 
   return (
     <>
-      <ul className="flex flex-col">
-        {foods.map((food, i) => (
-          <li key={`${food.name}-${i}`} className="border-t border-line py-2.5 first:border-t-0">
-            <div className="flex items-center gap-3">
-              <span className="min-w-0 flex-1 text-[14.5px] font-bold leading-snug">
-                {food.name}
-                <span className="block text-[12.5px] font-normal text-muted">
-                  {kcal(food.calories)} kcal · {Math.round(food.protein_g)} g protein
-                </span>
-              </span>
-              {/* Typed-in foods have no portion to scale */}
-              {food.quickEntry ? (
-                <span className="text-sm text-muted">as typed</span>
-              ) : (
-                <AmountField food={food} disabled={pending} onChange={(g) => changeGrams(i, g)} />
-              )}
-            </div>
-            {waterTracking && !food.quickEntry && (
-              <div className="mt-2">
-                <DrinkTypeSelect
-                  name={food.name}
-                  value={food.drink_type ?? null}
-                  disabled={pending}
-                  onChange={(type) => changeDrinkType(i, type)}
-                />
+      <SwipeList className="flex flex-col">
+        {foods.map((food, i) =>
+          removed.includes(i) ? (
+            // The sheet is a modal dialog that toasts can't reach, so Undo sits where the food was
+            <li key={`removed-${i}`} className="swipe-fold border-t border-line first:border-t-0">
+              <div className="overflow-hidden">
+                <div className="flex items-center justify-between gap-3 py-1.5 text-[13.5px] text-muted">
+                  <span className="min-w-0 truncate">
+                    <s>{food.name}</s> removed
+                  </span>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => setRemoved((prev) => prev.filter((r) => r !== i))}
+                    className="h-9 shrink-0 rounded-[10px] bg-surface-raised px-3 text-[13.5px] font-bold text-accent"
+                  >
+                    Undo
+                  </button>
+                </div>
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
+            </li>
+          ) : (
+            <SwipeToRemove
+              key={`food-${i}`}
+              label={food.name}
+              disabled={pending}
+              onRemove={() => setRemoved((prev) => [...prev, i])}
+            >
+              <div className="flex items-center gap-3">
+                <span className="min-w-0 flex-1 text-[14.5px] font-bold leading-snug">
+                  {food.name}
+                  <span className="block text-[12.5px] font-normal text-muted">
+                    {kcal(food.calories)} kcal · {Math.round(food.protein_g)} g protein
+                  </span>
+                </span>
+                {/* Typed-in foods have no portion to scale */}
+                {food.quickEntry ? (
+                  <span className="text-sm text-muted">as typed</span>
+                ) : (
+                  <AmountField food={food} disabled={pending} onChange={(g) => changeGrams(i, g)} />
+                )}
+              </div>
+              {waterTracking && !food.quickEntry && (
+                <div className="mt-2">
+                  <DrinkTypeSelect
+                    name={food.name}
+                    value={food.drink_type ?? null}
+                    disabled={pending}
+                    onChange={(type) => changeDrinkType(i, type)}
+                  />
+                </div>
+              )}
+            </SwipeToRemove>
+          ),
+        )}
+      </SwipeList>
+      {kept.length === 0 && (
+        <p className="text-sm text-muted">
+          Nothing left to save. To remove the whole meal, delete it instead.
+        </p>
+      )}
       <p className="flex flex-col gap-0.5 rounded-panel bg-surface-raised px-3 py-2.5 text-[13.5px] text-muted">
         <span className="text-xs">New total</span>
         <span>
@@ -180,7 +215,7 @@ function EditMealForm({
         </label>
       </div>
       <div className="flex flex-col gap-2">
-        <Button pending={pending} onClick={save} className="w-full">
+        <Button pending={pending} disabled={kept.length === 0} onClick={save} className="w-full">
           {pending ? "Saving…" : "Save changes"}
         </Button>
         <Button variant="outline" disabled={pending} onClick={onDone} className="w-full">

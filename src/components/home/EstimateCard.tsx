@@ -1,13 +1,14 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TodayProgress } from "@/app/actions";
 import { useAnalysis } from "@/components/AnalysisProvider";
 import { Button } from "@/components/Button";
 import { DatePicker } from "@/components/DatePicker";
 import { DrinkTypeSelect } from "@/components/DrinkTypeSelect";
 import { ZoomableImage } from "@/components/ImageLightbox";
+import { SwipeList, SwipeToRemove } from "@/components/SwipeToRemove";
 import { useWaterTracking } from "@/components/WaterTracking";
 import { dayKey, dayLabel } from "@/lib/day";
 import type { Confidence, FoodItem, MealAnalysis, MealTotals } from "@/lib/schema";
@@ -22,6 +23,26 @@ const CONFIDENCE: Record<Confidence, string> = {
 
 const n = (value: number) => Math.round(value).toLocaleString("en-US");
 const norm = (name: string) => name.trim().toLowerCase();
+
+/** A number that counts to each new value instead of jumping, e.g. totals after a removal. */
+function useCountUp(target: number): number {
+  const [shown, setShown] = useState(target);
+  const current = useRef(target);
+  useEffect(() => {
+    const from = current.current;
+    if (from === target) return;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const start = performance.now();
+    let frame = requestAnimationFrame(function step(now) {
+      const p = reduced ? 1 : Math.min(1, (now - start) / 400);
+      current.current = from + (target - from) * (1 - (1 - p) ** 3);
+      setShown(current.current);
+      if (p < 1) frame = requestAnimationFrame(step);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [target]);
+  return shown;
+}
 
 /** ▲/▼ kcal change vs the previous estimate; nothing when it moved by less than 1 kcal. */
 function Delta({ now, before }: { now: number; before: number | null }) {
@@ -45,16 +66,21 @@ function FoodRow({
   before,
   isNew,
   disabled,
+  hint,
   onGramsChange,
   onDrinkTypeChange,
+  onRemove,
 }: {
   food: FoodItem;
   /** The same food in the previous estimate, for the ▲/▼ change */
   before: FoodItem | null;
   isNew: boolean;
   disabled: boolean;
+  /** Nudge this row on the first estimates, to show foods can be swiped away */
+  hint: boolean;
   onGramsChange: (grams: number) => void;
   onDrinkTypeChange: (type: DrinkType | null) => void;
+  onRemove: () => void;
 }) {
   const waterTracking = useWaterTracking();
   const [open, setOpen] = useState(false);
@@ -62,7 +88,7 @@ function FoodRow({
   const [draft, setDraft] = useState<string | null>(null);
 
   return (
-    <li className="border-t border-line py-2.5 first:border-t-0">
+    <SwipeToRemove label={food.name} disabled={disabled} hint={hint} onRemove={onRemove}>
       <div className="flex items-center gap-2.5">
         {food.imageUrl && (
           <ZoomableImage
@@ -136,7 +162,7 @@ function FoodRow({
       {waterTracking && food.volume_ml != null && (
         <p className="mt-1 text-[12.5px] text-muted">{formatWater(food.volume_ml)} toward Water</p>
       )}
-    </li>
+    </SwipeToRemove>
   );
 }
 
@@ -162,6 +188,7 @@ function afterThisMeal(progress: TodayProgress, meal: MealTotals): string | null
  */
 export function EstimateCard({
   analysis,
+  keys,
   previous,
   label,
   durationMs,
@@ -169,6 +196,8 @@ export function EstimateCard({
   onLogged,
 }: {
   analysis: MealAnalysis;
+  /** A stable key per food, so rows keep their state as others are removed */
+  keys: number[];
   previous: MealAnalysis | null;
   label: string;
   durationMs: number | null;
@@ -186,6 +215,7 @@ export function EstimateCard({
     handleGramsChange,
     handleDrinkTypeChange,
     handleLog,
+    removeFood,
   } = useAnalysis();
   const todayKey = dayKey(new Date());
   const before = new Map(previous?.foods.map((f) => [norm(f.name), f]) ?? []);
@@ -194,6 +224,11 @@ export function EstimateCard({
   const after = progress ? afterThisMeal(progress, analysis.totals) : null;
   const t = analysis.totals;
   const weight = mealWeight(analysis.foods);
+  const empty = analysis.foods.length === 0;
+  const calories = useCountUp(t.calories);
+  const protein = useCountUp(t.protein_g);
+  const carbs = useCountUp(t.carbs_g);
+  const fat = useCountUp(t.fat_g);
 
   return (
     <section aria-label={label} className="flex flex-col gap-3 rounded-[22px] bg-surface p-4">
@@ -202,22 +237,28 @@ export function EstimateCard({
         <h2 className="text-base font-extrabold tracking-tight">{label}</h2>
         <p className="text-[13px] text-muted">
           {durationMs !== null ? `Done in ${Math.max(1, Math.round(durationMs / 1000))} s · ` : ""}
-          tap a weight to change it
+          tap a weight to edit, swipe to remove
         </p>
       </div>
-      <ul>
+      <SwipeList>
         {analysis.foods.map((food, i) => (
           <FoodRow
-            key={`${food.name}-${i}`}
+            key={keys[i] ?? `${food.name}-${i}`}
             food={food}
             before={before.get(norm(food.name)) ?? null}
             isNew={previous !== null && !before.has(norm(food.name))}
             disabled={loading || logging}
+            hint={i === 0}
             onGramsChange={(grams) => handleGramsChange(i, grams)}
             onDrinkTypeChange={(type) => handleDrinkTypeChange(i, type)}
+            onRemove={() => {
+              const key = keys[i];
+              if (key !== undefined) removeFood(key);
+            }}
           />
         ))}
-      </ul>
+      </SwipeList>
+      {empty && <p className="text-sm text-muted">Nothing left to log.</p>}
       {removed.length > 0 && (
         <p className="text-[12.5px] text-muted line-through">
           Removed: {removed.map((f) => f.name).join(", ")}
@@ -225,18 +266,17 @@ export function EstimateCard({
       )}
       <div className="flex flex-col gap-0.5 border-t-2 border-line-strong pt-2.5">
         <span className="text-[22px] font-extrabold tracking-tight tabular-nums">
-          {n(t.calories)} kcal
+          {n(calories)} kcal
           <Delta now={t.calories} before={previous?.totals.calories ?? null} />
           {weight && <span className="text-muted"> · {weight}</span>}
         </span>
         <span className="text-[13.5px] text-muted tabular-nums">
-          {Math.round(t.protein_g)} g protein · {Math.round(t.carbs_g)} g carbs ·{" "}
-          {Math.round(t.fat_g)} g fat
+          {Math.round(protein)} g protein · {Math.round(carbs)} g carbs · {Math.round(fat)} g fat
           {waterTracking && t.water_ml !== undefined && ` · water ${formatWater(t.water_ml)}`}
         </span>
       </div>
       {analysis.notes && <p className="text-[12.5px] text-muted">{analysis.notes}</p>}
-      {after && (
+      {after && !empty && (
         <p className="flex flex-col gap-0.5 rounded-panel bg-surface-raised px-3 py-2.5 text-[13.5px] text-muted">
           <span className="text-xs">After this meal</span>
           <b className="font-semibold text-foreground">{after}</b>
@@ -264,7 +304,7 @@ export function EstimateCard({
           size="sm"
           className="flex-1"
           pending={logging}
-          disabled={loading}
+          disabled={loading || empty}
           onClick={() =>
             void handleLog().then((plate) => {
               if (plate) onLogged(plate.id, plate.day);

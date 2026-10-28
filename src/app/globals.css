@@ -214,6 +214,49 @@ input[type="time"]::-webkit-date-and-time-value {
   }
 }
 
+/* A swipe-to-remove row (SwipeToRemove): after it slides off it folds its
+   height away, and a row that arrives in a list that has already rendered (an
+   undone removal, a scanned food) unfolds into place */
+.swipe-fold {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.swipe-fold > * {
+  min-height: 0;
+}
+
+.swipe-fold[data-folded] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  border-color: transparent;
+}
+
+/* Past the commit point the trash icon tips, to say "letting go deletes" */
+.swipe-pill svg {
+  transition: transform 220ms cubic-bezier(0.34, 1.28, 0.64, 1);
+}
+
+.swipe-pill[data-commit] svg {
+  transform: scale(1.18) rotate(-8deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .swipe-fold {
+    transition:
+      grid-template-rows 280ms cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 200ms ease,
+      border-color 280ms ease;
+  }
+
+  @starting-style {
+    [data-ready] > .swipe-fold {
+      grid-template-rows: 0fr;
+      opacity: 0;
+    }
+  }
+}
+
 /* The "still working" bar on the analyzing card: a segment sliding across, not a fake percentage */
 @keyframes indeterminate {
   from {
