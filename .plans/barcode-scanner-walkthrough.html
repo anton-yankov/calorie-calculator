@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The barcode scanner, step by step — Calorie Calculator</title>
+<style>
+  :root {
+    --paper: #FBF7F0;
+    --card: #FFFFFF;
+    --ink: #1E1B2E;
+    --soft: #6B6577;
+    --line: #ECE4D8;
+    --coral: #E8573A;
+    --coral-bg: #FFE8DF;
+    --mint: #1E9E74;
+    --mint-bg: #DDF5EA;
+    --sky-bg: #E6EEFF;
+    --app-bg: #1A1720;
+    --app-ink: #F1ECF4;
+    --app-mint: #86D3B0;
+    --app-accent: #E08A5C;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 17px; line-height: 1.6;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 22px; }
+  code { font-family: var(--mono); font-size: .88em; background: #F1EADF; padding: 2px 6px; border-radius: 6px; }
+  b.mark { background: linear-gradient(transparent 60%, #BFEBD7 60%); }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(251,247,240,.88); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap { display: flex; gap: 8px; overflow-x: auto; padding-top: 10px; padding-bottom: 10px; }
+  nav a {
+    flex: none; text-decoration: none; color: var(--ink); font-size: 14px; font-weight: 600;
+    padding: 6px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line);
+  }
+  nav a span { color: var(--coral); font-weight: 800; margin-right: 4px; }
+  nav a:hover { border-color: var(--ink); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 64px 0 24px; }
+  .hero .eyebrow { font-weight: 700; color: var(--coral); font-size: 15px; margin-bottom: 10px; }
+  .hero h1 { font-size: clamp(38px, 6.4vw, 68px); line-height: 1.02; letter-spacing: -0.035em; margin: 0 0 18px; font-weight: 850; }
+  .hero p { font-size: 20px; color: var(--soft); max-width: 680px; margin: 0; }
+
+  /* ---------- parts ---------- */
+  .part { padding: 56px 0 8px; scroll-margin-top: 60px; }
+  .part-label { font-size: 13px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--coral); }
+  .part h2 { font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.025em; line-height: 1.1; margin: 6px 0 10px; font-weight: 850; }
+  .part > .wrap > p.intro { font-size: 19px; color: var(--soft); max-width: 720px; margin: 0 0 26px; }
+  .card {
+    background: var(--card); border-radius: 26px; padding: 28px;
+    box-shadow: 0 1px 0 var(--line), 0 14px 34px rgba(30,27,46,.06);
+  }
+  .new {
+    display: inline-block; vertical-align: middle; font-size: 11.5px; font-weight: 800; letter-spacing: .08em;
+    color: var(--coral); background: var(--coral-bg); padding: 3px 9px; border-radius: 999px; text-transform: uppercase;
+  }
+
+  /* ---------- overview ---------- */
+  .trio { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 14px; align-items: center; }
+  .trio .card { text-align: center; padding: 26px 18px; }
+  .trio .big { font-size: 46px; line-height: 1; margin-bottom: 10px; }
+  .trio h3 { margin: 0 0 4px; font-size: 20px; }
+  .trio p { margin: 0; color: var(--soft); font-size: 15px; }
+  .trio .arrow { font-size: 28px; color: var(--soft); }
+  .trio .card.hl { outline: 3px solid var(--coral); }
+  @media (max-width: 760px) { .trio { grid-template-columns: 1fr; } .trio .arrow { transform: rotate(90deg); justify-self: center; } }
+
+  /* ---------- walkthrough ---------- */
+  .walk { display: grid; grid-template-columns: 300px 1fr; gap: 44px; align-items: start; }
+  @media (max-width: 800px) { .walk { grid-template-columns: 1fr; justify-items: center; } }
+  .phone {
+    width: 280px; padding: 10px; border-radius: 44px; background: #121016;
+    box-shadow: 0 30px 60px rgba(30,27,46,.25), inset 0 0 0 2px #2a2630;
+  }
+  .phone.buzz { animation: buzz .32s linear; }
+  @keyframes buzz {
+    0%,100% { transform: translateX(0); } 15% { transform: translateX(-4px) rotate(-.6deg); }
+    35% { transform: translateX(4px) rotate(.6deg); } 55% { transform: translateX(-3px); } 75% { transform: translateX(3px); }
+  }
+  .screen {
+    position: relative; width: 260px; height: 500px; overflow: hidden; border-radius: 34px;
+    background:
+      radial-gradient(circle at 25% 18%, #6a5643 0, transparent 55%),
+      radial-gradient(circle at 85% 88%, #45403a 0, transparent 50%),
+      #2c2721;
+    color: var(--app-ink); font-size: 13px; line-height: 1.3;
+  }
+  .screen .abs { position: absolute; }
+
+  .pack {
+    left: 150px; top: 205px; width: 160px; height: 100px; border-radius: 7px;
+    background: #EEE8D8; box-shadow: 0 10px 24px rgba(0,0,0,.45);
+    transform: translate(-50%, -50%) rotate(-8deg);
+    animation: jitter 1.4s ease-in-out infinite;
+  }
+  .frozen .pack { animation: none; }
+  @keyframes jitter {
+    0%,100% { transform: translate(-50%, -50%) rotate(-8deg) translate(0, 0); }
+    25% { transform: translate(-50%, -50%) rotate(-8deg) translate(2px, -1.5px); }
+    50% { transform: translate(-50%, -50%) rotate(-8deg) translate(-1.5px, 2px); }
+    75% { transform: translate(-50%, -50%) rotate(-8deg) translate(1.5px, 1px); }
+  }
+  .bars {
+    left: 17px; top: 14px; width: 126px; height: 52px;
+    background: repeating-linear-gradient(90deg,
+      #1B1A16 0 2px, transparent 2px 4px, #1B1A16 4px 5px, transparent 5px 7px,
+      #1B1A16 7px 10px, transparent 10px 11px, #1B1A16 11px 12px, transparent 12px 15px,
+      #1B1A16 15px 17px, transparent 17px 18px, #1B1A16 18px 19px, transparent 19px 22px);
+  }
+  .digits { left: 0; right: 0; top: 72px; text-align: center; font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: #1B1A16; }
+
+  .frame {
+    left: 130px; top: 225px; width: 170px; height: 170px; border-radius: 18px;
+    transform: translate(-50%, -50%) rotate(0deg);
+    box-shadow: 0 0 0 700px rgba(26,23,32,.34);
+    transition-property: left, top, width, height, transform, box-shadow, border-radius;
+    transition-duration: .48s; transition-timing-function: cubic-bezier(.2,.9,.25,1);
+  }
+  .fly .frame {
+    left: 148.6px; top: 195px; width: 155px; height: 76px; border-radius: 12px;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    box-shadow: 0 0 0 700px rgba(26,23,32,.6), 0 0 22px rgba(134,211,176,.4);
+  }
+  .corners { position: absolute; inset: 0; animation: breathe 1.3s ease-in-out infinite alternate; }
+  .fly .corners { animation: none; }
+  @keyframes breathe { to { transform: scale(.955); } }
+  .c {
+    position: absolute; width: 30px; height: 30px; border: 0 solid var(--app-ink);
+    transition: border-color .2s ease-out, width .26s cubic-bezier(.4,0,.2,1) .38s, height .26s cubic-bezier(.4,0,.2,1) .38s;
+  }
+  .c.tl { left: 0; top: 0; border-top-width: 3.5px; border-left-width: 3.5px; border-top-left-radius: 14px; }
+  .c.tr { right: 0; top: 0; border-top-width: 3.5px; border-right-width: 3.5px; border-top-right-radius: 14px; }
+  .c.bl { left: 0; bottom: 0; border-bottom-width: 3.5px; border-left-width: 3.5px; border-bottom-left-radius: 14px; }
+  .c.br { right: 0; bottom: 0; border-bottom-width: 3.5px; border-right-width: 3.5px; border-bottom-right-radius: 14px; }
+  .fly .c { border-color: var(--app-mint); }
+  .closed .c { width: calc(50% + 1.5px); height: calc(50% + 1.5px); }
+
+  .flash { inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  .flash.go { animation: flash .3s ease-out; }
+  @keyframes flash { 30% { opacity: .2; } }
+
+  .shade-top { left: 0; right: 0; top: 0; height: 96px; background: linear-gradient(rgba(26,23,32,.85), transparent); }
+  .shade-bottom { left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(transparent, rgba(26,23,32,.94) 45%); }
+  .round {
+    top: 16px; width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(26,23,32,.55); border: 1px solid rgba(241,236,244,.18);
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+    transition: opacity .2s;
+  }
+  .round.x { left: 14px; }
+  .round.light { right: 14px; }
+  .frozen .round.light { opacity: 0; }
+  .title { left: 0; right: 0; top: 26px; text-align: center; font-weight: 800; font-size: 14px; }
+
+  .snaps {
+    left: 50%; top: 66px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px;
+    background: rgba(26,23,32,.72); font-size: 11px; font-weight: 700; white-space: nowrap;
+    opacity: 0; transition: opacity .25s;
+  }
+  .snapping .snaps { opacity: 1; }
+  .snap {
+    width: 17px; height: 17px; border-radius: 4px; background: rgba(241,236,244,.14);
+    display: flex; align-items: center; justify-content: center; font-size: 10px; color: #ff9b85;
+    opacity: .25; animation: snap 1.5s steps(1) infinite;
+  }
+  .snap::after { content: "✗"; }
+  .snap:nth-child(2) { animation-delay: .25s; } .snap:nth-child(3) { animation-delay: .5s; }
+  .snap:nth-child(4) { animation-delay: .75s; } .snap:nth-child(5) { animation-delay: 1s; }
+  .snap:nth-child(6) { animation-delay: 1.25s; }
+  @keyframes snap { 0% { opacity: 1; } 17% { opacity: .25; } }
+  .frozen .snap { animation: none; opacity: .3; }
+  .frozen .snap:last-child { opacity: 1; background: var(--app-mint); color: #10241C; }
+  .frozen .snap:last-child::after { content: "✓"; }
+
+  .chip {
+    left: 130px; top: 326px; height: 34px; padding: 0 15px; border-radius: 999px;
+    transform: translateX(-50%); white-space: nowrap;
+    background: rgba(26,23,32,.62); border: 1px solid rgba(241,236,244,.14); backdrop-filter: blur(10px);
+    display: grid; place-items: center; font-weight: 700; font-size: 12.5px;
+    transition: left .46s cubic-bezier(.2,.9,.25,1) .06s, top .46s cubic-bezier(.2,.9,.25,1) .06s,
+      background-color .22s, border-color .22s, color .22s;
+  }
+  .closed .chip { left: 149px; top: 255px; background: var(--app-mint); border-color: var(--app-mint); color: #10241C; }
+  .chip > span { grid-area: 1 / 1; display: flex; align-items: center; gap: 7px; transition: opacity .18s; }
+  .chip .found { opacity: 0; font-family: var(--mono); }
+  .closed .chip .looking { opacity: 0; }
+  .closed .chip .found { opacity: 1; transition-delay: .14s; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--app-accent); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: .35; transform: scale(.75); } }
+
+  .hint { left: 0; right: 0; bottom: 78px; text-align: center; font-size: 12.5px; font-weight: 600; transition: opacity .2s; }
+  .hint.got { color: var(--app-mint); opacity: 0; }
+  .frozen .hint.look { opacity: 0; }
+  .frozen .hint.got { opacity: 1; }
+  .type {
+    left: 14px; right: 14px; bottom: 20px; height: 46px; border-radius: 16px;
+    background: rgba(48,44,52,.78); border: 1px solid rgba(241,236,244,.12);
+    display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 13px; font-weight: 700;
+    transition: opacity .2s;
+  }
+  .type b { color: var(--app-accent); font-size: 16px; }
+  .frozen .type { opacity: .4; }
+
+  .home { inset: 0; background: var(--app-bg); opacity: 0; transition: opacity .3s; pointer-events: none; padding: 54px 18px; }
+  .done .home { opacity: 1; }
+  .home .ghost { height: 18px; border-radius: 8px; background: rgba(241,236,244,.08); margin-bottom: 12px; }
+  .home .ghost.big { height: 90px; border-radius: 18px; }
+  .sheet {
+    left: 0; right: 0; bottom: 0; padding: 10px 18px 18px; border-radius: 24px 24px 0 0;
+    background: #25212C; transform: translateY(105%);
+    transition: transform .42s cubic-bezier(.2,.9,.25,1);
+  }
+  .done .sheet { transform: none; transition-delay: .15s; }
+  .sheet .handle { width: 38px; height: 4px; border-radius: 2px; background: rgba(241,236,244,.25); margin: 0 auto 14px; }
+  .sheet .head { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+  .sheet .pic { width: 52px; height: 52px; border-radius: 14px; background: #3a3342; display: grid; place-items: center; font-size: 28px; flex: none; }
+  .sheet .name { font-weight: 800; font-size: 15px; }
+  .sheet .sub { color: rgba(241,236,244,.6); font-size: 12px; }
+  .sheet .macros { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+  .sheet .macros div { background: rgba(241,236,244,.06); border-radius: 12px; padding: 8px 4px; text-align: center; }
+  .sheet .macros strong { display: block; font-size: 15px; }
+  .sheet .macros span { font-size: 10.5px; color: rgba(241,236,244,.6); }
+  .sheet .add { height: 44px; border-radius: 14px; background: var(--app-accent); color: #1A1720; font-weight: 800; display: grid; place-items: center; }
+
+  .panel .count { font-size: 14px; font-weight: 700; color: var(--soft); display: flex; align-items: center; gap: 10px; }
+  .panel h3 { font-size: clamp(24px, 3vw, 31px); letter-spacing: -0.02em; line-height: 1.15; margin: 8px 0 12px; }
+  .panel .text { font-size: 18px; margin: 0 0 16px; }
+  .why { background: var(--mint-bg); border-radius: 18px; padding: 14px 18px; font-size: 16px; }
+  .why strong { color: var(--mint); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; align-items: center; }
+  button {
+    font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; border-radius: 999px;
+    padding: 10px 18px; border: 2px solid var(--ink); background: transparent; color: var(--ink);
+  }
+  button.primary { background: var(--ink); color: var(--paper); }
+  button.real { border-color: var(--coral); color: var(--coral); }
+  button:disabled { opacity: .35; cursor: default; }
+  .dots { display: flex; gap: 8px; margin-top: 18px; }
+  .dots button { width: 36px; height: 36px; padding: 0; font-size: 13px; border-width: 2px; border-color: var(--line); color: var(--soft); background: var(--card); }
+  .dots button.on { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .dots button.isnew:not(.on) { border-color: #F6B7A6; }
+  .legend { font-size: 13px; color: var(--soft); margin-top: 8px; }
+
+  /* ---------- the trick ---------- */
+  .problem { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  @media (max-width: 760px) { .problem { grid-template-columns: 1fr; } }
+  .problem .card h3 { margin: 0 0 6px; font-size: 19px; }
+  .problem .card p { margin: 0; }
+  .lab { display: grid; grid-template-columns: 360px 1fr; gap: 32px; align-items: center; }
+  @media (max-width: 800px) { .lab { grid-template-columns: 1fr; justify-items: center; } }
+  .label {
+    position: relative; width: 340px; height: 210px; border-radius: 14px; background: #EEE8D8;
+    box-shadow: 0 10px 26px rgba(30,27,46,.15); overflow: hidden;
+  }
+  .label .lbars {
+    position: absolute; left: 30px; top: 26px; width: 280px; height: 110px;
+    background: repeating-linear-gradient(90deg,
+      #1B1A16 0 3px, transparent 3px 6px, #1B1A16 6px 8px, transparent 8px 11px,
+      #1B1A16 11px 16px, transparent 16px 18px, #1B1A16 18px 20px, transparent 20px 25px,
+      #1B1A16 25px 28px, transparent 28px 30px, #1B1A16 30px 32px, transparent 32px 36px);
+  }
+  .label .ldigits { position: absolute; left: 0; right: 0; top: 142px; text-align: center; font-family: var(--mono); font-size: 16px; letter-spacing: .2em; color: #1B1A16; }
+  .label .readline { position: absolute; left: 32px; width: 276px; top: 111px; height: 3px; background: var(--coral); border-radius: 2px; }
+  .label .readline::before, .label .readline::after {
+    content: ""; position: absolute; top: -5px; width: 13px; height: 13px; border-radius: 50%; background: var(--coral);
+  }
+  .label .readline::before { left: -6px; } .label .readline::after { right: -6px; }
+  .label .probe { position: absolute; left: 8px; right: 8px; height: 0; border-top: 3px dashed #3B6FE0; transition: top .06s linear; }
+  .label .tick { position: absolute; left: 14px; width: 10px; height: 3px; border-radius: 2px; }
+  .label .tick.on { background: var(--mint); } .label .tick.off { background: #B9B2A6; }
+  .label .found { position: absolute; left: 18px; width: 304px; top: 14px; height: 134px; border: 4px solid var(--mint); border-radius: 12px; opacity: 0; transform: scale(1.06); transition: opacity .3s, transform .3s; }
+  .label .found.show { opacity: 1; transform: none; }
+  .readout { font-size: 18px; margin: 0 0 14px; min-height: 58px; }
+  .readout .n { font-family: var(--mono); font-weight: 800; font-size: 22px; }
+  .readout .yes { color: var(--mint); font-weight: 800; } .readout .no { color: var(--coral); font-weight: 800; }
+  input[type=range] { width: 100%; accent-color: #3B6FE0; margin: 6px 0 16px; }
+  .key { display: flex; flex-wrap: wrap; gap: 14px; font-size: 14px; color: var(--soft); margin-top: 12px; }
+  .key i { display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 6px; }
+
+  .tilt { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  @media (max-width: 760px) { .tilt { grid-template-columns: 1fr; } }
+  .tilt .card { text-align: center; }
+  .tilt .pic { position: relative; height: 150px; margin-bottom: 10px; }
+  .tilt .code {
+    position: absolute; left: 50%; top: 50%; width: 170px; height: 74px; margin: -37px 0 0 -85px;
+    transform: rotate(-12deg);
+    background: repeating-linear-gradient(90deg, #1B1A16 0 3px, transparent 3px 5px, #1B1A16 5px 6px, transparent 6px 9px, #1B1A16 9px 12px, transparent 12px 14px);
+  }
+  .tilt .box { position: absolute; left: 50%; top: 50%; border: 4px solid; border-radius: 12px; }
+  .tilt .box.bad { width: 206px; height: 134px; margin: -67px 0 0 -103px; border-color: #D9A08F; border-style: dashed; }
+  .tilt .box.good { width: 194px; height: 98px; margin: -49px 0 0 -97px; transform: rotate(-12deg); border-color: var(--mint); }
+  .tilt h3 { margin: 0 0 4px; font-size: 18px; }
+  .tilt p { margin: 0; color: var(--soft); font-size: 15px; }
+  .smallprint { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  @media (max-width: 760px) { .smallprint { grid-template-columns: 1fr; } }
+  .smallprint .card { background: var(--sky-bg); box-shadow: none; }
+  .smallprint h3 { margin: 0 0 6px; font-size: 18px; }
+  .smallprint p { margin: 0; font-size: 16px; }
+
+  /* ---------- what changed ---------- */
+  .changed { display: grid; grid-template-columns: 280px 1fr; gap: 36px; align-items: start; }
+  @media (max-width: 800px) { .changed { grid-template-columns: 1fr; justify-items: center; } }
+  .oldphone { width: 260px; padding: 10px; border-radius: 40px; background: #121016; position: relative; }
+  .oldphone svg { display: block; width: 240px; height: 460px; border-radius: 30px; }
+  .oldphone .tag { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--soft); color: #fff; font-size: 12px; font-weight: 800; letter-spacing: .1em; padding: 4px 12px; border-radius: 999px; }
+  .rows { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .row { display: grid; grid-template-columns: 150px 1fr 26px 1fr; gap: 12px; align-items: center; background: var(--card); border-radius: 18px; padding: 14px 18px; box-shadow: 0 1px 0 var(--line); }
+  .row .what { font-weight: 800; }
+  .row .old { color: var(--soft); text-decoration: line-through; text-decoration-color: #D9A08F; font-size: 15.5px; }
+  .row .to { color: var(--coral); font-weight: 800; text-align: center; }
+  .row .now { font-size: 15.5px; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; gap: 2px; } .row .to { display: none; } }
+
+  /* ---------- FAQ ---------- */
+  details { background: var(--card); border-radius: 18px; margin-bottom: 10px; box-shadow: 0 1px 0 var(--line); }
+  summary { cursor: pointer; padding: 16px 20px; font-weight: 750; font-size: 17.5px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--coral); font-size: 22px; line-height: 1; }
+  details[open] summary::after { content: "–"; }
+  details p { margin: 0; padding: 0 20px 18px; color: #3d3849; }
+
+  .files { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+  .files td { background: var(--card); padding: 12px 16px; vertical-align: top; }
+  .files td:first-child { border-radius: 14px 0 0 14px; white-space: nowrap; font-weight: 700; }
+  .files td:last-child { border-radius: 0 14px 14px 0; color: #3d3849; }
+
+  /* ---------- say it ---------- */
+  .say { background: var(--ink); color: var(--paper); border-radius: 30px; padding: 40px clamp(24px, 5vw, 56px); }
+  .say .part-label { color: #FFB49F; }
+  .say h2 { color: var(--paper); }
+  .say ol { font-size: clamp(18px, 2.2vw, 22px); line-height: 1.5; padding-left: 26px; margin: 18px 0 0; }
+  .say li { margin-bottom: 12px; padding-left: 6px; }
+  .say li::marker { color: #FFB49F; font-weight: 800; }
+  .say em { color: var(--app-mint); font-style: normal; font-weight: 700; }
+
+  footer { color: var(--soft); font-size: 14px; padding: 40px 0 70px; text-align: center; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .frame, .c, .chip, .sheet { transition: none !important; }
+    .pack, .corners, .snap, .dot { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a href="#overview"><span>1</span>The idea</a>
+    <a href="#walk"><span>2</span>Step by step</a>
+    <a href="#trick"><span>3</span>The clever trick</a>
+    <a href="#changed"><span>4</span>Old vs new</a>
+    <a href="#faq"><span>5</span>Questions</a>
+    <a href="#say"><span>6</span>Say it in 20 seconds</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Calorie Calculator · the barcode scanner</div>
+    <h1>Point. <b class="mark">Lock on.</b> Eat.</h1>
+    <p>A step-by-step guide to how the scanner works, especially the new look. Click through it, play with it, and you'll be able to explain it to anyone.</p>
+  </div>
+</header>
+
+<!-- ================= 1 ================= -->
+<section class="part" id="overview">
+  <div class="wrap">
+    <div class="part-label">Part 1</div>
+    <h2>The whole idea in three boxes</h2>
+    <p class="intro">You point the camera at a food package. The app reads the barcode, shows you clearly <em>what</em> it read, then shows you the food's calories.</p>
+    <div class="trio">
+      <div class="card"><div class="big">📱</div><h3>Point</h3><p>The camera looks for a barcode, about 5 snapshots a second</p></div>
+      <div class="arrow">→</div>
+      <div class="card hl"><div class="big">🟩</div><h3>Lock on <span class="new">New</span></h3><p>A green box jumps onto the barcode and shows its number</p></div>
+      <div class="arrow">→</div>
+      <div class="card"><div class="big">🥤</div><h3>See it</h3><p>The product appears with its calories, ready to add</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section class="part" id="walk">
+  <div class="wrap">
+    <div class="part-label">Part 2</div>
+    <h2>Click through a scan</h2>
+    <p class="intro">This is a slowed-down copy of the real scanner. Press <strong>Next</strong> (or the → key) to go one step at a time. The steps marked <span class="new">New</span> are what the redesign added.</p>
+
+    <div class="walk">
+      <div class="phone" id="phone">
+        <div class="screen" id="screen" role="img" aria-label="Animated copy of the scanner screen">
+          <div class="abs pack"><div class="abs bars"></div><div class="abs digits">5449000000996</div></div>
+          <div class="abs flash" id="flash"></div>
+          <div class="abs frame"><div class="corners"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i></div></div>
+          <div class="abs shade-top"></div>
+          <div class="abs shade-bottom"></div>
+          <div class="abs round x">✕</div>
+          <div class="abs title">Scan a barcode</div>
+          <div class="abs round light">🔦</div>
+          <div class="abs snaps">📸 <i class="snap"></i><i class="snap"></i><i class="snap"></i><i class="snap"></i><i class="snap"></i><i class="snap"></i></div>
+          <div class="abs chip">
+            <span class="looking"><i class="dot"></i>Looking for a barcode</span>
+            <span class="found">✓ 5449000000996</span>
+          </div>
+          <div class="abs hint look">Upright or sideways, both work.</div>
+          <div class="abs hint got">Got it. Looking it up…</div>
+          <div class="abs type"><b>⌨</b> Type the number instead</div>
+          <div class="abs home"><div class="ghost" style="width:40%"></div><div class="ghost big"></div><div class="ghost"></div><div class="ghost" style="width:70%"></div></div>
+          <div class="abs sheet">
+            <div class="handle"></div>
+            <div class="head"><div class="pic">🥤</div><div><div class="name">Cola, 330 ml can</div><div class="sub">Found in Open Food Facts</div></div></div>
+            <div class="macros">
+              <div><strong>139</strong><span>kcal</span></div><div><strong>0 g</strong><span>protein</span></div>
+              <div><strong>35 g</strong><span>carbs</span></div><div><strong>0 g</strong><span>fat</span></div>
+            </div>
+            <div class="add">Add to today</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card panel">
+        <div class="count"><span id="count">Step 1 of 6</span><span class="new" id="badge">New</span></div>
+        <h3 id="stitle"></h3>
+        <p class="text" id="stext"></p>
+        <div class="why"><strong>💡 Why?</strong> <span id="swhy"></span></div>
+        <div class="controls">
+          <button id="prev">← Back</button>
+          <button class="primary" id="next">Next →</button>
+          <button class="real" id="real">▶ Watch at real speed</button>
+        </div>
+        <div class="dots" id="dots"></div>
+        <div class="legend">Steps with a pink ring are new in the redesign.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section class="part" id="trick">
+  <div class="wrap">
+    <div class="part-label">Part 3 · new</div>
+    <h2>The clever trick: how it finds the box</h2>
+    <p class="intro">To draw the green box, the app needs to know exactly where the barcode is. The barcode reader doesn't tell it much, so the app works the rest out itself.</p>
+
+    <div class="problem">
+      <div class="card">
+        <h3>😬 The problem</h3>
+        <p>The reader (ZXing) only gives back <strong>two dots</strong>: the left and right ends of the line it read across the stripes (the orange line below). That tells you how <em>wide</em> the barcode is, but not how <em>tall</em> it is or whether it's tilted.</p>
+      </div>
+      <div class="card">
+        <h3>💡 The trick</h3>
+        <p>Draw more lines above and below the orange one and count how many times each crosses between black and white. <b class="mark">Lots of switches = still on the stripes.</b> Hardly any = you've gone past the top or bottom of the barcode.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="lab">
+        <div class="label" id="label">
+          <div class="lbars"></div>
+          <div class="ldigits">5449000000996</div>
+          <div class="readline"></div>
+          <div class="found" id="foundbox"></div>
+          <div class="probe" id="probe" style="top:60px"></div>
+        </div>
+        <div>
+          <p class="readout" id="readout"></p>
+          <label for="slider" style="font-weight:700;font-size:15px">Drag to move the blue test line ↕</label>
+          <input type="range" id="slider" min="6" max="204" value="60">
+          <button class="primary" id="auto">▶ Let the app do it</button>
+          <div class="key">
+            <span><i style="border-top:3px solid var(--coral)"></i>line the reader used</span>
+            <span><i style="border-top:3px dashed #3B6FE0"></i>test line</span>
+            <span><i style="border-top:3px solid var(--mint)"></i>"still on the stripes"</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tilt">
+      <div class="card">
+        <div class="pic"><div class="code"></div><div class="box bad"></div></div>
+        <h3>Without the tilt check 😕</h3>
+        <p>The reader's line always runs straight across the picture, so the box would come out straight and too big.</p>
+      </div>
+      <div class="card">
+        <div class="pic"><div class="code"></div><div class="box good"></div></div>
+        <h3>With the tilt check 🙂</h3>
+        <p>The edges of the stripes all point the same way. The app measures that direction and turns the box to match. This was the second commit.</p>
+      </div>
+    </div>
+
+    <div class="smallprint">
+      <div class="card">
+        <h3>📐 Last step: fit it to the screen</h3>
+        <p>The camera picture is bigger than the phone screen and gets cropped to fit. The box is scaled and shifted the same way, so it lands exactly on the barcode you see.</p>
+      </div>
+      <div class="card">
+        <h3>🛟 Plan B</h3>
+        <p>If the picture is too blurry to measure, the frame just stays where it is and still shows the number. A failed measurement never stops the scan.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 4 ================= -->
+<section class="part" id="changed">
+  <div class="wrap">
+    <div class="part-label">Part 4</div>
+    <h2>Old vs new</h2>
+    <p class="intro">On the left is the old scanner. The phone in Part 2 is the new one.</p>
+    <div class="changed">
+      <div class="oldphone">
+        <span class="tag">OLD</span>
+        <svg viewBox="0 0 240 460" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
+          <rect width="240" height="460" fill="#2b2620"/>
+          <rect width="240" height="62" fill="#1B1A16"/>
+          <line x1="0" y1="62" x2="240" y2="62" stroke="#38352C"/>
+          <text x="16" y="30" font-size="7.5" font-weight="700" letter-spacing="1.2" fill="#E08A5C">PRODUCT SCANNER</text>
+          <text x="16" y="48" font-size="14" font-weight="800" fill="#EDEAE0">Scan a food barcode</text>
+          <circle cx="216" cy="38" r="14" fill="#24221C" stroke="#38352C"/>
+          <text x="216" y="42.5" text-anchor="middle" font-size="12" fill="#EDEAE0">✕</text>
+          <g transform="rotate(-8 140 200)">
+            <rect x="65" y="152" width="150" height="96" rx="6" fill="#ECE6D6"/>
+            <rect x="81" y="166" width="118" height="50" fill="url(#oldbars)"/>
+            <text x="140" y="232" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" letter-spacing="1.2" fill="#1B1A16">5449000000996</text>
+          </g>
+          <defs>
+            <pattern id="oldbars" width="22" height="10" patternUnits="userSpaceOnUse">
+              <rect x="0" width="2" height="10" fill="#1B1A16"/><rect x="4" width="1" height="10" fill="#1B1A16"/>
+              <rect x="7" width="3" height="10" fill="#1B1A16"/><rect x="11" width="1" height="10" fill="#1B1A16"/>
+              <rect x="15" width="2" height="10" fill="#1B1A16"/><rect x="18" width="1" height="10" fill="#1B1A16"/>
+            </pattern>
+          </defs>
+          <path d="M0 63 H240 V378 H0 Z M25 122 V312 H215 V122 Z" fill="rgba(27,26,22,.32)" fill-rule="evenodd"/>
+          <rect x="25" y="122" width="190" height="190" rx="10" fill="none" stroke="rgba(255,255,255,.45)"/>
+          <g stroke="#fff" stroke-width="2" fill="none">
+            <path d="M25 150 V132 Q25 122 35 122 H53"/><path d="M187 122 H205 Q215 122 215 132 V150"/>
+            <path d="M25 284 V302 Q25 312 35 312 H53"/><path d="M187 312 H205 Q215 312 215 302 V284"/>
+          </g>
+          <line x1="38" y1="217" x2="202" y2="217" stroke="#E08A5C" stroke-width="2"/>
+          <line x1="38" y1="217" x2="202" y2="217" stroke="#E08A5C" stroke-width="8" opacity=".25"/>
+          <line x1="120" y1="135" x2="120" y2="299" stroke="#E08A5C" stroke-width="2" opacity=".55"/>
+          <rect x="68" y="282" width="104" height="20" rx="10" fill="rgba(0,0,0,.45)" stroke="rgba(255,255,255,.2)"/>
+          <text x="120" y="295.5" text-anchor="middle" font-size="9" font-weight="600" fill="rgba(255,255,255,.9)">Upright or sideways</text>
+          <rect x="170" y="74" width="58" height="26" rx="13" fill="rgba(0,0,0,.55)" stroke="rgba(255,255,255,.35)"/>
+          <text x="199" y="91" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">○ Light</text>
+          <text x="120" y="362" text-anchor="middle" font-size="10.5" font-weight="500" fill="#EDEAE0">Center the barcode and hold steady</text>
+          <rect x="0" y="378" width="240" height="82" fill="#1B1A16"/>
+          <line x1="0" y1="378" x2="240" y2="378" stroke="#38352C"/>
+          <text x="16" y="398" font-size="9" font-weight="600" fill="#A5A195">Or enter the number below the barcode</text>
+          <rect x="16" y="407" width="146" height="32" rx="8" fill="#24221C" stroke="#38352C"/>
+          <text x="25" y="427" font-size="9.5" fill="#6e6a5f">e.g. 3017624010701</text>
+          <rect x="168" y="407" width="56" height="32" rx="8" fill="#E08A5C"/>
+          <text x="196" y="427" text-anchor="middle" font-size="10" font-weight="700" fill="#1B1A16">Look up</text>
+        </svg>
+      </div>
+      <div class="rows">
+        <div class="row"><div class="what">Screen</div><div class="old">Header bar + form squeeze the camera</div><div class="to">→</div><div class="now">Camera fills the whole screen</div></div>
+        <div class="row"><div class="what">While looking</div><div class="old">Two orange laser lines</div><div class="to">→</div><div class="now">Calm "breathing" corners + "Looking for a barcode"</div></div>
+        <div class="row"><div class="what">After a scan</div><div class="old">Jumps straight to "Looking it up…"</div><div class="to">→</div><div class="now">Freeze, green box on the code, number shown</div></div>
+        <div class="row"><div class="what">Tilted codes</div><div class="old">Nothing special</div><div class="to">→</div><div class="now">Box tilts to match the code</div></div>
+        <div class="row"><div class="what">Typing the number</div><div class="old">Input always on screen</div><div class="to">→</div><div class="now">"Type the number instead" button opens a sheet</div></div>
+        <div class="row"><div class="what">Flashlight</div><div class="old">"○ Light" text pill</div><div class="to">→</div><div class="now">Round 🔦 icon button</div></div>
+        <div class="row"><div class="what">Camera trouble</div><div class="old">Small red banner</div><div class="to">→</div><div class="now">Full screen: what went wrong + what to do</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 5 ================= -->
+<section class="part" id="faq">
+  <div class="wrap">
+    <div class="part-label">Part 5</div>
+    <h2>Questions your friend might ask</h2>
+    <p class="intro">Tap a question to see a short answer.</p>
+
+    <details><summary>Does the animation make you wait longer?</summary>
+      <p>No. The product search starts the instant the barcode is read, and the animation plays while the search is running. By the time the scanner closes (0.9 s later), the answer is often already there.</p></details>
+    <details><summary>Why does the picture freeze?</summary>
+      <p>The app draws the green box using the snapshot that was read. If the live video kept moving, the barcode would drift away from the box. So that exact snapshot is placed over the video and the box lands on it. A faint white flash, like a camera shutter, hides the switch.</p></details>
+    <details><summary>What if the barcode is sideways or upside down?</summary>
+      <p>If a snapshot doesn't read upright, the reader tries it turned 90°. The box is also turned as little as possible: a sideways code gets an upright box with its width and height swapped, so the frame never spins around.</p></details>
+    <details><summary>Where does the food info come from?</summary>
+      <p>First from products you've added before (saved to your account, instant). Then from Open Food Facts, a free public food database. If neither knows it, you get a form to add it, and you can photograph the nutrition label to fill it in. Next time it's one scan.</p></details>
+    <details><summary>What if the camera is blocked, missing or busy?</summary>
+      <p>A full-screen message explains what happened in plain words ("The camera is blocked", "No camera found", "The camera is busy"). It always offers <strong>Type the number instead</strong>, plus <strong>Try the camera again</strong> when that could help.</p></details>
+    <details><summary>Will it read any barcode or QR code?</summary>
+      <p>No, only supermarket barcode types (EAN, UPC and a couple of others), and only numbers with 7 to 14 digits. Everything else is ignored, and scanning just carries on.</p></details>
+    <details><summary>What about people who get dizzy from animations?</summary>
+      <p>If the phone is set to "reduce motion", nothing flies around. The green box and the number simply appear on the code.</p></details>
+
+    <h3 style="margin:34px 0 4px;font-size:21px">If your friend is a programmer: where it lives</h3>
+    <table class="files">
+      <tr><td><code>barcode-reader.ts</code></td><td>Sets up ZXing: which barcode types to look for, and a fix for ZXing's own "turn the picture" feature, which crashed. It also remembers the last snapshot so the screen can freeze on it.</td></tr>
+      <tr><td><code>BarcodeScanner.tsx</code></td><td>The scanner screen: camera, freezing, the lock-on state, error screens, the "type the number" sheet.</td></tr>
+      <tr><td><code>barcode-outline.ts</code></td><td>The maths from Part 3: height, tilt, fitting the box to the screen.</td></tr>
+      <tr><td><code>globals.css</code></td><td>The animations: breathing, flying, corners closing, the flash.</td></tr>
+      <tr><td><code>BarcodeFlow.tsx</code></td><td>Starts the product search at scan time and shows the product once the scanner is done.</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ================= 6 ================= -->
+<section class="part" id="say">
+  <div class="wrap">
+    <div class="say">
+      <div class="part-label">Part 6</div>
+      <h2>Say it in 20 seconds</h2>
+      <ol>
+        <li>The camera takes about <em>five snapshots a second</em>, and a barcode library looks for the stripes, upright or sideways.</li>
+        <li>When one works, the phone buzzes, the screen <em>freezes on that snapshot</em>, and the product search starts right away.</li>
+        <li>The frame <em>jumps onto the barcode</em> and closes into a green box with the number under it. The app finds the box by sliding lines up and down until they run off the stripes, and tilts it to match.</li>
+        <li>Under a second later you see the food and its calories. If the camera doesn't work, you just <em>type the number</em>.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<footer>Calorie Calculator · barcode scanner walkthrough · redesign from 5 Oct 2026</footer>
+
+<script>
+(function () {
+  var steps = [
+    { title: "The camera opens", isNew: true,
+      text: "The camera fills the whole screen. A frame in the middle gently “breathes” (shrinks and grows a little) and a pill says “Looking for a barcode”. This calm look is new: the old version had two orange laser lines.",
+      why: "A calm screen feels relaxed, and it makes the moment the app finds something stand out." },
+    { title: "It takes ~5 snapshots a second", isNew: false,
+      text: "Every 0.18 seconds the app grabs a still picture from the video and hands it to ZXing, a free barcode-reading library. Most snapshots fail (blurry, too far, cut off). That's normal, and it just tries the next one. If a picture doesn't read upright, it also tries it turned sideways.",
+      why: "The 📸 boxes at the top of the phone show the tries. They aren't in the real app, they're just here to show what's happening behind the scenes." },
+    { title: "Got it! Buzz and freeze", isNew: true,
+      text: "The moment a snapshot works, the phone buzzes and the product search starts in the background. The screen freezes on that exact snapshot, with a faint white flash like a camera taking a photo.",
+      why: "The app is about to draw a box around the barcode, and a still picture is much easier to hit than a moving one. The flash hides the jump from live video to frozen picture." },
+    { title: "The frame flies onto the barcode", isNew: true,
+      text: "The frame slides, shrinks and tilts until it sits right around the barcode, and turns green. Everything around it gets darker so the code stands out.",
+      why: "It shows you exactly what was scanned. Before, the screen just jumped away and you had to trust it. How does it know where the barcode is? That's Part 3." },
+    { title: "The box closes and the number appears", isNew: true,
+      text: "The four corners grow until they meet, making a full green box. The pill slides under the code, turns green, and shows the digits it read with a ✓.",
+      why: "Steps 3, 4 and 5 really happen together, in about 0.65 seconds. They're slowed down here. Press “Watch at real speed” to see the real timing." },
+    { title: "Here's your food", isNew: false,
+      text: "About 0.9 seconds after the scan, the scanner closes and the product appears with its calories. The app checks products you've added before first, then a free public food database called Open Food Facts.",
+      why: "The search started back in step 3, so the animation didn't make you wait. It ran while you were watching the green box." }
+  ];
+
+  var screen = document.getElementById("screen");
+  var phone = document.getElementById("phone");
+  var flash = document.getElementById("flash");
+  var prev = document.getElementById("prev");
+  var next = document.getElementById("next");
+  var real = document.getElementById("real");
+  var dots = document.getElementById("dots");
+  var current = 1;
+  var busy = false;
+
+  steps.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.textContent = i + 1;
+    b.setAttribute("aria-label", "Go to step " + (i + 1));
+    if (s.isNew) b.className = "isnew";
+    b.addEventListener("click", function () { if (!busy) go(i + 1); });
+    dots.appendChild(b);
+  });
+
+  function restart(el, cls) {
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
+
+  function render(n) {
+    var s = steps[n - 1];
+    document.getElementById("count").textContent = "Step " + n + " of " + steps.length;
+    document.getElementById("badge").style.display = s.isNew ? "" : "none";
+    document.getElementById("stitle").textContent = s.title;
+    document.getElementById("stext").textContent = s.text;
+    document.getElementById("swhy").textContent = s.why;
+    Array.prototype.forEach.call(dots.children, function (b, i) { b.classList.toggle("on", i === n - 1); });
+    prev.disabled = busy || n === 1;
+    next.disabled = busy;
+    real.disabled = busy;
+    next.textContent = n === steps.length ? "Start over ↺" : "Next →";
+  }
+
+  function go(n) {
+    var before = current;
+    current = n;
+    screen.classList.toggle("snapping", n === 2 || n === 3);
+    screen.classList.toggle("frozen", n >= 3);
+    screen.classList.toggle("fly", n >= 4);
+    screen.classList.toggle("closed", n >= 5);
+    screen.classList.toggle("done", n >= 6);
+    if (n >= 3 && before < 3) {
+      restart(flash, "go");
+      restart(phone, "buzz");
+      if (navigator.vibrate) navigator.vibrate(60);
+    }
+    render(n);
+  }
+
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  prev.addEventListener("click", function () { if (current > 1) go(current - 1); });
+  next.addEventListener("click", function () { go(current === steps.length ? 1 : current + 1); });
+  real.addEventListener("click", function () {
+    busy = true;
+    go(1);
+    wait(1800).then(function () { go(5); return wait(900); })
+      .then(function () { go(6); return wait(500); })
+      .then(function () { busy = false; render(current); });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (busy || e.target.tagName === "INPUT") return;
+    var r = document.getElementById("walk").getBoundingClientRect();
+    if (r.bottom < 0 || r.top > window.innerHeight) return;
+    if (e.key === "ArrowRight") next.click();
+    if (e.key === "ArrowLeft" && current > 1) prev.click();
+  });
+  go(1);
+
+  /* ---------- Part 3: the line lab ---------- */
+  var label = document.getElementById("label");
+  var probe = document.getElementById("probe");
+  var slider = document.getElementById("slider");
+  var readout = document.getElementById("readout");
+  var foundbox = document.getElementById("foundbox");
+  var auto = document.getElementById("auto");
+  var BARS_TOP = 26, BARS_BOTTOM = 136, READ_EDGES = 58;
+
+  function edgesAt(y) {
+    if (y >= BARS_TOP && y <= BARS_BOTTOM) return READ_EDGES - (y % 3);
+    if (y >= 146 && y <= 162) return 9 + (y % 4);
+    return 0;
+  }
+  function onBars(y) { return edgesAt(y) >= READ_EDGES * 0.6; }
+  function show(y) {
+    probe.style.top = (y - 1) + "px";
+    var n = edgesAt(y);
+    readout.innerHTML = "This test line crosses <span class=\"n\">" + n + "</span> black↔white switches<br>" +
+      (onBars(y) ? "<span class=\"yes\">✅ Still on the stripes</span>"
+                 : "<span class=\"no\">❌ Off the stripes" + (n ? " (just the digits)" : "") + "</span>");
+  }
+  function clearTicks() {
+    label.querySelectorAll(".tick").forEach(function (t) { t.remove(); });
+    foundbox.classList.remove("show");
+  }
+  slider.addEventListener("input", function () { clearTicks(); show(+slider.value); });
+
+  auto.addEventListener("click", function () {
+    auto.disabled = true; slider.disabled = true;
+    clearTicks();
+    var plan = [], y;
+    for (y = 106; y >= 6; y -= 6) { plan.push(y); if (!onBars(y)) break; }
+    for (y = 118; y <= 204; y += 6) { plan.push(y); if (!onBars(y)) break; }
+    var i = 0;
+    (function step() {
+      if (i === plan.length) {
+        foundbox.classList.add("show");
+        readout.innerHTML = "<span class=\"yes\">Found it!</span> The last green line going up is the top of the barcode, " +
+          "and the last going down is the bottom. Add a little padding and that's the box.";
+        auto.disabled = false; slider.disabled = false;
+        return;
+      }
+      var py = plan[i++];
+      show(py); slider.value = py;
+      var t = document.createElement("i");
+      t.className = "tick " + (onBars(py) ? "on" : "off");
+      t.style.top = (py - 1) + "px";
+      label.appendChild(t);
+      setTimeout(step, 110);
+    })();
+  });
+  show(60);
+})();
+</script>
+</body>
+</html>

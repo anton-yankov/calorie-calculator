@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How the barcode scanner works — Calorie Calculator</title>
+<style>
+  :root {
+    --bg: #1B1A16;
+    --surface: #24221C;
+    --ink: #EDEAE0;
+    --ink-soft: #A5A195;
+    --accent: #E08A5C;
+    --accent-soft: #3A2A20;
+    --green: #7FBF92;
+    --green-soft: #22312A;
+    --line: #38352C;
+    --code-bg: #2d2d2d;
+    --radius: 10px;
+    --mint: #86D3B0;
+    --serif: Georgia, 'Times New Roman', serif;
+    --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color-scheme: dark;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  .kicker {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(32px, 5vw, 46px);
+    font-weight: 650; line-height: 1.1; margin: 0 0 12px;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 17px; max-width: 640px; margin: 0; }
+  .meta { margin-top: 18px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+  .meta strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: var(--serif);
+    font-size: 27px; font-weight: 650; margin: 56px 0 8px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h2 .num { font-family: var(--mono); font-size: 14px; color: var(--accent); font-weight: 600; }
+  h2 .new {
+    font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--accent); background: var(--accent-soft);
+    border-radius: 999px; padding: 3px 10px; align-self: center;
+  }
+  h3 { font-size: 17px; font-weight: 700; margin: 30px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: var(--accent); }
+  .lede { color: var(--ink-soft); margin-top: 0; font-size: 17px; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 18px 0;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden; font-size: 14.5px;
+  }
+  th {
+    text-align: left; padding: 10px 14px; background: #2A281F;
+    font-size: 12.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+  td.was { color: var(--ink-soft); }
+  td.now { color: var(--ink); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 24px; margin: 18px 0;
+  }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 18px; margin: 18px 0; font-size: 15px;
+  }
+  .callout.good { border-left-color: var(--green); background: var(--green-soft); }
+
+  code { font-family: var(--mono); }
+  :not(pre) > code { background: #2E2C24; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+
+  figure { margin: 24px 0; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-soft); text-align: center; margin-top: 10px; }
+
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 18px 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 0 0 18px 52px; }
+  ol.steps > li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: var(--mono); font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px;
+    width: 2px; background: var(--line);
+  }
+  ol.steps strong { display: block; margin-bottom: 2px; }
+  ol.steps .step-note { color: var(--ink-soft); font-size: 14.5px; }
+  .t { font-family: var(--mono); font-size: 12.5px; color: var(--accent); margin-left: 6px; font-weight: 600; }
+
+  footer.doc {
+    margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-soft);
+  }
+
+  /* ---------- Before / after phones ---------- */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 24px 0 8px; }
+  .compare > div { display: flex; flex-direction: column; align-items: center; }
+  .compare .label {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
+    margin-bottom: 12px; color: var(--ink-soft);
+  }
+  .compare .label.after { color: var(--accent); }
+  .phone {
+    width: 252px; height: 472px; border-radius: 36px; padding: 6px;
+    background: #0E0D0B; border: 1px solid var(--line); flex: none;
+  }
+  .phone svg { width: 240px; height: 460px; display: block; border-radius: 30px; }
+  @media (max-width: 620px) { .compare { grid-template-columns: 1fr; } }
+
+  /* ---------- Live demo of the new scanner (6s loop) ---------- */
+  .screen {
+    position: relative; width: 240px; height: 460px; overflow: hidden; border-radius: 30px;
+    background:
+      radial-gradient(circle at 30% 20%, #5b4a3a 0, transparent 55%),
+      radial-gradient(circle at 80% 85%, #3d3a30 0, transparent 50%),
+      #2b2620;
+    font-family: var(--sans); color: var(--ink);
+  }
+  .screen * { position: absolute; }
+  .pack {
+    left: 140px; top: 190px; width: 150px; height: 96px; border-radius: 6px;
+    background: #ECE6D6; box-shadow: 0 8px 22px rgba(0,0,0,.4);
+    transform: translate(-50%, -50%) rotate(-8deg);
+    animation: jitter 6s infinite;
+  }
+  .bars {
+    left: 16px; top: 14px; width: 118px; height: 50px;
+    background: repeating-linear-gradient(90deg,
+      #1B1A16 0 2px, transparent 2px 4px, #1B1A16 4px 5px, transparent 5px 7px,
+      #1B1A16 7px 10px, transparent 10px 11px, #1B1A16 11px 12px, transparent 12px 15px,
+      #1B1A16 15px 17px, transparent 17px 18px, #1B1A16 18px 19px, transparent 19px 22px);
+  }
+  .digits {
+    left: 0; right: 0; top: 68px; text-align: center;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: #1B1A16;
+  }
+  .frame {
+    width: 160px; height: 160px; left: 120px; top: 207px; border-radius: 16px;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 600px rgba(26,23,32,.34);
+    animation: fly 6s infinite;
+  }
+  .corners { inset: 0; animation: breathe 6s infinite; }
+  .c { width: 28px; height: 28px; border: 0 solid var(--ink); animation: close 6s infinite; }
+  .c.tl { left: 0; top: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 16px; }
+  .c.tr { right: 0; top: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 16px; }
+  .c.bl { left: 0; bottom: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 16px; }
+  .c.br { right: 0; bottom: 0; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 16px; }
+  .flash { inset: 0; background: #fff; opacity: 0; animation: flash 6s infinite; }
+  .shade-top { left: 0; right: 0; top: 0; height: 90px; background: linear-gradient(rgba(26,23,32,.82), transparent); }
+  .shade-bottom { left: 0; right: 0; bottom: 0; height: 130px; background: linear-gradient(transparent, rgba(26,23,32,.92) 45%); }
+  .round {
+    top: 14px; width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(26,23,32,.55); border: 1px solid rgba(237,234,224,.18);
+    display: flex; align-items: center; justify-content: center; font-size: 15px; line-height: 1;
+  }
+  .round * { position: static; }
+  .round.x { left: 12px; }
+  .round.light { right: 12px; animation: hide 6s infinite; }
+  .title { left: 0; right: 0; top: 21px; text-align: center; font-weight: 800; font-size: 13px; }
+  .chip {
+    left: 120px; top: 301px; height: 30px; padding: 0 13px; border-radius: 999px;
+    transform: translateX(-50%); white-space: nowrap;
+    background: rgba(26,23,32,.62); border: 1px solid rgba(241,236,244,.14);
+    font-size: 11.5px; font-weight: 700;
+    animation: chip 6s infinite;
+  }
+  .chip span { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 28px; }
+  .chip .found { position: absolute; left: 0; right: 0; top: 0; justify-content: center; font-family: var(--mono); opacity: 0; animation: show 6s infinite; }
+  .chip .looking { animation: fade 6s infinite; }
+  .dot { position: static; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 1.6s infinite; }
+  .hint { left: 0; right: 0; bottom: 70px; text-align: center; font-size: 11.5px; font-weight: 600; }
+  .hint.looking { animation: fade 6s infinite; }
+  .hint.found { color: var(--mint); opacity: 0; animation: show 6s infinite; }
+  .type {
+    left: 12px; right: 12px; bottom: 18px; height: 40px; border-radius: 14px;
+    background: rgba(48,44,38,.75); border: 1px solid rgba(237,234,224,.12);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 12px; font-weight: 700; animation: dimmed 6s infinite;
+  }
+  .type * { position: static; }
+  .type b { color: var(--accent); font-size: 14px; }
+  .reset { inset: 0; background: #0E0D0B; animation: reset 6s infinite; }
+
+  .timeline { width: 252px; margin-top: 14px; }
+  .track { position: relative; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+  .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); animation: progress 6s linear infinite; }
+  .phases { display: grid; grid-template-columns: 40fr 24fr 36fr; font-size: 11px; white-space: nowrap; color: var(--ink-soft); margin-top: 6px; }
+  .phases span:nth-child(2) { color: var(--accent); font-weight: 700; }
+
+  @keyframes jitter {
+    0%   { transform: translate(-50%, -50%) rotate(-8deg) translate(0, 0); }
+    10%  { transform: translate(-50%, -50%) rotate(-8deg) translate(1.5px, -1px); }
+    20%  { transform: translate(-50%, -50%) rotate(-8deg) translate(-1px, 1.5px); }
+    30%  { transform: translate(-50%, -50%) rotate(-8deg) translate(1px, 1px); }
+    40%  { transform: translate(-50%, -50%) rotate(-8deg) translate(-1.5px, -.5px); }
+    46%, 100% { transform: translate(-50%, -50%) rotate(-8deg) translate(0, 0); }
+  }
+  @keyframes fly {
+    0%, 46% {
+      left: 120px; top: 207px; width: 160px; height: 160px;
+      transform: translate(-50%, -50%) rotate(0deg);
+      box-shadow: 0 0 0 600px rgba(26,23,32,.34);
+      animation-timing-function: cubic-bezier(.2,.9,.25,1);
+    }
+    56%, 100% {
+      left: 139px; top: 181px; width: 147px; height: 74px;
+      transform: translate(-50%, -50%) rotate(-8deg);
+      box-shadow: 0 0 0 600px rgba(26,23,32,.58), 0 0 18px rgba(134,211,176,.35);
+    }
+  }
+  @keyframes breathe {
+    0%, 23%, 46%, 100% { transform: scale(1); animation-timing-function: ease-in-out; }
+    11.5%, 34.5% { transform: scale(.955); animation-timing-function: ease-in-out; }
+  }
+  @keyframes close {
+    0%, 46% { border-color: var(--ink); width: 28px; height: 28px; }
+    50% { border-color: var(--mint); width: 28px; height: 28px; animation-timing-function: cubic-bezier(.4,0,.2,1); }
+    60%, 100% { border-color: var(--mint); width: calc(50% + 1.5px); height: calc(50% + 1.5px); }
+  }
+  @keyframes flash { 0%, 46% { opacity: 0; } 47.5% { opacity: .16; } 51%, 100% { opacity: 0; } }
+  @keyframes chip {
+    0%, 47% {
+      left: 120px; top: 301px; color: var(--ink);
+      background: rgba(26,23,32,.62); border-color: rgba(241,236,244,.14);
+      animation-timing-function: cubic-bezier(.2,.9,.25,1);
+    }
+    55%, 100% { left: 139px; top: 238px; color: #10241C; background: var(--mint); border-color: var(--mint); }
+  }
+  @keyframes fade { 0%, 47% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  @keyframes show { 0%, 49% { opacity: 0; } 53%, 100% { opacity: 1; } }
+  @keyframes hide { 0%, 46% { opacity: 1; } 48%, 100% { opacity: 0; } }
+  @keyframes dimmed { 0%, 46% { opacity: 1; } 49%, 100% { opacity: .4; } }
+  @keyframes pulse { 50% { opacity: .35; transform: scale(.75); } }
+  @keyframes reset { 0% { opacity: 1; } 4%, 90% { opacity: 0; } 97%, 100% { opacity: 1; } }
+  @keyframes progress { from { width: 0; } to { width: 100%; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <div class="kicker">Explainer · barcode scanner</div>
+  <h1>How the barcode scanner works</h1>
+  <p class="subtitle">You point your phone at a food package, the app reads the barcode, finds the product and shows its calories. This page walks through how that happens, with most of the space given to the new look of the scanner.</p>
+  <div class="meta">
+    <span><strong>Redesign:</strong> 5 Oct 2026, two commits</span>
+    <span><strong>Main files:</strong> <code>BarcodeScanner.tsx</code> · <code>barcode-outline.ts</code> · <code>barcode-reader.ts</code></span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<h2><span class="num">01</span>The big picture</h2>
+<p class="lede">Five steps from opening the camera to seeing the product. Only the middle one, the lock-on, is new.</p>
+
+<figure>
+<svg viewBox="0 0 860 120" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+  </defs>
+  <rect x="16" y="30" width="140" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="86" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">Open camera</text>
+  <text x="86" y="74" text-anchor="middle" font-size="11.5" fill="#A5A195">back camera, live</text>
+  <line x1="156" y1="60" x2="186" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="188" y="30" width="140" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="258" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">Read the code</text>
+  <text x="258" y="74" text-anchor="middle" font-size="11.5" fill="#A5A195">~5 tries a second</text>
+  <line x1="328" y1="60" x2="358" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="360" y="30" width="140" height="60" rx="10" fill="#3A2A20"/>
+  <text x="430" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#E08A5C">Lock on · NEW</text>
+  <text x="430" y="74" text-anchor="middle" font-size="11.5" fill="#E08A5C">outline + number</text>
+  <line x1="500" y1="60" x2="530" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="532" y="30" width="140" height="60" rx="10" fill="#24221C" stroke="#EDEAE0" stroke-width="1.5"/>
+  <text x="602" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#EDEAE0">Look it up</text>
+  <text x="602" y="74" text-anchor="middle" font-size="11.5" fill="#A5A195">your products, then web</text>
+  <line x1="672" y1="60" x2="702" y2="60" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="704" y="30" width="140" height="60" rx="10" fill="#EDEAE0"/>
+  <text x="774" y="56" text-anchor="middle" font-size="13" font-weight="700" fill="#1B1A16">Product sheet</text>
+  <text x="774" y="74" text-anchor="middle" font-size="11.5" fill="#55524A">pick amount, add</text>
+</svg>
+<figcaption>The lookup starts the moment the code is read, so it runs while the lock-on animation plays.</figcaption>
+</figure>
+
+<!-- ============================================================ -->
+<h2><span class="num">02</span>How it reads a barcode</h2>
+<p class="lede">The reading itself didn't change in the redesign. It uses ZXing, a free, open-source barcode library.</p>
+
+<ol class="steps">
+  <li>
+    <strong>Open the back camera</strong>
+    <span class="step-note">The browser asks for permission. This only works on a secure (HTTPS) page.</span>
+  </li>
+  <li>
+    <strong>Grab a still picture every 0.18 seconds</strong>
+    <span class="step-note">Each snapshot from the video goes to ZXing. Most snapshots contain no readable code. That's normal, and it simply tries the next one.</span>
+  </li>
+  <li>
+    <strong>Look for the stripe pattern</strong>
+    <span class="step-note">ZXing only looks for supermarket formats (EAN-13, EAN-8, UPC, ITF, Code 128). If it finds nothing, it tries the picture turned 90°, which is why sideways codes work too.</span>
+  </li>
+  <li>
+    <strong>Check the number</strong>
+    <span class="step-note">Only results with 7–14 digits count. Anything else is ignored and scanning carries on.</span>
+  </li>
+</ol>
+
+<div class="callout">ZXing's own "turn the picture" feature crashed and silently froze the camera. The app replaces that one piece with its own version that draws a rotated copy of the frame (<code>barcode-reader.ts</code>).</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">03</span>Before vs. after <span class="new">New</span></h2>
+<p class="lede">The old screen was busy: a header bar, a big box with two moving scan lines, and a typing form that was always visible. The new screen is the full camera with a calm frame. When a code is read, the frame jumps onto it.</p>
+
+<div class="compare">
+  <div>
+    <div class="label">Before</div>
+    <div class="phone">
+      <svg viewBox="0 0 240 460" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
+        <rect width="240" height="460" fill="#2b2620"/>
+        <!-- header bar -->
+        <rect width="240" height="62" fill="#1B1A16"/>
+        <line x1="0" y1="62" x2="240" y2="62" stroke="#38352C"/>
+        <text x="16" y="30" font-size="7.5" font-weight="700" letter-spacing="1.2" fill="#E08A5C">PRODUCT SCANNER</text>
+        <text x="16" y="48" font-size="14" font-weight="800" fill="#EDEAE0">Scan a food barcode</text>
+        <circle cx="216" cy="38" r="14" fill="#24221C" stroke="#38352C"/>
+        <text x="216" y="42.5" text-anchor="middle" font-size="12" fill="#EDEAE0">✕</text>
+        <!-- camera area -->
+        <rect x="0" y="63" width="240" height="315" fill="#2b2620"/>
+        <g transform="rotate(-8 140 200)">
+          <rect x="65" y="152" width="150" height="96" rx="6" fill="#ECE6D6"/>
+          <g fill="#1B1A16">
+            <rect x="81" y="166" width="2" height="50"/><rect x="85" y="166" width="1" height="50"/><rect x="88" y="166" width="3" height="50"/>
+            <rect x="92" y="166" width="1" height="50"/><rect x="96" y="166" width="2" height="50"/><rect x="99" y="166" width="1" height="50"/>
+            <rect x="103" y="166" width="2" height="50"/><rect x="107" y="166" width="1" height="50"/><rect x="110" y="166" width="3" height="50"/>
+            <rect x="114" y="166" width="1" height="50"/><rect x="118" y="166" width="2" height="50"/><rect x="121" y="166" width="1" height="50"/>
+            <rect x="125" y="166" width="2" height="50"/><rect x="129" y="166" width="1" height="50"/><rect x="132" y="166" width="3" height="50"/>
+            <rect x="136" y="166" width="1" height="50"/><rect x="140" y="166" width="2" height="50"/><rect x="143" y="166" width="1" height="50"/>
+            <rect x="147" y="166" width="2" height="50"/><rect x="151" y="166" width="1" height="50"/><rect x="154" y="166" width="3" height="50"/>
+            <rect x="158" y="166" width="1" height="50"/><rect x="162" y="166" width="2" height="50"/><rect x="165" y="166" width="1" height="50"/>
+            <rect x="169" y="166" width="2" height="50"/><rect x="173" y="166" width="1" height="50"/><rect x="176" y="166" width="3" height="50"/>
+            <rect x="180" y="166" width="1" height="50"/><rect x="184" y="166" width="2" height="50"/><rect x="187" y="166" width="1" height="50"/>
+            <rect x="191" y="166" width="2" height="50"/><rect x="195" y="166" width="1" height="50"/><rect x="197" y="166" width="2" height="50"/>
+          </g>
+          <text x="140" y="232" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" letter-spacing="1.2" fill="#1B1A16">5449000000996</text>
+        </g>
+        <!-- dim + big frame -->
+        <path d="M0 63 H240 V378 H0 Z M25 122 V312 H215 V122 Z" fill="rgba(27,26,22,.32)" fill-rule="evenodd"/>
+        <rect x="25" y="122" width="190" height="190" rx="10" fill="none" stroke="rgba(255,255,255,.45)"/>
+        <g stroke="#fff" stroke-width="2" fill="none">
+          <path d="M25 150 V132 Q25 122 35 122 H53"/><path d="M187 122 H205 Q215 122 215 132 V150"/>
+          <path d="M25 284 V302 Q25 312 35 312 H53"/><path d="M187 312 H205 Q215 312 215 302 V284"/>
+        </g>
+        <!-- two scan lines -->
+        <line x1="38" y1="217" x2="202" y2="217" stroke="#E08A5C" stroke-width="2"/>
+        <line x1="38" y1="217" x2="202" y2="217" stroke="#E08A5C" stroke-width="8" opacity=".25"/>
+        <line x1="120" y1="135" x2="120" y2="299" stroke="#E08A5C" stroke-width="2" opacity=".55"/>
+        <rect x="68" y="282" width="104" height="20" rx="10" fill="rgba(0,0,0,.45)" stroke="rgba(255,255,255,.2)"/>
+        <text x="120" y="295.5" text-anchor="middle" font-size="9" font-weight="600" fill="rgba(255,255,255,.9)">Upright or sideways</text>
+        <!-- light pill -->
+        <rect x="170" y="74" width="58" height="26" rx="13" fill="rgba(0,0,0,.55)" stroke="rgba(255,255,255,.35)"/>
+        <text x="199" y="91" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">○ Light</text>
+        <text x="120" y="362" text-anchor="middle" font-size="10.5" font-weight="500" fill="#EDEAE0">Center the barcode and hold steady</text>
+        <!-- manual form -->
+        <rect x="0" y="378" width="240" height="82" fill="#1B1A16"/>
+        <line x1="0" y1="378" x2="240" y2="378" stroke="#38352C"/>
+        <text x="16" y="398" font-size="9" font-weight="600" fill="#A5A195">Or enter the number below the barcode</text>
+        <rect x="16" y="407" width="146" height="32" rx="8" fill="#24221C" stroke="#38352C"/>
+        <text x="25" y="427" font-size="9.5" fill="#6e6a5f">e.g. 3017624010701</text>
+        <rect x="168" y="407" width="56" height="32" rx="8" fill="#E08A5C"/>
+        <text x="196" y="427" text-anchor="middle" font-size="10" font-weight="700" fill="#1B1A16">Look up</text>
+      </svg>
+    </div>
+  </div>
+  <div>
+    <div class="label after">After · live demo</div>
+    <div class="phone">
+      <div class="screen" aria-label="Animated demo of the new scanner locking onto a barcode" role="img">
+        <div class="pack"><div class="bars"></div><div class="digits">5449000000996</div></div>
+        <div class="flash"></div>
+        <div class="frame"><div class="corners"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i></div></div>
+        <div class="shade-top"></div>
+        <div class="shade-bottom"></div>
+        <div class="round x">✕</div>
+        <div class="title">Scan a barcode</div>
+        <div class="round light">🔦</div>
+        <div class="chip">
+          <span class="looking"><i class="dot"></i>Looking for a barcode</span>
+          <span class="found">✓ 5449000000996</span>
+        </div>
+        <div class="hint looking">Upright or sideways, both work.</div>
+        <div class="hint found">Got it. Looking it up…</div>
+        <div class="type"><b>⌨</b> Type the number instead</div>
+        <div class="reset"></div>
+      </div>
+    </div>
+    <div class="timeline">
+      <div class="track"><i></i></div>
+      <div class="phases"><span>Looking</span><span>Lock-on</span><span>Show number</span></div>
+    </div>
+  </div>
+</div>
+<p style="text-align:center;font-size:13px;color:var(--ink-soft);margin-top:4px">The demo loops slowly so you can follow it. In the app the lock-on takes about 0.65 seconds.</p>
+
+<h3>What changed, at a glance</h3>
+<table>
+  <tr><th>Part</th><th>Before</th><th>After</th></tr>
+  <tr><td>Layout</td><td class="was">Header bar on top, typing form at the bottom, camera squeezed in between</td><td class="now">Camera fills the whole screen, with buttons floating on top</td></tr>
+  <tr><td>While scanning</td><td class="was">Big box with two moving orange scan lines</td><td class="now">Smaller frame whose corners slowly "breathe", plus a "Looking for a barcode" pill with a pulsing dot</td></tr>
+  <tr><td>When read</td><td class="was">Jumped straight to a "Looking it up…" sheet, with no sign of what was read</td><td class="now">Picture freezes, the frame jumps onto the barcode, turns mint green, and shows the number it read</td></tr>
+  <tr><td>Tilted codes</td><td class="was">—</td><td class="now">The outline tilts to match the barcode (second commit)</td></tr>
+  <tr><td>Typing the number</td><td class="was">Input box always on screen</td><td class="now">A "Type the number instead" button that opens a small sheet</td></tr>
+  <tr><td>Flashlight</td><td class="was">Text pill "○ Light"</td><td class="now">Round icon button in the top corner (only if the phone supports it)</td></tr>
+  <tr><td>Camera problems</td><td class="was">Red banner over the preview</td><td class="now">Full-screen message that says what went wrong and what to do next</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">04</span>The lock-on moment, step by step <span class="new">New</span></h2>
+<p class="lede">Everything below happens in under a second, right after ZXing reads a valid number.</p>
+
+<ol class="steps">
+  <li>
+    <strong>Buzz and start the lookup<span class="t">0 ms</span></strong>
+    <span class="step-note">The phone vibrates briefly and the product search begins in the background straight away, so the animation doesn't add waiting time.</span>
+  </li>
+  <li>
+    <strong>Freeze the picture<span class="t">0 ms</span></strong>
+    <span class="step-note">The exact camera frame that was read is drawn on top of the live video. The outline then lands on a still image of the barcode, not a moving one. A faint white flash ("photo taken") hides the tiny jump.</span>
+  </li>
+  <li>
+    <strong>Frame flies onto the code<span class="t">0–480 ms</span></strong>
+    <span class="step-note">The square frame moves, shrinks and turns to fit around the barcode. The background darkens a bit more so the code stands out.</span>
+  </li>
+  <li>
+    <strong>Corners close into an outline<span class="t">380–640 ms</span></strong>
+    <span class="step-note">The four corners turn mint green and their arms grow until they meet, making a complete box around the code.</span>
+  </li>
+  <li>
+    <strong>The pill becomes the number<span class="t">~60–520 ms</span></strong>
+    <span class="step-note">"Looking for a barcode" slides under the code, turns green and cross-fades into ✓ and the digits. The bottom text changes to "Got it. Looking it up…".</span>
+  </li>
+  <li>
+    <strong>Hand over<span class="t">900 ms</span></strong>
+    <span class="step-note">The scanner closes and the product sheet (or a "Looking it up…" sheet, if the search is still running) takes over.</span>
+  </li>
+</ol>
+
+<div class="callout good">On phones set to "reduce motion", nothing flies: the outline and number simply appear on the code.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">05</span>How it knows where the barcode is <span class="new">New</span></h2>
+<p class="lede">This is the clever part (<code>barcode-outline.ts</code>). ZXing gives back just two points: the two ends of the line it read across the bars. That's enough to know the code's width, but not how tall it is or whether it leans.</p>
+
+<figure>
+<svg viewBox="0 0 860 240" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#A5A195"/>
+    </marker>
+    <pattern id="bars" width="24" height="10" patternUnits="userSpaceOnUse">
+      <rect x="0" width="2" height="10" fill="#1B1A16"/><rect x="4" width="1" height="10" fill="#1B1A16"/>
+      <rect x="7" width="3" height="10" fill="#1B1A16"/><rect x="12" width="1" height="10" fill="#1B1A16"/>
+      <rect x="15" width="2" height="10" fill="#1B1A16"/><rect x="20" width="1" height="10" fill="#1B1A16"/>
+    </pattern>
+  </defs>
+
+  <!-- panel 1 -->
+  <rect x="50" y="40" width="180" height="120" rx="6" fill="#ECE6D6"/>
+  <rect x="62" y="52" width="156" height="80" fill="url(#bars)"/>
+  <text x="140" y="150" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#1B1A16">5449000000996</text>
+  <line x1="64" y1="114" x2="216" y2="114" stroke="#E08A5C" stroke-width="3"/>
+  <circle cx="64" cy="114" r="5" fill="#E08A5C"/>
+  <circle cx="216" cy="114" r="5" fill="#E08A5C"/>
+
+  <line x1="246" y1="100" x2="300" y2="100" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+  <!-- panel 2 -->
+  <rect x="320" y="40" width="180" height="120" rx="6" fill="#ECE6D6"/>
+  <rect x="332" y="52" width="156" height="80" fill="url(#bars)"/>
+  <text x="410" y="150" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#1B1A16">5449000000996</text>
+  <g stroke="#2f8f5b" stroke-width="2" stroke-dasharray="4 3">
+    <line x1="326" y1="104" x2="494" y2="104"/><line x1="326" y1="94" x2="494" y2="94"/>
+    <line x1="326" y1="84" x2="494" y2="84"/><line x1="326" y1="74" x2="494" y2="74"/>
+    <line x1="326" y1="64" x2="494" y2="64"/><line x1="326" y1="55" x2="494" y2="55"/>
+    <line x1="326" y1="124" x2="494" y2="124"/>
+  </g>
+  <g stroke="#8a8578" stroke-width="2" stroke-dasharray="4 3">
+    <line x1="326" y1="45" x2="494" y2="45"/><line x1="326" y1="138" x2="494" y2="138"/>
+  </g>
+  <line x1="334" y1="114" x2="486" y2="114" stroke="#E08A5C" stroke-width="3"/>
+
+  <line x1="516" y1="100" x2="570" y2="100" stroke="#A5A195" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+  <!-- panel 3 -->
+  <g transform="rotate(-8 680 100)">
+    <rect x="578" y="28" width="204" height="140" rx="6" fill="#ECE6D6"/>
+    <rect x="602" y="52" width="156" height="80" fill="url(#bars)"/>
+    <text x="680" y="156" text-anchor="middle" font-family="ui-monospace, monospace" font-size="10" fill="#1B1A16">5449000000996</text>
+    <rect x="595" y="45" width="170" height="94" rx="10" fill="none" stroke="#86D3B0" stroke-width="3.5"/>
+  </g>
+
+  <!-- labels -->
+  <text x="140" y="200" text-anchor="middle" font-size="13.5" font-weight="700" fill="#EDEAE0">1 · Two points from ZXing</text>
+  <text x="140" y="219" text-anchor="middle" font-size="11.5" fill="#A5A195">the ends of the line it read</text>
+  <text x="410" y="200" text-anchor="middle" font-size="13.5" font-weight="700" fill="#EDEAE0">2 · Slide up and down</text>
+  <text x="410" y="219" text-anchor="middle" font-size="11.5" fill="#A5A195">green: still on bars · grey: off them</text>
+  <text x="680" y="200" text-anchor="middle" font-size="13.5" font-weight="700" fill="#EDEAE0">3 · Measure the lean, draw the box</text>
+  <text x="680" y="219" text-anchor="middle" font-size="11.5" fill="#A5A195">then place it on the phone screen</text>
+</svg>
+<figcaption>From two dots to a snug, tilted outline, worked out from the single frozen picture.</figcaption>
+</figure>
+
+<div class="card">
+  <p style="margin-top:0"><strong>1. Start from the read line.</strong> The two points give the code's width and direction. The line can cross the bars anywhere, not necessarily in the middle.</p>
+  <p><strong>2. Find the height.</strong> The app tests lines parallel to the read one, moving up and down 2 pixels at a time. As long as a line still crosses lots of black-white edges, it's on the bars. Where the edges stop is where the bars end.</p>
+  <p><strong>3. Find the lean</strong> <em>(second commit)</em>. ZXing's read line always runs straight across the picture, even when the code is tilted. So the app checks which way the bar edges point and turns the box to match. It only does this when the edges clearly agree and the tilt is under 30°.</p>
+  <p style="margin-bottom:0"><strong>4. Put it on screen.</strong> The camera picture is bigger than the phone screen and gets cropped to fit, so the box is scaled and shifted the same way. It's also turned as little as possible: a sideways code gets an upright box with its sides swapped, so the frame never spins a quarter turn.</p>
+</div>
+
+<div class="callout">If any of this can't be worked out (blurry frame, code half off-screen), the outline simply stays where the frame already is and shows the number. Scanning works the same either way.</div>
+
+<!-- ============================================================ -->
+<h2><span class="num">06</span>Finding the product</h2>
+<p class="lede">Once there's a number, the app asks its own server, which checks two places in order.</p>
+
+<table>
+  <tr><th>Where</th><th>What happens</th></tr>
+  <tr><td>1 · Your products</td><td>Products you've added before are saved to your account, so a repeat scan is instant.</td></tr>
+  <tr><td>2 · Open Food Facts</td><td>A free public food database. The app takes the name, brand, photo and nutrition per 100 g or ml.</td></tr>
+  <tr><td>Not found</td><td>An "Add this product" form opens. You can photograph the nutrition label to fill it in. The product is then saved, so next time it's one scan.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">07</span>When the camera doesn't cooperate</h2>
+<p class="lede">There's always a way forward: typing the digits printed under the bars.</p>
+
+<table>
+  <tr><th>Situation</th><th>What the user sees</th></tr>
+  <tr><td>Permission denied</td><td>"The camera is blocked" + Type the number · Try again</td></tr>
+  <tr><td>No camera</td><td>"No camera found" + Type the number</td></tr>
+  <tr><td>Another app using it</td><td>"The camera is busy" + Type the number · Try again</td></tr>
+  <tr><td>Not HTTPS / old browser</td><td>"Scanning isn't available here" + Type the number</td></tr>
+  <tr><td>Typed number</td><td>Must be 7–14 digits, otherwise a short error under the field</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2><span class="num">08</span>The 30-second version for your friend</h2>
+
+<div class="callout good">
+  <p style="margin-top:0">"The camera takes about five snapshots a second and a barcode library looks for the stripes, upright or sideways. When it finds a valid number, two things happen at once: the app starts looking the product up, and the screen freezes on that exact frame.</p>
+  <p>Then comes the new part. The scanning frame jumps onto the barcode and closes into a green outline, tilted to match it, with the number underneath. To get that outline, the app takes the line the reader used and slides parallel lines up and down until they run off the bars. That gives the height, and the direction of the bar edges gives the tilt.</p>
+  <p style="margin-bottom:0">Under a second later you see the product. If the camera doesn't work, you just type the number."</p>
+</div>
+
+<footer class="doc">
+  Calorie Calculator · barcode scanner explainer · based on commits 9c0e05d and 536ea03
+</footer>
+
+</div>
+</body>
+</html>
