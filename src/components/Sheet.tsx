@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * A panel for one focused task (add a food, edit a meal, pick an option). On
@@ -34,6 +34,9 @@ export function Sheet({
   const ref = useRef<HTMLDialogElement>(null);
   // The latest `open`, read when the dialog's close event fires
   const openRef = useRef(open);
+  // The panel's content stays mounted while the sheet slides away
+  const [shown, setShown] = useState(open);
+  if (open && !shown) setShown(true);
 
   useEffect(() => {
     openRef.current = open;
@@ -41,8 +44,22 @@ export function Sheet({
     if (!dialog) return;
     // An autofocus attribute on the dialog makes showModal focus the dialog itself
     dialog.toggleAttribute("autofocus", focusPanel);
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    if (open) {
+      dialog.removeAttribute("data-closing");
+      if (!dialog.open) dialog.showModal();
+    }
+    if (!open && dialog.open) {
+      // Play the exit animation (none with reduced motion), then really close
+      dialog.setAttribute("data-closing", "");
+      void Promise.allSettled(dialog.getAnimations().map((animation) => animation.finished)).then(
+        () => {
+          // Reopened mid-exit: the exit animation was cancelled, keep it open
+          if (openRef.current) return;
+          dialog.removeAttribute("data-closing");
+          dialog.close();
+        },
+      );
+    }
     if (!open) return;
     // A modal dialog still lets the page behind it scroll on iOS
     const root = document.documentElement;
@@ -58,10 +75,18 @@ export function Sheet({
       ref={ref}
       aria-label={title}
       tabIndex={focusPanel ? -1 : undefined}
+      // Escape asks the parent to close, so the sheet slides away like any
+      // other close instead of vanishing
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
       // close also fires (a task later) after the parent sets `open` to false;
-      // only a close the user made (Escape) is reported, or a parent that
-      // swaps one sheet for another would hear onClose for the old one
-      onClose={() => {
+      // only a close the user made (a repeated Escape the browser won't let us
+      // cancel) is reported, or a parent that swaps one sheet for another would
+      // hear onClose for the old one
+      onClose={(event) => {
+        if (!event.currentTarget.open) setShown(false);
         if (openRef.current) onClose();
       }}
       // The dialog itself has no padding, so a click whose target is the
@@ -69,9 +94,9 @@ export function Sheet({
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="m-0 mt-auto max-h-[88dvh] w-full max-w-none overflow-y-auto rounded-t-[28px] bg-surface p-0 text-foreground backdrop:bg-black/60 lg:m-auto lg:max-w-md lg:rounded-[24px] focus:outline-none"
+      className="sheet m-0 mt-auto max-h-[88dvh] w-full max-w-none overflow-y-auto rounded-t-[28px] bg-surface p-0 text-foreground backdrop:bg-black/60 lg:m-auto lg:max-w-md lg:rounded-[24px] focus:outline-none"
     >
-      {open && (
+      {shown && (
         <div className="flex flex-col gap-3.5 px-[18px] pt-2.5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] lg:px-6 lg:pt-6 lg:pb-6">
           <span
             aria-hidden

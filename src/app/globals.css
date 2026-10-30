@@ -214,6 +214,80 @@ input[type="time"]::-webkit-date-and-time-value {
   }
 }
 
+/* A sheet (Sheet) slides up from the bottom on phones and rises into place on
+   desktop, over a backdrop that fades in. Closing sets data-closing, plays the
+   reverse, and only then closes the dialog. */
+@media (prefers-reduced-motion: no-preference) {
+  .sheet[open] {
+    animation: sheet-in 380ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .sheet[open]::backdrop {
+    animation: backdrop-in 300ms ease;
+  }
+
+  .sheet[data-closing] {
+    animation: sheet-out 240ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+
+  .sheet[data-closing]::backdrop {
+    animation: backdrop-out 240ms ease forwards;
+  }
+
+  /* On desktop the sheet is a centred dialog: it rises and fades instead */
+  @media (min-width: 64rem) {
+    .sheet[open] {
+      animation-name: dialog-in;
+    }
+
+    .sheet[data-closing] {
+      animation-name: dialog-out;
+    }
+  }
+}
+
+.sheet[data-closing] {
+  pointer-events: none;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+
 /* A swipe-to-remove row (SwipeToRemove): after it slides off it folds its
    height away, and a row that arrives in a list that has already rendered (an
    undone removal, a scanned food) unfolds into place */
